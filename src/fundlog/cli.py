@@ -10,7 +10,12 @@ from fundlog.amounts import parse_amount_minor
 from fundlog.config import APP_NAME
 from fundlog.errors import FundLogError, InvalidEntryDateError
 from fundlog.output.console import print_message
-from fundlog.storage import create_portfolio, initialize_database, record_inflow
+from fundlog.storage import (
+    create_portfolio,
+    initialize_database,
+    record_inflow,
+    record_outflow,
+)
 
 app = typer.Typer(
     name="fundlog",
@@ -112,7 +117,7 @@ def _parse_entry_date(value: str) -> local_date:
         ) from error
 
 
-@app.command()
+@app.command(context_settings={"ignore_unknown_options": True})
 def outflow(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     amount: Annotated[str, typer.Argument(help="Capital outflow amount.")],
@@ -126,7 +131,15 @@ def outflow(
     ] = None,
 ) -> None:
     """Record capital leaving a portfolio."""
-    show_placeholder()
+    try:
+        amount_minor = parse_amount_minor(amount)
+        entry_date = local_date.today() if date is None else _parse_entry_date(date)
+        record_outflow(portfolio, amount_minor, entry_date, note)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Outflow recorded for portfolio '{portfolio}'.")
 
 
 @app.command()

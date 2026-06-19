@@ -4,6 +4,7 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from fundlog import __version__
@@ -362,8 +363,194 @@ def test_inflow_fails_for_soft_deleted_portfolio(
     assert "Active portfolio 'stocks' does not exist." in result.output
 
 
-def test_outflow_remains_a_placeholder() -> None:
-    result = runner.invoke(app, ["outflow", "stocks", "1000"])
+def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    result = runner.invoke(app, ["outflow", "stocks", "250"])
+
+    assert result.exit_code == 0
+    assert "Outflow recorded for portfolio 'stocks'." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry = connection.execute(
+            """
+            SELECT entry_type, amount_minor, entry_date, note
+            FROM capital_entries
+            WHERE entry_type = 'outflow'
+            """
+        ).fetchone()
+
+    assert entry == ("outflow", 25000, date.today().isoformat(), None)
+
+
+def test_outflow_stores_decimal_amount_as_minor_units(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    result = runner.invoke(
+        app,
+        [
+            "outflow",
+            "stocks",
+            "250.50",
+            "--date",
+            "2026-06-19",
+            "--note",
+            "withdrawal",
+        ],
+    )
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry = connection.execute(
+            """
+            SELECT amount_minor, entry_date, note
+            FROM capital_entries
+            WHERE entry_type = 'outflow'
+            """
+        ).fetchone()
+
+    assert entry == (25050, "2026-06-19", "withdrawal")
+
+
+@pytest.mark.parametrize(
+    ("amount", "message"),
+    [
+        ("0", "Amount must be greater than zero."),
+        ("-10", "Amount must be greater than zero."),
+        ("not-a-number", "Invalid amount: 'not-a-number'."),
+        ("10.001", "Amount cannot have more than 2 decimal places."),
+    ],
+)
+def test_outflow_rejects_invalid_amounts(
+    tmp_path: Path,
+    monkeypatch,
+    amount: str,
+    message: str,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    result = runner.invoke(app, ["outflow", "stocks", amount])
+
+    assert result.exit_code == 1
+    assert message in result.output
+
+
+def test_outflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["outflow", "stocks", "250"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_outflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["outflow", "stocks", "250"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_outflow_fails_when_cash_is_insufficient(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "100"])
+
+    result = runner.invoke(app, ["outflow", "stocks", "100.01"])
+
+    assert result.exit_code == 1
+    assert "Insufficient cash in portfolio 'stocks'." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        outflow_count = connection.execute(
+            "SELECT COUNT(*) FROM capital_entries WHERE entry_type = 'outflow'"
+        ).fetchone()[0]
+
+    assert outflow_count == 0
+
+
+def test_outflow_succeeds_when_cash_is_exactly_enough(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "250.50"])
+
+    result = runner.invoke(app, ["outflow", "stocks", "250.50"])
+
+    assert result.exit_code == 0
+
+
+def test_outflow_cash_check_includes_prior_active_outflows(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "500"])
+    runner.invoke(app, ["outflow", "stocks", "400"])
+
+    result = runner.invoke(app, ["outflow", "stocks", "100.01"])
+
+    assert result.exit_code == 1
+    assert "Insufficient cash in portfolio 'stocks'." in result.output
+
+
+def test_outflow_cash_check_ignores_soft_deleted_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "500"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE entry_type = 'inflow'
+            """
+        )
+
+    result = runner.invoke(app, ["outflow", "stocks", "1"])
+
+    assert result.exit_code == 1
+    assert "Insufficient cash in portfolio 'stocks'." in result.output
+
+
+def test_summary_remains_a_placeholder() -> None:
+    result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
     assert PLACEHOLDER_MESSAGE in result.output

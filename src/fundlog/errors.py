@@ -27,3 +27,7 @@ class InvalidAmountError(FundLogError):
 
 class InvalidEntryDateError(FundLogError):
     """Raised when a capital entry date is invalid."""
+
+
+class InsufficientCashError(FundLogError):
+    """Raised when an outflow exceeds available portfolio cash."""
