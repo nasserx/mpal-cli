@@ -16,6 +16,7 @@ from fundlog.output.console import (
 )
 from fundlog.storage import (
     create_portfolio,
+    edit_capital_entry,
     get_capital_entry_log,
     get_portfolio_summary,
     initialize_database,
@@ -116,11 +117,14 @@ def inflow(
 def _parse_entry_date(value: str) -> local_date:
     """Parse an ISO entry date."""
     try:
-        return local_date.fromisoformat(value)
+        parsed_date = local_date.fromisoformat(value)
     except ValueError as error:
         raise InvalidEntryDateError(
             f"Invalid date: '{value}'. Use YYYY-MM-DD."
         ) from error
+    if parsed_date.isoformat() != value:
+        raise InvalidEntryDateError(f"Invalid date: '{value}'. Use YYYY-MM-DD.")
+    return parsed_date
 
 
 @app.command(context_settings={"ignore_unknown_options": True})
@@ -193,7 +197,7 @@ def log(
     print_capital_entry_log(entries)
 
 
-@app.command()
+@app.command(context_settings={"ignore_unknown_options": True})
 def edit(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     entry_id: Annotated[int, typer.Argument(help="Capital entry ID.")],
@@ -211,7 +215,28 @@ def edit(
     ] = None,
 ) -> None:
     """Edit a portfolio capital entry."""
-    show_placeholder()
+    if amount is None and date is None and note is None:
+        typer.echo(
+            "Provide at least one of --amount, --date, or --note.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        amount_minor = None if amount is None else parse_amount_minor(amount)
+        entry_date = None if date is None else _parse_entry_date(date)
+        edit_capital_entry(
+            portfolio,
+            entry_id,
+            amount_minor=amount_minor,
+            entry_date=entry_date,
+            note=note,
+        )
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Capital entry {entry_id} updated for portfolio '{portfolio}'.")
 
 
 @app.command()

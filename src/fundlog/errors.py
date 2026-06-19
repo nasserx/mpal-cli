@@ -31,3 +31,15 @@ class InvalidEntryDateError(FundLogError):
 
 class InsufficientCashError(FundLogError):
     """Raised when an outflow exceeds available portfolio cash."""
+
+
+class CapitalEntryNotFoundError(FundLogError):
+    """Raised when a capital entry does not exist or is inactive."""
+
+
+class CapitalEntryPortfolioMismatchError(FundLogError):
+    """Raised when a capital entry belongs to another portfolio."""
+
+
+class InvalidLedgerEditError(FundLogError):
+    """Raised when an edit would make the active ledger invalid."""
