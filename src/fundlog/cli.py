@@ -7,6 +7,7 @@ import typer
 from fundlog import __version__
 from fundlog.config import APP_NAME
 from fundlog.output.console import print_message
+from fundlog.storage import initialize_database
 
 app = typer.Typer(
     name="fundlog",
@@ -47,7 +48,8 @@ def show_placeholder() -> None:
 @app.command("init")
 def init_command() -> None:
     """Initialize FundLog's local data store."""
-    show_placeholder()
+    database_path = initialize_database()
+    print_message(f"FundLog initialized at {database_path}")
 
 
 @app.command()

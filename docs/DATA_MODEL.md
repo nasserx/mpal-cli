@@ -7,7 +7,7 @@ This document describes the database conceptually. It does not prescribe a datab
 The v0.1 database contains only these conceptual tables:
 
 - `portfolios`
-- `portfolio_entries`
+- `capital_entries`
 - `audit_log`
 - `schema_migrations`
 
@@ -25,7 +25,7 @@ The v0.1 database contains only these conceptual tables:
 - Portfolio names are unique among active portfolios.
 - Removing or resetting records must not create orphaned child records.
 
-## `portfolio_entries`
+## `capital_entries`
 
 **Purpose:** Store the operations from which portfolio balances are derived.
 
@@ -75,7 +75,7 @@ The v0.1 database contains only these conceptual tables:
 
 ```text
 portfolios
-  └── portfolio_entries
+  └── capital_entries
 
 audit_log references affected records and actions
 schema_migrations tracks database evolution
