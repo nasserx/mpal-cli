@@ -2,6 +2,8 @@
 
 This document describes the database conceptually. It does not prescribe a database engine, SQL schema, migration, or implementation type.
 
+Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
+
 # v0.1 scope
 
 The v0.1 database contains only these conceptual tables:

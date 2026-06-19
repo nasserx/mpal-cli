@@ -7,7 +7,7 @@
 - Package/distribution name: `fundlog-cli`
 - Repository/folder name: `fundlog`
 
-FundLog is a local-first, terminal-based capital management and portfolio tracking tool. It stores manual portfolio records locally and derives calculations deterministically from those records.
+FundLog is a fully manual, local-first, terminal-based capital management and portfolio tracking tool. It stores manual portfolio records locally and derives calculations deterministically from those records. It does not use live prices or market APIs.
 
 ## Goals
 
@@ -23,8 +23,8 @@ FundLog is a local-first, terminal-based capital management and portfolio tracki
 FundLog is not intended to:
 
 - Execute trades or integrate with brokers.
-- Retrieve market data or track prices.
-- Automatically value portfolios.
+- Retrieve market data, live prices, or real-time prices.
+- Connect to market APIs or automatically value portfolios.
 - Provide financial advice.
 - Support multi-currency accounting.
 - Store currencies, company names, or asset types.
@@ -46,23 +46,27 @@ A recorded amount withdrawn from a portfolio. An outflow decreases both Capital 
 
 ### Cash
 
-The amount available in a portfolio after applying its active recorded operations. In v0.1, only inflows and outflows change Cash.
+The amount available inside a portfolio and not tied to open positions. In v0.1, Cash equals active inflows minus active outflows. Future manual trading operations may feed calculated buy costs, sell proceeds, and income into Cash.
 
-### Invested
+### Positions
 
-The amount committed to investments. Invested is `0` in v0.1 because investment operations are not implemented.
+The book cost of currently open positions. Positions is not market value, live value, or unrealized value. It is `0.00` in v0.1 because symbols and manual trading operations are not implemented.
 
-### Value
+### Book Value
 
-The sum of Cash and Invested. Value is derived; users do not enter it directly.
+Cash plus Positions. Book Value is an accounting value derived only from manual records and must not imply market value. In v0.1, Book Value equals Cash.
 
-### PnL
+### Realized PnL
 
-The result produced by future investment operations. Capital inflows and outflows do not produce PnL. PnL is `0` or shown as not available in v0.1.
+Profit or loss realized by future closed or partially closed manual positions. Capital inflows and outflows do not produce Realized PnL. It is `0.00` in v0.1.
+
+### Income
+
+Cash income from future manually recorded distributions or dividends. Income is `0.00` in v0.1.
 
 ### Return
 
-PnL divided by total inflows. In v0.1, Return is `0` or shown as not available, consistently with the chosen PnL presentation and denominator availability.
+Return is based on realized results only. The future formula is `(Realized PnL + Income) / Capital`. It is `0.00%` in v0.1, including when Capital is zero.
 
 ## v0.1 scope
 
@@ -79,4 +83,4 @@ v0.1 is limited to:
 - Soft-removing capital entries.
 - Resetting a portfolio's operations while retaining the portfolio.
 
-v0.1 contains portfolios and capital entries only. Investment records, market valuation, and price-based calculations are outside v0.1.
+v0.1 contains portfolios and capital entries only. Future manual trading operations may feed calculated results into Cash, Positions, Realized PnL, and Income. Live pricing, market APIs, market valuation, unrealized PnL, and price-based calculations are not part of FundLog.

@@ -14,12 +14,13 @@ REQUIRED_TABLES = {"portfolios", "capital_entries"}
 class PortfolioSummary:
     """Derived v0.1 summary values for one portfolio."""
 
-    portfolio_id: int
     portfolio_name: str
     capital_minor: int
     cash_minor: int
-    invested_minor: int
-    value_minor: int
+    positions_minor: int
+    book_value_minor: int
+    realized_pnl_minor: int
+    income_minor: int
 
 
 def get_portfolio_summary(
@@ -48,7 +49,6 @@ def get_portfolio_summary(
         row = connection.execute(
             """
             SELECT
-                p.id,
                 p.name,
                 COALESCE(
                     SUM(
@@ -74,13 +74,14 @@ def get_portfolio_summary(
             f"Active portfolio '{portfolio_name}' does not exist."
         )
 
-    capital_minor = row[2]
-    invested_minor = 0
+    capital_minor = row[1]
+    positions_minor = 0
     return PortfolioSummary(
-        portfolio_id=row[0],
-        portfolio_name=row[1],
+        portfolio_name=row[0],
         capital_minor=capital_minor,
         cash_minor=capital_minor,
-        invested_minor=invested_minor,
-        value_minor=capital_minor + invested_minor,
+        positions_minor=positions_minor,
+        book_value_minor=capital_minor + positions_minor,
+        realized_pnl_minor=0,
+        income_minor=0,
     )

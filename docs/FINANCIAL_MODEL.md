@@ -2,94 +2,122 @@
 
 ## Principles
 
-FundLog derives every financial result from active recorded operations. v0.1 records only portfolio capital inflows and outflows. Financial amounts must use decimal-safe logic when implemented and must not use binary floating point.
+FundLog is fully manual. It derives financial results only from active recorded operations and does not use live prices, market APIs, automatic valuation, market value, or unrealized PnL.
+
+v0.1 records only portfolio capital inflows and outflows. Financial amounts use integer minor units in storage and decimal-safe logic in application code; binary floating point is not used.
 
 ## Summary table
 
-The summary output has these columns:
+The summary output has exactly these columns:
 
-| id | Portfolio | Capital | Cash | Invested | Value | PnL | Return |
-|---:|---|---:|---:|---:|---:|---:|---:|
+| Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return |
+|---|---:|---:|---:|---:|---:|---:|---:|
 
-Their definitions are:
+The internal portfolio database ID is not part of summary output.
 
-- **Capital** = total active inflows - total active outflows.
-- **Cash** = available cash in the portfolio after active recorded operations.
-- **Invested** = `0` in v0.1 because symbols and investment operations are not implemented yet.
-- **Value** = Cash + Invested.
-- **PnL** = `0` or N/A in v0.1 because investment operations are not implemented yet.
-- **Return** = `0` or N/A in v0.1 because PnL is not available yet.
+### Capital
 
-An implementation must choose one consistent v0.1 presentation for unavailable PnL and Return values. It must not imply market performance where none has been recorded.
+External capital only.
 
-## Entry rules
+In v0.1:
+
+`Capital = total active inflows - total active outflows`
+
+### Cash
+
+Available cash inside the portfolio that is not tied to open positions.
+
+In v0.1:
+
+`Cash = total active inflows - total active outflows`
+
+Future manual trading operations may feed calculated buy costs, sell proceeds, and income or distributions into Cash. Those operations are not implemented in v0.1.
+
+### Positions
+
+The book cost of currently open positions. Positions is not market value, live value, or unrealized value.
+
+In v0.1, no symbols or manual trading positions exist:
+
+`Positions = 0.00`
+
+### Book Value
+
+`Book Value = Cash + Positions`
+
+Book Value is a book/accounting value based only on manual records. It must not imply market value.
+
+In v0.1:
+
+`Book Value = Cash`
+
+### Realized PnL
+
+Profit or loss realized from future closed or partially closed manual trading positions.
+
+In v0.1:
+
+`Realized PnL = 0.00`
+
+### Income
+
+Cash income from future manually recorded distributions or dividends.
+
+In v0.1:
+
+`Income = 0.00`
+
+### Return
+
+Return is based on realized results only, not unrealized market movement.
+
+The future formula is:
+
+`Return = (Realized PnL + Income) / Capital`
+
+In v0.1, Return is always `0.00%`. If Capital is zero, Return is also displayed as `0.00%`.
+
+## Capital entry rules
 
 - An inflow increases Capital and Cash by the same amount.
 - An outflow decreases Capital and Cash by the same amount.
 - An outflow is rejected if Cash is insufficient.
-- An outflow does not affect PnL.
-- Entry removal is a soft delete.
-- Portfolio reset soft-deletes portfolio entries.
-- Reset requires the `--yes` confirmation option.
+- An outflow does not affect Realized PnL or Income.
 - Active entries alone contribute to current calculations.
-- Edits, removals, and resets must retain enough information to support future auditing.
-- Edits and removals must not leave a ledger state where an outflow exceeds available Cash under deterministic entry ordering.
-- In v0.1, because only capital operations exist, Invested is `0` and Value normally equals Cash. If entries are removed or edited, all figures are recalculated from the remaining active records; no alternate Value is introduced.
-- FundLog must not invent market value or any price-based valuation.
+- Soft-deleted entries do not contribute.
+- Portfolio reset soft-deletes portfolio entries.
+- Edits, removals, and resets must remain audit-ready when implemented.
+- FundLog must not invent market value or use price-based valuation.
+- Fees are not a portfolio-level summary field. If supported later, they belong within manual symbol trading calculations.
 
 ## Example scenarios
 
-### Create a portfolio with an initial inflow
+### Empty portfolio
 
-```console
-fundlog create stocks --initial 5000
-```
-
-Result:
-
-- Capital: `5000`
-- Cash: `5000`
-- Invested: `0`
-- Value: `5000`
-- PnL: `0` or N/A
-- Return: `0` or N/A
+| Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| stocks | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00% |
 
 ### Add an inflow
-
-Starting with Cash and Capital of `5000`:
 
 ```console
 fundlog inflow stocks 1000
 ```
 
-Result: Capital and Cash both become `6000`.
+Capital, Cash, and Book Value become `1000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
 
-### Add an outflow with sufficient Cash
-
-Starting with Cash and Capital of `6000`:
+### Add an outflow
 
 ```console
 fundlog outflow stocks 250
 ```
 
-Result: Capital and Cash both become `5750`. PnL is unchanged.
+After the preceding inflow, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
 
 ### Attempt an outflow with insufficient Cash
 
-Starting with Cash of `5750`:
-
 ```console
-fundlog outflow stocks 6000
+fundlog outflow stocks 1000
 ```
 
-Result: the command fails, no entry is created, and all balances remain unchanged.
-
-### Summary before trading features exist
-
-For the preceding successful entries:
-
-| id | Portfolio | Capital | Cash | Invested | Value | PnL | Return |
-|---:|---|---:|---:|---:|---:|---:|---:|
-| 1 | stocks | 5750 | 5750 | 0 | 5750 | 0 or N/A | 0 or N/A |
-
-The summary is ledger-derived. It contains no market price or manually entered portfolio value.
+With only `750.00` Cash available, the command fails, creates no entry, and leaves the summary unchanged.

@@ -120,7 +120,7 @@ fundlog summary stocks
 
 **Options:** None in v0.1.
 
-**Behavior:** Displays one row with `id`, `Portfolio`, `Capital`, `Cash`, `Invested`, `Value`, `PnL`, and `Return`, derived from active recorded entries.
+**Behavior:** Displays one row with `Portfolio`, `Capital`, `Cash`, `Positions`, `Book Value`, `Realized PnL`, `Income`, and `Return`, derived from active recorded entries. The internal portfolio ID is not displayed. Book Value is based only on manual records and is not market value.
 
 **Validation:** Portfolio must exist and be active. `PORTFOLIO` and `--all` are mutually exclusive forms.
 

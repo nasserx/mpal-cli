@@ -1,6 +1,6 @@
 # FundLog
 
-FundLog is a local-first CLI for manually recording capital movements across portfolios.
+FundLog is a fully manual, local-first CLI for recording capital movements across portfolios.
 
 The CLI command is `fundlog`. The package/distribution name is `fundlog-cli`.
 
@@ -12,13 +12,15 @@ The CLI command is `fundlog`. The package/distribution name is `fundlog-cli`.
 - A local database-backed CLI.
 - A foundation for future extensions.
 
-FundLog calculates its results from recorded operations. It does not accept a manually entered portfolio value.
+FundLog calculates its results only from manually recorded operations.
 
 ## Scope
 
-FundLog is intentionally simple. It does not fetch market data, calculate live prices, connect to external services, or provide financial advice.
+FundLog is intentionally simple. It does not fetch market data, calculate live prices, connect to market APIs or other external services, or provide financial advice.
 
 FundLog only works with the records you enter manually.
+
+Portfolio summaries use book/accounting values. Book Value is derived from manual records and is not market value.
 
 ## v0.1 examples
 

@@ -562,17 +562,18 @@ def test_summary_for_portfolio_with_no_entries(
 
     assert result.exit_code == 0
     for heading in (
-        "id",
         "Portfolio",
         "Capital",
         "Cash",
-        "Invested",
-        "Value",
-        "PnL",
+        "Positions",
+        "Book Value",
+        "Realized PnL",
+        "Income",
         "Return",
     ):
         assert heading in result.output
     assert "stocks" in result.output
+    assert result.output.count("0.00") >= 6
     assert "0.00%" in result.output
 
 
@@ -695,6 +696,47 @@ def test_summary_formats_money_with_two_decimal_places(
     assert result.exit_code == 0
     assert result.output.count("1.20") == 3
     assert "0.00" in result.output
+    assert "0.00%" in result.output
+
+
+def test_summary_hides_internal_and_ambiguous_columns(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert "│ id " not in result.output
+    assert "Invested" not in result.output
+    assert "│ Value " not in result.output
+    assert "│ PnL " not in result.output
+
+
+def test_summary_v01_book_fields_are_deterministic(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("750.00") == 3
+    assert "Positions" in result.output
+    assert "Book Value" in result.output
+    assert "Realized PnL" in result.output
+    assert "Income" in result.output
+    assert result.output.count("0.00") >= 4
     assert "0.00%" in result.output
 
 

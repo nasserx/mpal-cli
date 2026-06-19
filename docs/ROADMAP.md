@@ -30,13 +30,15 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 
 ## v0.3 — Investment operations
 
-- Record buys.
-- Record sells.
-- Record fees.
-- Record dividends.
-- Calculate invested cost.
+- Record manual buys.
+- Record manual sells.
+- Account for trade-associated fees within manual trade calculations.
+- Record manual distributions or dividends.
+- Calculate open-position book cost.
 - Calculate realized PnL.
-- Derive portfolio Value from recorded operations.
+- Feed manual results into Cash, Positions, Book Value, Realized PnL, and Income.
+
+FundLog will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
 
 ## v0.4 — Reporting and delivery
 
