@@ -1,6 +1,7 @@
 """Portfolio persistence operations."""
 
 import sqlite3
+from datetime import date
 from pathlib import Path
 
 from fundlog.config import get_database_path
@@ -49,3 +50,63 @@ def create_portfolio(name: str, database_path: Path | None = None) -> int:
     if cursor.lastrowid is None:
         raise RuntimeError("SQLite did not return a portfolio ID.")
     return cursor.lastrowid
+
+
+def create_portfolio_with_initial(
+    name: str,
+    amount_minor: int,
+    entry_date: date,
+    database_path: Path | None = None,
+) -> int:
+    """Atomically create a portfolio and its initial inflow entry."""
+    if not name.strip():
+        raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
+
+    path = database_path if database_path is not None else get_database_path()
+    if not path.is_file():
+        raise DatabaseNotInitializedError(
+            "FundLog is not initialized. Run 'fundlog init' first."
+        )
+
+    with sqlite3.connect(path) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("BEGIN IMMEDIATE")
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if not REQUIRED_TABLES.issubset(tables):
+            raise DatabaseNotInitializedError(
+                "FundLog is not initialized. Run 'fundlog init' first."
+            )
+
+        try:
+            portfolio_cursor = connection.execute(
+                "INSERT INTO portfolios (name) VALUES (?)",
+                (name,),
+            )
+        except sqlite3.IntegrityError as error:
+            raise PortfolioAlreadyExistsError(
+                f"An active portfolio named '{name}' already exists."
+            ) from error
+
+        portfolio_id = portfolio_cursor.lastrowid
+        if portfolio_id is None:
+            raise RuntimeError("SQLite did not return a portfolio ID.")
+
+        connection.execute(
+            """
+            INSERT INTO capital_entries (
+                portfolio_id,
+                entry_type,
+                amount_minor,
+                entry_date
+            )
+            VALUES (?, 'inflow', ?, ?)
+            """,
+            (portfolio_id, amount_minor, entry_date.isoformat()),
+        )
+
+    return portfolio_id

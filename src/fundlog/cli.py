@@ -17,6 +17,7 @@ from fundlog.output.console import (
 )
 from fundlog.storage import (
     create_portfolio,
+    create_portfolio_with_initial,
     edit_capital_entry,
     get_all_portfolio_summaries,
     get_capital_entry_log,
@@ -80,17 +81,24 @@ def create(
     ] = None,
 ) -> None:
     """Create a portfolio, optionally with initial capital."""
-    if initial is not None:
-        typer.echo("The --initial option is not implemented yet.", err=True)
-        raise typer.Exit(code=1)
-
     try:
-        create_portfolio(name)
+        if initial is None:
+            create_portfolio(name)
+        else:
+            amount_minor = parse_amount_minor(initial)
+            create_portfolio_with_initial(
+                name,
+                amount_minor,
+                local_date.today(),
+            )
     except FundLogError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from error
 
-    print_message(f"Portfolio '{name}' created.")
+    if initial is None:
+        print_message(f"Portfolio '{name}' created.")
+    else:
+        print_message(f"Portfolio '{name}' created with initial capital.")
 
 
 @app.command(context_settings={"ignore_unknown_options": True})

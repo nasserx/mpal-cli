@@ -197,7 +197,7 @@ def test_create_rejects_empty_name(tmp_path: Path, monkeypatch) -> None:
     assert "Portfolio name cannot be empty." in result.output
 
 
-def test_create_with_initial_is_not_implemented(
+def test_create_with_initial_creates_portfolio_and_inflow(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -207,14 +207,177 @@ def test_create_with_initial_is_not_implemented(
 
     result = runner.invoke(app, ["create", "stocks", "--initial", "5000"])
 
+    assert result.exit_code == 0
+    assert "Portfolio 'stocks' created with initial capital." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio = connection.execute(
+            "SELECT id, name, deleted_at FROM portfolios"
+        ).fetchone()
+        entries = connection.execute(
+            """
+            SELECT portfolio_id, entry_type, amount_minor, entry_date, deleted_at
+            FROM capital_entries
+            """
+        ).fetchall()
+
+    assert portfolio[1:] == ("stocks", None)
+    assert entries == [(portfolio[0], "inflow", 500000, date.today().isoformat(), None)]
+
+
+def test_create_with_initial_supports_decimal_amount(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "5000.50"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        amount_minor = connection.execute(
+            "SELECT amount_minor FROM capital_entries"
+        ).fetchone()[0]
+
+    assert amount_minor == 500050
+
+
+@pytest.mark.parametrize(
+    ("amount", "message"),
+    [
+        ("0", "Amount must be greater than zero."),
+        ("-10", "Amount must be greater than zero."),
+        ("not-a-number", "Invalid amount: 'not-a-number'."),
+        ("10.001", "Amount cannot have more than 2 decimal places."),
+        ("NaN", "Invalid amount: 'NaN'."),
+        ("Infinity", "Invalid amount: 'Infinity'."),
+    ],
+)
+def test_create_with_initial_rejects_invalid_amount(
+    tmp_path: Path,
+    monkeypatch,
+    amount: str,
+    message: str,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", amount])
+
     assert result.exit_code == 1
-    assert "--initial option is not implemented yet." in result.output
+    assert message in result.output
     with sqlite3.connect(data_dir / "fundlog.db") as connection:
         portfolio_count = connection.execute(
             "SELECT COUNT(*) FROM portfolios"
         ).fetchone()[0]
+        entry_count = connection.execute(
+            "SELECT COUNT(*) FROM capital_entries"
+        ).fetchone()[0]
 
     assert portfolio_count == 0
+    assert entry_count == 0
+
+
+def test_create_with_initial_fails_before_init(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "5000"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_duplicate_create_with_initial_creates_no_extra_entry(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "5000"])
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+
+    assert result.exit_code == 1
+    assert "An active portfolio named 'stocks' already exists." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_count = connection.execute(
+            "SELECT COUNT(*) FROM portfolios"
+        ).fetchone()[0]
+        entries = connection.execute(
+            "SELECT entry_type, amount_minor FROM capital_entries"
+        ).fetchall()
+
+    assert portfolio_count == 1
+    assert entries == [("inflow", 500000)]
+
+
+def test_create_with_initial_rolls_back_if_entry_insert_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER reject_initial_entry
+            BEFORE INSERT ON capital_entries
+            BEGIN
+                SELECT RAISE(ABORT, 'forced entry failure');
+            END
+            """
+        )
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "5000"])
+
+    assert result.exit_code == 1
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_count = connection.execute(
+            "SELECT COUNT(*) FROM portfolios"
+        ).fetchone()[0]
+        entry_count = connection.execute(
+            "SELECT COUNT(*) FROM capital_entries"
+        ).fetchone()[0]
+
+    assert portfolio_count == 0
+    assert entry_count == 0
+
+
+def test_summary_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "5000.50"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("5000.50") == 3
+    assert result.output.count("0.00") >= 4
+    assert "0.00%" in result.output
+
+
+def test_log_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "5000.50"])
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "inflow" in result.output
+    assert "5000.50" in result.output
+    assert date.today().isoformat() in result.output
 
 
 def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
