@@ -549,8 +549,164 @@ def test_outflow_cash_check_ignores_soft_deleted_entries(
     assert "Insufficient cash in portfolio 'stocks'." in result.output
 
 
-def test_summary_remains_a_placeholder() -> None:
+def test_summary_for_portfolio_with_no_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
     result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    for heading in (
+        "id",
+        "Portfolio",
+        "Capital",
+        "Cash",
+        "Invested",
+        "Value",
+        "PnL",
+        "Return",
+    ):
+        assert heading in result.output
+    assert "stocks" in result.output
+    assert "0.00%" in result.output
+
+
+def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000.50"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1000.50") == 3
+
+
+def test_summary_after_inflow_and_outflow(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250.25"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("749.75") == 3
+
+
+def test_summary_ignores_soft_deleted_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE amount_minor = 25000
+            """
+        )
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1000.00") == 3
+    assert "1250.00" not in result.output
+
+
+def test_summary_ignores_soft_deleted_outflow(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE entry_type = 'outflow'
+            """
+        )
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1000.00") == 3
+    assert "750.00" not in result.output
+
+
+def test_summary_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_summary_fails_for_unknown_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_summary_formats_money_with_two_decimal_places(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1.2"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1.20") == 3
+    assert "0.00" in result.output
+    assert "0.00%" in result.output
+
+
+def test_summary_all_is_not_implemented() -> None:
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 1
+    assert "--all option is not implemented yet." in result.output
+
+
+def test_log_remains_a_placeholder() -> None:
+    result = runner.invoke(app, ["log", "stocks"])
 
     assert result.exit_code == 0
     assert PLACEHOLDER_MESSAGE in result.output

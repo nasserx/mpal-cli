@@ -9,9 +9,10 @@ from fundlog import __version__
 from fundlog.amounts import parse_amount_minor
 from fundlog.config import APP_NAME
 from fundlog.errors import FundLogError, InvalidEntryDateError
-from fundlog.output.console import print_message
+from fundlog.output.console import print_message, print_portfolio_summary
 from fundlog.storage import (
     create_portfolio,
+    get_portfolio_summary,
     initialize_database,
     record_inflow,
     record_outflow,
@@ -154,7 +155,20 @@ def summary(
     ] = False,
 ) -> None:
     """Show one portfolio summary or all portfolio summaries."""
-    show_placeholder()
+    if all_portfolios:
+        typer.echo("The --all option is not implemented yet.", err=True)
+        raise typer.Exit(code=1)
+    if portfolio is None:
+        typer.echo("A portfolio name is required.", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        portfolio_summary = get_portfolio_summary(portfolio)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_portfolio_summary(portfolio_summary)
 
 
 @app.command()

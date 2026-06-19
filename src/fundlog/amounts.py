@@ -26,3 +26,10 @@ def parse_amount_minor(amount: str) -> int:
         raise InvalidAmountError("Amount cannot have more than 2 decimal places.")
 
     return int(minor_amount)
+
+
+def format_amount_minor(amount_minor: int) -> str:
+    """Format integer minor units as a decimal amount with two places."""
+    sign = "-" if amount_minor < 0 else ""
+    whole, fraction = divmod(abs(amount_minor), MINOR_UNITS_PER_UNIT)
+    return f"{sign}{whole}.{fraction:02d}"
