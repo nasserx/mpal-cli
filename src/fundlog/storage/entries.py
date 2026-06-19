@@ -333,3 +333,51 @@ def remove_capital_entry(
             """,
             (entry_id,),
         )
+
+
+def reset_portfolio_entries(
+    portfolio_name: str,
+    database_path: Path | None = None,
+) -> int:
+    """Atomically soft-delete all active entries for one active portfolio."""
+    path = database_path if database_path is not None else get_database_path()
+    if not path.is_file():
+        raise DatabaseNotInitializedError(
+            "FundLog is not initialized. Run 'fundlog init' first."
+        )
+
+    with sqlite3.connect(path) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("BEGIN IMMEDIATE")
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if not REQUIRED_TABLES.issubset(tables):
+            raise DatabaseNotInitializedError(
+                "FundLog is not initialized. Run 'fundlog init' first."
+            )
+
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        cursor = connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE portfolio_id = ?
+                AND deleted_at IS NULL
+            """,
+            (portfolio[0],),
+        )
+
+    return cursor.rowcount

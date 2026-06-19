@@ -6,6 +6,7 @@ from fundlog.storage.entries import (
     record_inflow,
     record_outflow,
     remove_capital_entry,
+    reset_portfolio_entries,
 )
 from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
 from fundlog.storage.portfolios import create_portfolio
@@ -22,4 +23,5 @@ __all__ = [
     "record_inflow",
     "record_outflow",
     "remove_capital_entry",
+    "reset_portfolio_entries",
 ]

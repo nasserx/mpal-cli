@@ -23,6 +23,7 @@ from fundlog.storage import (
     record_inflow,
     record_outflow,
     remove_capital_entry,
+    reset_portfolio_entries,
 )
 
 app = typer.Typer(
@@ -264,4 +265,14 @@ def reset(
     ] = False,
 ) -> None:
     """Reset portfolio entries while retaining the portfolio."""
-    show_placeholder()
+    if not yes:
+        typer.echo("Reset requires the --yes confirmation flag.", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        reset_portfolio_entries(portfolio)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Portfolio '{portfolio}' reset.")

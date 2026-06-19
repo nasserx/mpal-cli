@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from fundlog import __version__
-from fundlog.cli import PLACEHOLDER_MESSAGE, app
+from fundlog.cli import app
 
 runner = CliRunner()
 
@@ -1517,8 +1517,190 @@ def test_remove_cash_validation_ignores_soft_deleted_entries(
     assert result.exit_code == 0
 
 
-def test_reset_remains_a_placeholder() -> None:
+def test_reset_requires_initialized_database(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_reset_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_reset_requires_yes(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["reset", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Reset requires the --yes confirmation flag." in result.output
+
+
+def test_reset_without_yes_does_not_change_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    result = runner.invoke(app, ["reset", "stocks"])
+
+    assert result.exit_code == 1
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        deleted_at = connection.execute(
+            "SELECT deleted_at FROM capital_entries WHERE id = 1"
+        ).fetchone()[0]
+
+    assert deleted_at is None
+
+
+def test_reset_soft_deletes_all_active_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+
     result = runner.invoke(app, ["reset", "stocks", "--yes"])
 
     assert result.exit_code == 0
-    assert PLACEHOLDER_MESSAGE in result.output
+    assert "Portfolio 'stocks' reset." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            "SELECT id, deleted_at FROM capital_entries ORDER BY id"
+        ).fetchall()
+
+    assert [entry[0] for entry in entries] == [1, 2]
+    assert all(entry[1] is not None for entry in entries)
+
+
+def test_reset_preserves_already_soft_deleted_timestamp(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
+            ("2000-01-01 00:00:00",),
+        )
+
+    result = runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            "SELECT id, deleted_at FROM capital_entries ORDER BY id"
+        ).fetchall()
+
+    assert entries[0][1] is not None
+    assert entries[1] == (2, "2000-01-01 00:00:00")
+
+
+def test_reset_does_not_affect_other_portfolios(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["inflow", "crypto", "500"])
+
+    result = runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        rows = connection.execute(
+            """
+            SELECT p.name, e.deleted_at
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert rows[0] == ("crypto", None)
+    assert rows[1][0] == "stocks"
+    assert rows[1][1] is not None
+
+
+def test_log_is_empty_after_reset(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "No active capital entries for portfolio 'stocks'." in result.output
+
+
+def test_summary_is_zero_after_reset(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+    runner.invoke(app, ["reset", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.count("0.00") >= 6
+    assert "0.00%" in result.output
+    assert "750.00" not in result.output
+
+
+def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    reset_result = runner.invoke(app, ["reset", "stocks", "--yes"])
+    summary_result = runner.invoke(app, ["summary", "stocks"])
+
+    assert reset_result.exit_code == 0
+    assert summary_result.exit_code == 0
+    assert "stocks" in summary_result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio = connection.execute(
+            "SELECT name, deleted_at FROM portfolios WHERE name = 'stocks'"
+        ).fetchone()
+
+    assert portfolio == ("stocks", None)
