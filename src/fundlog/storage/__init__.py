@@ -10,13 +10,18 @@ from fundlog.storage.entries import (
 )
 from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
 from fundlog.storage.portfolios import create_portfolio
-from fundlog.storage.summaries import PortfolioSummary, get_portfolio_summary
+from fundlog.storage.summaries import (
+    PortfolioSummary,
+    get_all_portfolio_summaries,
+    get_portfolio_summary,
+)
 
 __all__ = [
     "CapitalEntry",
     "PortfolioSummary",
     "create_portfolio",
     "edit_capital_entry",
+    "get_all_portfolio_summaries",
     "get_capital_entry_log",
     "get_portfolio_summary",
     "initialize_database",

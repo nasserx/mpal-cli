@@ -12,11 +12,13 @@ from fundlog.errors import FundLogError, InvalidEntryDateError
 from fundlog.output.console import (
     print_capital_entry_log,
     print_message,
+    print_portfolio_summaries,
     print_portfolio_summary,
 )
 from fundlog.storage import (
     create_portfolio,
     edit_capital_entry,
+    get_all_portfolio_summaries,
     get_capital_entry_log,
     get_portfolio_summary,
     initialize_database,
@@ -166,9 +168,24 @@ def summary(
     ] = False,
 ) -> None:
     """Show one portfolio summary or all portfolio summaries."""
-    if all_portfolios:
-        typer.echo("The --all option is not implemented yet.", err=True)
+    if all_portfolios and portfolio is not None:
+        typer.echo(
+            "A portfolio name cannot be combined with --all.",
+            err=True,
+        )
         raise typer.Exit(code=1)
+    if all_portfolios:
+        try:
+            portfolio_summaries = get_all_portfolio_summaries()
+        except FundLogError as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from error
+
+        if not portfolio_summaries:
+            print_message("No active portfolios.")
+            return
+        print_portfolio_summaries(portfolio_summaries)
+        return
     if portfolio is None:
         typer.echo("A portfolio name is required.", err=True)
         raise typer.Exit(code=1)

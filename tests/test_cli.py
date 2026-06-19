@@ -740,11 +740,169 @@ def test_summary_v01_book_fields_are_deterministic(
     assert "0.00%" in result.output
 
 
-def test_summary_all_is_not_implemented() -> None:
+def test_summary_all_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
     result = runner.invoke(app, ["summary", "--all"])
 
     assert result.exit_code == 1
-    assert "--all option is not implemented yet." in result.output
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_summary_all_with_no_portfolios(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert "No active portfolios." in result.output
+
+
+def test_summary_all_lists_multiple_active_portfolios(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert "stocks" in result.output
+    assert "crypto" in result.output
+
+
+def test_summary_all_uses_exact_documented_columns(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    for heading in (
+        "Portfolio",
+        "Capital",
+        "Cash",
+        "Positions",
+        "Book Value",
+        "Realized PnL",
+        "Income",
+        "Return",
+    ):
+        assert heading in result.output
+    assert "│ id " not in result.output
+    assert "Invested" not in result.output
+    assert "│ Value " not in result.output
+    assert "│ PnL " not in result.output
+
+
+def test_summary_all_derives_each_portfolio_independently(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+    runner.invoke(app, ["inflow", "crypto", "500.50"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert result.output.count("750.00") == 3
+    assert result.output.count("500.50") == 3
+
+
+def test_summary_all_ignores_soft_deleted_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
+        )
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1000.00") == 3
+    assert "1250.00" not in result.output
+
+
+def test_summary_all_ignores_soft_deleted_portfolios(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            "UPDATE portfolios SET deleted_at = CURRENT_TIMESTAMP WHERE name = ?",
+            ("crypto",),
+        )
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert "stocks" in result.output
+    assert "crypto" not in result.output
+
+
+def test_summary_all_ordering_is_name_ascending(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["create", "gold"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert result.output.index("crypto") < result.output.index("gold")
+    assert result.output.index("gold") < result.output.index("stocks")
+
+
+def test_summary_rejects_portfolio_with_all_flag(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["summary", "stocks", "--all"])
+
+    assert result.exit_code == 1
+    assert "A portfolio name cannot be combined with --all." in result.output
 
 
 def test_log_fails_before_init(tmp_path: Path, monkeypatch) -> None:

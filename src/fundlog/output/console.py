@@ -15,6 +15,11 @@ def print_message(message: str) -> None:
 
 def print_portfolio_summary(summary: PortfolioSummary) -> None:
     """Print one portfolio summary using the documented columns."""
+    print_portfolio_summaries([summary])
+
+
+def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
+    """Print portfolio summaries using the documented columns."""
     table = Table()
     table.add_column("Portfolio")
     table.add_column("Capital", justify="right")
@@ -24,16 +29,17 @@ def print_portfolio_summary(summary: PortfolioSummary) -> None:
     table.add_column("Realized PnL", justify="right")
     table.add_column("Income", justify="right")
     table.add_column("Return", justify="right")
-    table.add_row(
-        summary.portfolio_name,
-        format_amount_minor(summary.capital_minor),
-        format_amount_minor(summary.cash_minor),
-        format_amount_minor(summary.positions_minor),
-        format_amount_minor(summary.book_value_minor),
-        format_amount_minor(summary.realized_pnl_minor),
-        format_amount_minor(summary.income_minor),
-        "0.00%",
-    )
+    for summary in summaries:
+        table.add_row(
+            summary.portfolio_name,
+            format_amount_minor(summary.capital_minor),
+            format_amount_minor(summary.cash_minor),
+            format_amount_minor(summary.positions_minor),
+            format_amount_minor(summary.book_value_minor),
+            format_amount_minor(summary.realized_pnl_minor),
+            format_amount_minor(summary.income_minor),
+            "0.00%",
+        )
     Console(width=120).print(table)
 
 

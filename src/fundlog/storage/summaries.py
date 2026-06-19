@@ -1,4 +1,4 @@
-"""Single-portfolio summary queries."""
+"""Portfolio summary queries."""
 
 import sqlite3
 from dataclasses import dataclass
@@ -74,6 +74,59 @@ def get_portfolio_summary(
             f"Active portfolio '{portfolio_name}' does not exist."
         )
 
+    return _summary_from_row(row)
+
+
+def get_all_portfolio_summaries(
+    database_path: Path | None = None,
+) -> list[PortfolioSummary]:
+    """Return summaries for all active portfolios ordered by name."""
+    path = database_path if database_path is not None else get_database_path()
+    if not path.is_file():
+        raise DatabaseNotInitializedError(
+            "FundLog is not initialized. Run 'fundlog init' first."
+        )
+
+    with sqlite3.connect(path) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if not REQUIRED_TABLES.issubset(tables):
+            raise DatabaseNotInitializedError(
+                "FundLog is not initialized. Run 'fundlog init' first."
+            )
+
+        rows = connection.execute(
+            """
+            SELECT
+                p.name,
+                COALESCE(
+                    SUM(
+                        CASE e.entry_type
+                            WHEN 'inflow' THEN e.amount_minor
+                            WHEN 'outflow' THEN -e.amount_minor
+                        END
+                    ),
+                    0
+                )
+            FROM portfolios AS p
+            LEFT JOIN capital_entries AS e
+                ON e.portfolio_id = p.id
+                AND e.deleted_at IS NULL
+            WHERE p.deleted_at IS NULL
+            GROUP BY p.id, p.name
+            ORDER BY p.name ASC
+            """
+        ).fetchall()
+
+    return [_summary_from_row(row) for row in rows]
+
+
+def _summary_from_row(row: tuple[str, int]) -> PortfolioSummary:
+    """Build a v0.1 summary from a name and active capital total."""
     capital_minor = row[1]
     positions_minor = 0
     return PortfolioSummary(
