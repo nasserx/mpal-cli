@@ -9,9 +9,14 @@ from fundlog import __version__
 from fundlog.amounts import parse_amount_minor
 from fundlog.config import APP_NAME
 from fundlog.errors import FundLogError, InvalidEntryDateError
-from fundlog.output.console import print_message, print_portfolio_summary
+from fundlog.output.console import (
+    print_capital_entry_log,
+    print_message,
+    print_portfolio_summary,
+)
 from fundlog.storage import (
     create_portfolio,
+    get_capital_entry_log,
     get_portfolio_summary,
     initialize_database,
     record_inflow,
@@ -176,7 +181,16 @@ def log(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
 ) -> None:
     """Show the capital-entry log for a portfolio."""
-    show_placeholder()
+    try:
+        entries = get_capital_entry_log(portfolio)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    if not entries:
+        print_message(f"No active capital entries for portfolio '{portfolio}'.")
+        return
+    print_capital_entry_log(entries)
 
 
 @app.command()

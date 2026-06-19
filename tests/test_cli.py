@@ -705,8 +705,175 @@ def test_summary_all_is_not_implemented() -> None:
     assert "--all option is not implemented yet." in result.output
 
 
-def test_log_remains_a_placeholder() -> None:
+def test_log_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
     result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_log_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_log_for_empty_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "No active capital entries for portfolio 'stocks'." in result.output
+
+
+def test_log_shows_inflow_entry_with_date_note_and_amount(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(
+        app,
+        [
+            "inflow",
+            "stocks",
+            "1000.5",
+            "--date",
+            "2026-06-19",
+            "--note",
+            "initial deposit",
+        ],
+    )
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    for heading in ("id", "Date", "Type", "Amount", "Note"):
+        assert heading in result.output
+    assert "2026-06-19" in result.output
+    assert "inflow" in result.output
+    assert "1000.50" in result.output
+    assert "initial deposit" in result.output
+
+
+def test_log_shows_outflow_entry(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["inflow", "stocks", "500"])
+    runner.invoke(
+        app,
+        [
+            "outflow",
+            "stocks",
+            "250",
+            "--date",
+            "2026-06-20",
+            "--note",
+            "withdrawal",
+        ],
+    )
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "outflow" in result.output
+    assert "250.00" in result.output
+    assert "2026-06-20" in result.output
+    assert "withdrawal" in result.output
+
+
+def test_log_ignores_soft_deleted_entries(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(
+        app,
+        ["inflow", "stocks", "100", "--note", "keep this"],
+    )
+    runner.invoke(
+        app,
+        ["inflow", "stocks", "200", "--note", "hide this"],
+    )
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE note = 'hide this'
+            """
+        )
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "keep this" in result.output
+    assert "hide this" not in result.output
+
+
+def test_log_only_shows_selected_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "stocks", "100", "--note", "stock entry"])
+    runner.invoke(app, ["inflow", "crypto", "200", "--note", "crypto entry"])
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert "stock entry" in result.output
+    assert "crypto entry" not in result.output
+
+
+def test_log_ordering_is_date_then_id(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(
+        app,
+        ["inflow", "stocks", "300", "--date", "2026-06-20", "--note", "third"],
+    )
+    runner.invoke(
+        app,
+        ["inflow", "stocks", "100", "--date", "2026-06-19", "--note", "first"],
+    )
+    runner.invoke(
+        app,
+        ["inflow", "stocks", "200", "--date", "2026-06-19", "--note", "second"],
+    )
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 0
+    assert result.output.index("first") < result.output.index("second")
+    assert result.output.index("second") < result.output.index("third")
+
+
+def test_edit_remains_a_placeholder() -> None:
+    result = runner.invoke(app, ["edit", "stocks", "1", "--amount", "100"])
 
     assert result.exit_code == 0
     assert PLACEHOLDER_MESSAGE in result.output

@@ -2,12 +2,15 @@
 
 from fundlog.storage.database import initialize_database
 from fundlog.storage.entries import record_inflow, record_outflow
+from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
 from fundlog.storage.portfolios import create_portfolio
 from fundlog.storage.summaries import PortfolioSummary, get_portfolio_summary
 
 __all__ = [
+    "CapitalEntry",
     "PortfolioSummary",
     "create_portfolio",
+    "get_capital_entry_log",
     "get_portfolio_summary",
     "initialize_database",
     "record_inflow",

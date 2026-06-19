@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.table import Table
 
 from fundlog.amounts import format_amount_minor
+from fundlog.storage.logs import CapitalEntry
 from fundlog.storage.summaries import PortfolioSummary
 
 
@@ -33,4 +34,23 @@ def print_portfolio_summary(summary: PortfolioSummary) -> None:
         "0.00",
         "0.00%",
     )
+    Console().print(table)
+
+
+def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
+    """Print active capital entries using the documented log columns."""
+    table = Table()
+    table.add_column("id", justify="right")
+    table.add_column("Date")
+    table.add_column("Type")
+    table.add_column("Amount", justify="right")
+    table.add_column("Note")
+    for entry in entries:
+        table.add_row(
+            str(entry.entry_id),
+            entry.entry_date,
+            entry.entry_type,
+            format_amount_minor(entry.amount_minor),
+            entry.note or "",
+        )
     Console().print(table)
