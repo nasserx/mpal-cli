@@ -43,3 +43,7 @@ class CapitalEntryPortfolioMismatchError(FundLogError):
 
 class InvalidLedgerEditError(FundLogError):
     """Raised when an edit would make the active ledger invalid."""
+
+
+class InvalidLedgerRemoveError(FundLogError):
+    """Raised when a removal would make the active ledger invalid."""

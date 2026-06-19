@@ -22,6 +22,7 @@ from fundlog.storage import (
     initialize_database,
     record_inflow,
     record_outflow,
+    remove_capital_entry,
 )
 
 app = typer.Typer(
@@ -245,7 +246,13 @@ def remove(
     entry_id: Annotated[int, typer.Argument(help="Capital entry ID.")],
 ) -> None:
     """Soft-remove a portfolio capital entry."""
-    show_placeholder()
+    try:
+        remove_capital_entry(portfolio, entry_id)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Capital entry {entry_id} removed from portfolio '{portfolio}'.")
 
 
 @app.command()

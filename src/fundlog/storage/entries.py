@@ -11,6 +11,7 @@ from fundlog.errors import (
     DatabaseNotInitializedError,
     InsufficientCashError,
     InvalidLedgerEditError,
+    InvalidLedgerRemoveError,
     PortfolioNotFoundError,
 )
 
@@ -246,4 +247,89 @@ def edit_capital_entry(
         connection.execute(
             f"UPDATE capital_entries SET {', '.join(assignments)} WHERE id = ?",
             values,
+        )
+
+
+def remove_capital_entry(
+    portfolio_name: str,
+    entry_id: int,
+    database_path: Path | None = None,
+) -> None:
+    """Atomically soft-delete one active capital entry."""
+    path = database_path if database_path is not None else get_database_path()
+    if not path.is_file():
+        raise DatabaseNotInitializedError(
+            "FundLog is not initialized. Run 'fundlog init' first."
+        )
+
+    with sqlite3.connect(path) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("BEGIN IMMEDIATE")
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if not REQUIRED_TABLES.issubset(tables):
+            raise DatabaseNotInitializedError(
+                "FundLog is not initialized. Run 'fundlog init' first."
+            )
+
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        entry = connection.execute(
+            """
+            SELECT portfolio_id, deleted_at
+            FROM capital_entries
+            WHERE id = ?
+            """,
+            (entry_id,),
+        ).fetchone()
+        if entry is None:
+            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} does not exist.")
+        if entry[1] is not None:
+            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} is not active.")
+        if entry[0] != portfolio[0]:
+            raise CapitalEntryPortfolioMismatchError(
+                f"Capital entry {entry_id} does not belong to portfolio "
+                f"'{portfolio_name}'."
+            )
+
+        cash_without_entry = connection.execute(
+            """
+            SELECT COALESCE(
+                SUM(
+                    CASE entry_type
+                        WHEN 'inflow' THEN amount_minor
+                        WHEN 'outflow' THEN -amount_minor
+                    END
+                ),
+                0
+            )
+            FROM capital_entries
+            WHERE portfolio_id = ?
+                AND deleted_at IS NULL
+                AND id != ?
+            """,
+            (portfolio[0], entry_id),
+        ).fetchone()[0]
+        if cash_without_entry < 0:
+            raise InvalidLedgerRemoveError("Remove would make portfolio cash negative.")
+
+        connection.execute(
+            """
+            UPDATE capital_entries
+            SET deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (entry_id,),
         )
