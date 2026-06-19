@@ -1,14 +1,16 @@
 """FundLog command-line interface."""
 
+from datetime import date as local_date
 from typing import Annotated
 
 import typer
 
 from fundlog import __version__
+from fundlog.amounts import parse_amount_minor
 from fundlog.config import APP_NAME
-from fundlog.errors import FundLogError
+from fundlog.errors import FundLogError, InvalidEntryDateError
 from fundlog.output.console import print_message
-from fundlog.storage import create_portfolio, initialize_database
+from fundlog.storage import create_portfolio, initialize_database, record_inflow
 
 app = typer.Typer(
     name="fundlog",
@@ -75,7 +77,7 @@ def create(
     print_message(f"Portfolio '{name}' created.")
 
 
-@app.command()
+@app.command(context_settings={"ignore_unknown_options": True})
 def inflow(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     amount: Annotated[str, typer.Argument(help="Capital inflow amount.")],
@@ -89,7 +91,25 @@ def inflow(
     ] = None,
 ) -> None:
     """Record capital entering a portfolio."""
-    show_placeholder()
+    try:
+        amount_minor = parse_amount_minor(amount)
+        entry_date = local_date.today() if date is None else _parse_entry_date(date)
+        record_inflow(portfolio, amount_minor, entry_date, note)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Inflow recorded for portfolio '{portfolio}'.")
+
+
+def _parse_entry_date(value: str) -> local_date:
+    """Parse an ISO entry date."""
+    try:
+        return local_date.fromisoformat(value)
+    except ValueError as error:
+        raise InvalidEntryDateError(
+            f"Invalid date: '{value}'. Use YYYY-MM-DD."
+        ) from error
 
 
 @app.command()

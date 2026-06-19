@@ -1,6 +1,7 @@
 """Smoke tests for the FundLog CLI scaffold."""
 
 import sqlite3
+from datetime import date
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -215,8 +216,154 @@ def test_create_with_initial_is_not_implemented(
     assert portfolio_count == 0
 
 
-def test_non_create_command_remains_a_placeholder() -> None:
+def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
     result = runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    assert result.exit_code == 0
+    assert "Inflow recorded for portfolio 'stocks'." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry = connection.execute(
+            """
+            SELECT p.name, e.entry_type, e.amount_minor, e.entry_date, e.note
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            """
+        ).fetchone()
+
+    assert entry == ("stocks", "inflow", 100000, date.today().isoformat(), None)
+
+
+def test_inflow_stores_decimal_amount_as_minor_units(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(
+        app,
+        [
+            "inflow",
+            "stocks",
+            "1000.50",
+            "--date",
+            "2026-06-19",
+            "--note",
+            "initial deposit",
+        ],
+    )
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry = connection.execute(
+            "SELECT amount_minor, entry_date, note FROM capital_entries"
+        ).fetchone()
+
+    assert entry == (100050, "2026-06-19", "initial deposit")
+
+
+def test_inflow_rejects_zero_amount(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["inflow", "stocks", "0"])
+
+    assert result.exit_code == 1
+    assert "Amount must be greater than zero." in result.output
+
+
+def test_inflow_rejects_negative_amount(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["inflow", "stocks", "-10"])
+
+    assert result.exit_code == 1
+    assert "Amount must be greater than zero." in result.output
+
+
+def test_inflow_rejects_invalid_amount(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["inflow", "stocks", "not-a-number"])
+
+    assert result.exit_code == 1
+    assert "Invalid amount: 'not-a-number'." in result.output
+
+
+def test_inflow_rejects_more_than_two_decimal_places(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["inflow", "stocks", "10.001"])
+
+    assert result.exit_code == 1
+    assert "Amount cannot have more than 2 decimal places." in result.output
+
+
+def test_inflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_inflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_inflow_fails_for_soft_deleted_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            "UPDATE portfolios SET deleted_at = CURRENT_TIMESTAMP WHERE name = ?",
+            ("stocks",),
+        )
+
+    result = runner.invoke(app, ["inflow", "stocks", "1000"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_outflow_remains_a_placeholder() -> None:
+    result = runner.invoke(app, ["outflow", "stocks", "1000"])
 
     assert result.exit_code == 0
     assert PLACEHOLDER_MESSAGE in result.output

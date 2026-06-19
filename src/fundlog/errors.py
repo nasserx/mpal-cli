@@ -15,3 +15,15 @@ class PortfolioAlreadyExistsError(FundLogError):
 
 class InvalidPortfolioNameError(FundLogError):
     """Raised when a portfolio name is empty."""
+
+
+class PortfolioNotFoundError(FundLogError):
+    """Raised when an active portfolio cannot be found."""
+
+
+class InvalidAmountError(FundLogError):
+    """Raised when a monetary amount is invalid."""
+
+
+class InvalidEntryDateError(FundLogError):
+    """Raised when a capital entry date is invalid."""
