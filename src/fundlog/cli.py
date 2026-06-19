@@ -6,8 +6,9 @@ import typer
 
 from fundlog import __version__
 from fundlog.config import APP_NAME
+from fundlog.errors import FundLogError
 from fundlog.output.console import print_message
-from fundlog.storage import initialize_database
+from fundlog.storage import create_portfolio, initialize_database
 
 app = typer.Typer(
     name="fundlog",
@@ -61,7 +62,17 @@ def create(
     ] = None,
 ) -> None:
     """Create a portfolio, optionally with initial capital."""
-    show_placeholder()
+    if initial is not None:
+        typer.echo("The --initial option is not implemented yet.", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        create_portfolio(name)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Portfolio '{name}' created.")
 
 
 @app.command()

@@ -127,8 +127,96 @@ def test_init_is_idempotent(tmp_path: Path, monkeypatch) -> None:
     assert portfolio_count == 1
 
 
-def test_non_init_command_remains_a_placeholder() -> None:
+def test_create_portfolio_after_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
     result = runner.invoke(app, ["create", "stocks"])
+
+    assert result.exit_code == 0
+    assert "Portfolio 'stocks' created." in result.output
+
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolios = connection.execute(
+            "SELECT name, deleted_at FROM portfolios"
+        ).fetchall()
+
+    assert portfolios == [("stocks", None)]
+
+
+def test_duplicate_active_portfolio_fails(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["create", "stocks"])
+
+    assert result.exit_code == 1
+    assert "An active portfolio named 'stocks' already exists." in result.output
+
+
+def test_create_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["create", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_create_does_not_create_capital_entries(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["create", "stocks"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry_count = connection.execute(
+            "SELECT COUNT(*) FROM capital_entries"
+        ).fetchone()[0]
+
+    assert entry_count == 0
+
+
+def test_create_rejects_empty_name(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["create", ""])
+
+    assert result.exit_code == 1
+    assert "Portfolio name cannot be empty." in result.output
+
+
+def test_create_with_initial_is_not_implemented(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "5000"])
+
+    assert result.exit_code == 1
+    assert "--initial option is not implemented yet." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_count = connection.execute(
+            "SELECT COUNT(*) FROM portfolios"
+        ).fetchone()[0]
+
+    assert portfolio_count == 0
+
+
+def test_non_create_command_remains_a_placeholder() -> None:
+    result = runner.invoke(app, ["inflow", "stocks", "1000"])
 
     assert result.exit_code == 0
     assert PLACEHOLDER_MESSAGE in result.output
