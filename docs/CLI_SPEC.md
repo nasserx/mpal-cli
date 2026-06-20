@@ -86,9 +86,9 @@ temporarily as hidden compatibility aliases:
 | `fundlog buy` | `fundlog asset buy` |
 | `fundlog sell` | `fundlog asset sell` |
 
-`fundlog asset list <portfolio>` may remain as a hidden compatibility alias for
-`fundlog asset summary <portfolio>`. The implementation should make that choice
-explicit when the portfolio-wide asset summary is added.
+`fundlog asset list <portfolio>` is implemented as a hidden compatibility alias
+for `fundlog asset summary <portfolio>`. It returns the same output and remains
+callable for existing scripts.
 
 Aliases must preserve existing arguments, validation, output, exit behavior,
 and storage effects. They should delegate to the same command/service path as
@@ -119,7 +119,7 @@ The compatibility spellings should remain callable but hidden:
 - Root `create`, `summary`, `reset`, `delete`
 - Root `inflow`, `outflow`, `log`, `edit`
 - Root `income`, `buy`, `sell`
-- `asset list`, if retained as the portfolio-wide asset-summary alias
+- `asset list`, the portfolio-wide asset-summary compatibility alias
 
 Hidden aliases are transitional compatibility behavior, not the preferred
 interface. Before a stable v1 release, the project should explicitly decide
@@ -131,15 +131,11 @@ whether to retain, deprecate, or remove them.
    or accounting services.
 2. Move asset income, buy, and sell command registration under `asset` while
    reusing the existing handlers and validation.
-3. Extend `asset summary` to accept either `<portfolio>` or
-   `<portfolio>/<symbol>`.
-4. Register current root spellings as hidden aliases that delegate to the same
+3. Register current root spellings as hidden aliases that delegate to the same
    implementation paths.
-5. Decide whether `asset list` remains as a hidden alias for portfolio-wide
-   `asset summary`.
-6. Update help tests and user documentation only after the organized commands
+4. Update help tests and user documentation only after the organized commands
    are executable.
-7. Evaluate compatibility alias removal separately before stable v1.
+5. Evaluate compatibility alias removal separately before stable v1.
 
 ## Command conventions
 
@@ -448,34 +444,41 @@ symbols in one command and symbols already active in the portfolio are rejected.
 **Errors:** FundLog is not initialized; unknown portfolio; invalid symbol;
 duplicate symbol; active asset already exists; database failure.
 
-## `fundlog asset list PORTFOLIO`
+## `fundlog asset summary PORTFOLIO`
 
 Example:
 
 ```console
-fundlog asset list stocks
+fundlog asset summary stocks
 ```
 
-**Purpose:** List active assets in one portfolio.
+**Purpose:** Show derived summaries for all active assets in one portfolio.
 
 **Arguments:**
 
 - `PORTFOLIO`: Existing active portfolio.
 
-**Options:** None in the asset foundation.
+**Options:** None.
 
 **Behavior:** Displays active assets ordered by uppercase symbol using
-`Symbol`, `Quantity`, `Cost Basis`, `Realized PnL`, `Income`, and
-`Realized Return`. Quantity and Cost Basis reflect active buy and sell
-transactions. Realized PnL reflects active sells, and Income reflects active
-income transactions. Realized Return is `(Realized PnL + Income) / Total Buy
-Cost`, or `0.00%` when Total Buy Cost is zero.
+`Asset`, `Quantity`, `Cost Basis`, `Average Cost`, `Realized PnL`, `Income`,
+and `Realized Return`. Quantity and Cost Basis reflect active buy and sell
+transactions. Average Cost is `Cost Basis / Quantity`, or `--` when Quantity
+is zero. Realized PnL reflects active sells, and Income reflects active income
+transactions. Realized Return is `(Realized PnL + Income) / Total Buy Cost`, or
+`0.00%` when Total Buy Cost is zero.
 Internal database IDs are not displayed. An existing portfolio with no assets
 prints a deterministic empty-list message.
 
 **Validation:** The portfolio must exist and be active.
 
 **Errors:** FundLog is not initialized; unknown portfolio; database failure.
+
+## `fundlog asset list PORTFOLIO`
+
+This remains callable as a hidden compatibility alias for
+`fundlog asset summary PORTFOLIO`. It has identical output, validation, and
+errors, but is not shown in normal help or recommended documentation.
 
 ## `fundlog asset delete PORTFOLIO/SYMBOL --yes`
 

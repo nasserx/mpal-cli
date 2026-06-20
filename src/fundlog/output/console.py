@@ -101,15 +101,16 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 
 
 def print_assets(assets: list[Asset]) -> None:
-    """Print active assets using the initial asset-foundation columns."""
+    """Print portfolio-wide active asset summaries."""
     table = Table(
         header_style=TABLE_HEADER,
         border_style=TABLE_BORDER,
         style=TABLE_CELL,
     )
-    table.add_column("Symbol")
+    table.add_column("Asset")
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
+    table.add_column("Average Cost", justify="right")
     table.add_column("Realized PnL", justify="right")
     table.add_column("Income", justify="right")
     table.add_column("Realized Return", justify="right")
@@ -118,6 +119,7 @@ def print_assets(assets: list[Asset]) -> None:
             asset.symbol,
             format_quantity(asset.quantity),
             format_money(asset.cost_basis_minor),
+            _format_average_cost(asset.cost_basis_minor, asset.quantity),
             format_profit_loss_money(asset.realized_pnl_minor),
             format_income_money(asset.income_minor),
             format_profit_loss_percent(
@@ -125,7 +127,7 @@ def print_assets(assets: list[Asset]) -> None:
                 asset.total_buy_cost_minor,
             ),
         )
-    Console().print(table)
+    Console(width=120).print(table)
 
 
 def print_asset_summary(portfolio_name: str, asset: Asset) -> None:

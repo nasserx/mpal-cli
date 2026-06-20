@@ -73,7 +73,7 @@ HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
         "fundlog delete <portfolio> --yes",
         "fundlog reset <portfolio> --yes",
         ASSET_ADD_SHAPE,
-        "fundlog asset list <portfolio>",
+        "fundlog asset summary <portfolio>",
         "fundlog asset log <portfolio>/<symbol>",
         "fundlog asset summary <portfolio>/<symbol>",
         "fundlog asset delete <portfolio>/<symbol> --yes",
@@ -89,9 +89,9 @@ HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
 ASSET_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
     (
         ASSET_ADD_SHAPE,
-        "fundlog asset list <portfolio>",
-        "fundlog asset log <portfolio>/<symbol>",
+        "fundlog asset summary <portfolio>",
         "fundlog asset summary <portfolio>/<symbol>",
+        "fundlog asset log <portfolio>/<symbol>",
         "fundlog asset delete <portfolio>/<symbol> --yes",
     )
 )
@@ -182,11 +182,16 @@ def asset_add(
     )
 
 
-@asset_app.command("list")
+@asset_app.command("list", hidden=True)
 def asset_list(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
 ) -> None:
-    """List active assets in a portfolio."""
+    """Compatibility alias for portfolio-wide asset summary."""
+    _print_portfolio_asset_summary(portfolio)
+
+
+def _print_portfolio_asset_summary(portfolio: str) -> None:
+    """Print every active asset summary for one active portfolio."""
     try:
         assets = get_assets(portfolio)
     except FundLogError as error:
@@ -227,14 +232,20 @@ def asset_delete(
 
 @asset_app.command("summary")
 def asset_summary(
-    reference: Annotated[
+    target: Annotated[
         str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+        typer.Argument(
+            help="Portfolio name or asset reference in <portfolio>/<symbol> form."
+        ),
     ],
 ) -> None:
-    """Show the derived accounting summary for an asset."""
+    """Show all asset summaries in a portfolio or one asset summary."""
+    if "/" not in target:
+        _print_portfolio_asset_summary(target)
+        return
+
     try:
-        portfolio, symbol = parse_asset_reference(reference)
+        portfolio, symbol = parse_asset_reference(target)
         summary = get_asset_summary(portfolio, symbol)
     except FundLogError as error:
         print_error(str(error))

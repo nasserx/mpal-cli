@@ -70,7 +70,7 @@ def test_asset_summary_requires_initialized_database(
 
 @pytest.mark.parametrize(
     "reference",
-    ["stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"],
+    ["/AAPL", "stocks/", "stocks/AAPL/extra"],
 )
 def test_asset_summary_rejects_invalid_asset_reference(
     tmp_path: Path,
@@ -84,6 +84,125 @@ def test_asset_summary_rejects_invalid_asset_reference(
     assert result.exit_code == 1
     assert "Invalid asset reference" in result.output
     assert "Traceback" not in result.output
+
+
+def test_portfolio_asset_summary_requires_initialized_database(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["asset", "summary", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_portfolio_asset_summary_requires_active_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["asset", "summary", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_portfolio_asset_summary_shows_empty_message(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+
+    result = runner.invoke(app, ["asset", "summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert "No active assets for portfolio 'stocks'." in result.output
+
+
+def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch, symbols=("MSFT", "AAPL"))
+    _buy("stocks/AAPL", price="100", quantity="10")
+    _sell("stocks/AAPL", price="150", quantity="3")
+    runner.invoke(app, ["income", "stocks/AAPL", "20"])
+    _buy("stocks/MSFT", price="50", quantity="4")
+    _sell("stocks/MSFT", price="80", quantity="1")
+    runner.invoke(app, ["income", "stocks/MSFT", "10"])
+
+    result = runner.invoke(app, ["asset", "summary", "stocks"])
+
+    assert result.exit_code == 0
+    for column in (
+        "Asset",
+        "Quantity",
+        "Cost Basis",
+        "Average Cost",
+        "Realized PnL",
+        "Income",
+        "Realized Return",
+    ):
+        assert column in result.output
+    assert result.output.index("AAPL") < result.output.index("MSFT")
+    aapl_row = next(line for line in result.output.splitlines() if "AAPL" in line)
+    msft_row = next(line for line in result.output.splitlines() if "MSFT" in line)
+    assert " 7 " in aapl_row
+    assert "700.00" in aapl_row
+    assert " 100 " in aapl_row
+    assert "+150.00" in aapl_row
+    assert "20.00" in aapl_row
+    assert "+17.00%" in aapl_row
+    assert " 3 " in msft_row
+    assert "150.00" in msft_row
+    assert " 50 " in msft_row
+    assert "+30.00" in msft_row
+    assert "10.00" in msft_row
+    assert "+20.00%" in msft_row
+    assert " ID " not in result.output.upper()
+
+
+def test_portfolio_asset_summary_excludes_deleted_assets(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch, symbols=("AAPL", "MSFT"))
+    _buy("stocks/AAPL", price="100", quantity="1")
+    _buy("stocks/MSFT", price="50", quantity="1")
+    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    result = runner.invoke(app, ["asset", "summary", "stocks"])
+
+    assert result.exit_code == 0
+    assert "AAPL" not in result.output
+    assert "MSFT" in result.output
+
+
+def test_asset_list_is_hidden_compatibility_alias(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch, symbols=("AAPL", "MSFT"))
+    _buy("stocks/AAPL", price="100", quantity="1")
+
+    official = runner.invoke(app, ["asset", "summary", "stocks"])
+    alias = runner.invoke(app, ["asset", "list", "stocks"])
+    help_result = runner.invoke(app, ["asset", "--help"])
+
+    assert official.exit_code == 0
+    assert alias.exit_code == 0
+    assert alias.output == official.output
+    assert "list" not in help_result.output
 
 
 def test_asset_summary_requires_active_portfolio(

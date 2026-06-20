@@ -27,6 +27,7 @@ def test_top_level_help_includes_common_command_shapes(
         "fundlog delete <portfolio> <entry-number>",
         "fundlog delete <portfolio> --yes",
         "fundlog asset add <portfolio> <symbol> [symbol...]",
+        "fundlog asset summary <portfolio>",
         "fundlog asset summary <portfolio>/<symbol>",
         "fundlog income <portfolio>/<symbol> <amount>",
         "fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity>",
@@ -48,12 +49,13 @@ def test_asset_help_includes_subcommand_examples(
     assert result.exit_code == 0
     for command_shape in (
         "fundlog asset add <portfolio> <symbol> [symbol...]",
-        "fundlog asset list <portfolio>",
+        "fundlog asset summary <portfolio>",
         "fundlog asset log <portfolio>/<symbol>",
         "fundlog asset summary <portfolio>/<symbol>",
         "fundlog asset delete <portfolio>/<symbol> --yes",
     ):
         assert command_shape in result.output
+    assert "fundlog asset list <portfolio>" not in result.output
     assert not (data_dir / "fundlog.db").exists()
 
 

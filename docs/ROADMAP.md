@@ -65,9 +65,8 @@ FundLog will remain fully manual. Live prices, market APIs, market value, and un
 ## Command hierarchy migration
 
 - Add official `portfolio`, `capital`, and organized `asset` command groups.
-- Add portfolio-wide `asset summary <portfolio>`.
+- Portfolio-wide `asset summary <portfolio>` is implemented.
 - Keep existing root commands as hidden compatibility aliases.
-- Decide whether `asset list` remains as a hidden alias for portfolio-wide
-  asset summary.
+- `asset list` remains as a hidden alias for portfolio-wide asset summary.
 - Show only official commands in help after implementation.
 - Review alias retention or removal before stable v1.

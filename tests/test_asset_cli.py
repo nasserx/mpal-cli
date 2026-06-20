@@ -27,8 +27,9 @@ def test_asset_help_lists_foundation_commands() -> None:
 
     assert result.exit_code == 0
     assert "add" in result.output
-    assert "list" in result.output
+    assert "summary" in result.output
     assert "delete" in result.output
+    assert "list" not in result.output
 
 
 def test_asset_add_requires_initialized_database(
@@ -280,7 +281,7 @@ def test_asset_list_shows_uppercase_symbols_in_order(
     assert result.output.index("BRK.B") < result.output.index("MSFT")
 
 
-def test_asset_list_uses_foundation_columns_and_zero_values(
+def test_asset_list_uses_summary_columns_and_zero_values(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -291,9 +292,10 @@ def test_asset_list_uses_foundation_columns_and_zero_values(
 
     assert result.exit_code == 0
     for column in (
-        "Symbol",
+        "Asset",
         "Quantity",
         "Cost Basis",
+        "Average Cost",
         "Realized PnL",
         "Income",
         "Realized Return",
@@ -301,6 +303,7 @@ def test_asset_list_uses_foundation_columns_and_zero_values(
         assert column in result.output
     assert "0.00" in result.output
     assert "0.00%" in result.output
+    assert "--" in result.output
     asset_row = next(line for line in result.output.splitlines() if "AAPL" in line)
     assert " 0 " in asset_row
     assert " id " not in result.output.lower()

@@ -66,6 +66,12 @@ Existing root commands remain the executable interface until the migration is
 implemented. They are planned to remain temporarily as hidden compatibility
 aliases so existing usage does not break abruptly.
 
+The asset-summary portion is implemented now: `fundlog asset summary stocks`
+shows all active asset summaries in the portfolio, while
+`fundlog asset summary stocks/AAPL` shows one asset. The older
+`fundlog asset list stocks` spelling remains callable as a hidden compatibility
+alias for the portfolio-wide summary.
+
 Entry numbers shown by `fundlog capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
 

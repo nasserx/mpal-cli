@@ -75,8 +75,9 @@ market value, and unrealized PnL remain prohibited.
 - `fundlog reset <portfolio> --yes`
 - `fundlog delete <portfolio> --yes`
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
-- `fundlog asset list <portfolio>`
+- `fundlog asset summary <portfolio>`
 - `fundlog asset summary <portfolio>/<symbol>`
+- `fundlog asset list <portfolio>` (hidden compatibility alias)
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 - `fundlog income <portfolio>/<symbol> <amount>`
@@ -98,8 +99,9 @@ implemented yet:
 - Asset: `asset add`, `asset summary`, `asset log`, `asset delete`,
   `asset income`, `asset buy`, `asset sell`
 
-`asset summary <portfolio>` is planned to show every active asset summary in a
-portfolio. `asset summary <portfolio>/<symbol>` continues to show one asset.
+`asset summary <portfolio>` shows every active asset summary in a portfolio.
+`asset summary <portfolio>/<symbol>` shows one asset. `asset list <portfolio>`
+is implemented as a hidden compatibility alias with identical output.
 
 When implementation is explicitly authorized:
 
@@ -107,9 +109,8 @@ When implementation is explicitly authorized:
 - Existing root commands should remain temporarily as hidden compatibility
   aliases and delegate to the same handlers/services.
 - Do not duplicate accounting or persistence logic for aliases.
-- `asset list <portfolio>` may become a hidden alias for
-  `asset summary <portfolio>`; make that choice explicitly during
-  implementation.
+- Preserve `asset list <portfolio>` as the hidden compatibility alias for
+  `asset summary <portfolio>`.
 - Do not remove compatibility aliases before a separate pre-v1 decision.
 
 Until that migration is implemented, preserve the current executable command

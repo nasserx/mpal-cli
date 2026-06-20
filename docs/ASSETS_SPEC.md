@@ -8,7 +8,8 @@ fees, and asset income after the completed v0.1 portfolio and capital ledger.
 The initial asset foundation is implemented:
 
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
-- `fundlog asset list <portfolio>`
+- `fundlog asset summary <portfolio>`
+- `fundlog asset list <portfolio>` as a hidden compatibility alias
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 - `fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]`
@@ -119,15 +120,16 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
-`asset add`, `asset list`, `asset summary`, `asset log`, and `asset delete` are
-implemented. Manual income, buy, and sell commands are also implemented.
+`asset add`, both forms of `asset summary`, `asset log`, and `asset delete` are
+implemented. `asset list` remains as a hidden compatibility alias. Manual
+income, buy, and sell commands are also implemented.
 
 ### Asset management
 
 ```console
 fundlog asset add <portfolio> <symbol>
 fundlog asset add <portfolio> <symbol> <symbol> ...
-fundlog asset list <portfolio>
+fundlog asset summary <portfolio>
 fundlog asset summary <portfolio>/<symbol>
 fundlog asset log <portfolio>/<symbol>
 fundlog asset delete <portfolio>/<symbol> --yes
@@ -139,8 +141,12 @@ Implemented foundation commands:
 - Multi-symbol creation is atomic.
 - Duplicate symbols in one command are rejected.
 - An active duplicate in the portfolio is rejected.
-- `asset list` returns active assets ordered by symbol.
-- `asset summary` returns one active asset's derived accounting totals.
+- `asset summary <portfolio>` returns all active asset summaries ordered by
+  symbol.
+- `asset summary <portfolio>/<symbol>` returns one active asset's derived
+  accounting totals.
+- `asset list <portfolio>` delegates to the portfolio-wide asset summary and is
+  hidden from normal help.
 - `asset log` is read-only and returns active transaction rows ordered by date
   and asset-local entry number.
 - `asset delete` requires `--yes`, parses exactly one `/`, normalizes the
@@ -200,24 +206,25 @@ title above the table.
 
 Color must not be the only way meaning is communicated.
 
-### Asset list
+### Portfolio asset summary
 
 Command:
 
 ```console
-fundlog asset list <portfolio>
+fundlog asset summary <portfolio>
 ```
 
 Columns:
 
-| Symbol | Quantity | Cost Basis | Realized PnL | Income | Realized Return |
-|---|---:|---:|---:|---:|---:|
+| Asset | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
+|---|---:|---:|---:|---:|---:|---:|
 
 Rules:
 
-- Symbol is displayed uppercase.
+- Asset is the normalized uppercase symbol.
 - Quantity is the current open quantity and uses `format_quantity()`.
 - Cost Basis is the current open book cost.
+- Average Cost follows the single-asset summary rule.
 - Cost Basis and Income use money formatting. Realized PnL uses signed money
   formatting: positive values include `+`, negative values include `-`, and
   zero remains unsigned.
@@ -226,6 +233,8 @@ Rules:
 - Normal cells use the unified table-cell style.
 - Ordering is deterministic. Alphabetical ordering by normalized symbol is the
   initial design.
+- `asset list <portfolio>` produces the same output as a hidden compatibility
+  alias.
 
 ### Asset log
 
