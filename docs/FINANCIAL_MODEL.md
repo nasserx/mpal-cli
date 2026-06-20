@@ -6,6 +6,10 @@ FundLog is fully manual. It derives financial results only from active recorded 
 
 v0.1 records only portfolio capital inflows and outflows. Financial amounts use integer minor units in storage and decimal-safe logic in application code; binary floating point is not used.
 
+Displayed monetary values use thousands separators and exactly two decimal
+places. This display rule is specific to money and does not define formatting
+for future quantities or unit prices.
+
 ## Summary table
 
 The summary output has exactly these columns:
@@ -106,7 +110,7 @@ In v0.1, Return is always `0.00%`. If Capital is zero, Return is also displayed 
 fundlog inflow stocks 1000
 ```
 
-Capital, Cash, and Book Value become `1000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
+Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
 
 ### Add an outflow
 

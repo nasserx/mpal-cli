@@ -59,8 +59,13 @@ Preserve existing command arguments, options, validation, output, and exit behav
 Never use Python `float` for money.
 
 - Monetary amounts are stored as integer minor units.
-- Use `parse_amount_minor()` and `format_amount_minor()` from `src/fundlog/amounts.py`.
+- Use `parse_amount_minor()` for monetary input and `format_money()` for
+  monetary display from `src/fundlog/amounts.py`.
 - Do not duplicate monetary parsing or formatting logic in command handlers.
+- `format_money()` accepts integer minor units and displays thousands separators
+  with exactly two decimal places.
+- Do not use `format_money()` for quantities or unit prices. Future quantity and
+  price features require separate precision-aware formatting helpers.
 
 v0.1 calculations:
 
@@ -127,6 +132,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
+- `tests/test_amounts.py`: Focused exact money display-formatting tests.
 - `tests/test_dates.py`: Focused shared transaction-date validation tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.

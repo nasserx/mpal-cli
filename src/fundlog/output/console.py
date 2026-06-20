@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from fundlog.amounts import format_amount_minor
+from fundlog.amounts import format_money
 from fundlog.output.theme import (
     ERROR,
     INFO,
@@ -76,12 +76,12 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
     for summary in summaries:
         table.add_row(
             summary.portfolio_name,
-            format_amount_minor(summary.capital_minor),
-            format_amount_minor(summary.cash_minor),
-            format_amount_minor(summary.positions_minor),
-            format_amount_minor(summary.book_value_minor),
-            format_amount_minor(summary.realized_pnl_minor),
-            format_amount_minor(summary.income_minor),
+            format_money(summary.capital_minor),
+            format_money(summary.cash_minor),
+            format_money(summary.positions_minor),
+            format_money(summary.book_value_minor),
+            format_money(summary.realized_pnl_minor),
+            format_money(summary.income_minor),
             "0.00%",
         )
     Console(width=120).print(table)
@@ -104,7 +104,7 @@ def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
             str(entry.entry_no),
             entry.entry_date,
             entry.entry_type,
-            format_amount_minor(entry.amount_minor),
+            format_money(entry.amount_minor),
             entry.note or "",
         )
     Console().print(table)

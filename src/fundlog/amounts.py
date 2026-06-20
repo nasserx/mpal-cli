@@ -1,4 +1,4 @@
-"""Exact monetary amount parsing."""
+"""Exact monetary parsing and money-specific display formatting."""
 
 from decimal import Decimal, InvalidOperation
 
@@ -28,8 +28,8 @@ def parse_amount_minor(amount: str) -> int:
     return int(minor_amount)
 
 
-def format_amount_minor(amount_minor: int) -> str:
-    """Format integer minor units as a decimal amount with two places."""
+def format_money(amount_minor: int) -> str:
+    """Format integer minor units as money with grouping and two places."""
     sign = "-" if amount_minor < 0 else ""
     whole, fraction = divmod(abs(amount_minor), MINOR_UNITS_PER_UNIT)
-    return f"{sign}{whole}.{fraction:02d}"
+    return f"{sign}{whole:,}.{fraction:02d}"

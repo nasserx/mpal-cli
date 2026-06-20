@@ -336,7 +336,7 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
     assert "│ 5 │" not in first_log.output
     assert "│ 9 │" not in first_log.output
     assert "750.00" in summary_result.output
-    assert "1250.00" in final_log.output
+    assert "1,250.00" in final_log.output
     assert "withdrawal" not in final_log.output
     assert duplicate_result.exit_code == 1
     assert "An active portfolio named 'stocks' already exists." in (
@@ -636,7 +636,7 @@ def test_summary_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("5000.50") == 3
+    assert result.output.count("5,000.50") == 3
     assert result.output.count("0.00") >= 4
     assert "0.00%" in result.output
 
@@ -651,7 +651,7 @@ def test_log_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert "inflow" in result.output
-    assert "5000.50" in result.output
+    assert "5,000.50" in result.output
     assert date.today().isoformat() in result.output
 
 
@@ -1092,7 +1092,7 @@ def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("1000.50") == 3
+    assert result.output.count("1,000.50") == 3
 
 
 def test_summary_after_inflow_and_outflow(tmp_path: Path, monkeypatch) -> None:
@@ -1131,8 +1131,8 @@ def test_summary_ignores_soft_deleted_entries(
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("1000.00") == 3
-    assert "1250.00" not in result.output
+    assert result.output.count("1,000.00") == 3
+    assert "1,250.00" not in result.output
 
 
 def test_summary_ignores_soft_deleted_outflow(
@@ -1157,7 +1157,7 @@ def test_summary_ignores_soft_deleted_outflow(
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("1000.00") == 3
+    assert result.output.count("1,000.00") == 3
     assert "750.00" not in result.output
 
 
@@ -1351,8 +1351,8 @@ def test_summary_all_ignores_soft_deleted_entries(
     result = runner.invoke(app, ["summary", "--all"])
 
     assert result.exit_code == 0
-    assert result.output.count("1000.00") == 3
-    assert "1250.00" not in result.output
+    assert result.output.count("1,000.00") == 3
+    assert "1,250.00" not in result.output
 
 
 def test_summary_all_ignores_soft_deleted_portfolios(
@@ -1473,7 +1473,7 @@ def test_log_shows_inflow_entry_with_date_note_and_amount(
     assert "│ id " not in result.output
     assert "2026-06-19" in result.output
     assert "inflow" in result.output
-    assert "1000.50" in result.output
+    assert "1,000.50" in result.output
     assert "initial deposit" in result.output
 
 
@@ -2091,7 +2091,7 @@ def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("1250.50") == 3
+    assert result.output.count("1,250.50") == 3
 
 
 def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
@@ -2174,8 +2174,8 @@ def test_deleted_entry_is_ignored_by_summary(
     result = runner.invoke(app, ["summary", "stocks"])
 
     assert result.exit_code == 0
-    assert result.output.count("1000.00") == 3
-    assert "1250.00" not in result.output
+    assert result.output.count("1,000.00") == 3
+    assert "1,250.00" not in result.output
 
 
 def test_delete_entry_fails_before_init(tmp_path: Path, monkeypatch) -> None:
@@ -2295,7 +2295,7 @@ def test_deleting_outflow_succeeds_and_increases_cash(
 
     assert delete_result.exit_code == 0
     assert summary_result.exit_code == 0
-    assert summary_result.output.count("1000.00") == 3
+    assert summary_result.output.count("1,000.00") == 3
     assert "250.00" not in summary_result.output
 
 
