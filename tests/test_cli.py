@@ -22,6 +22,7 @@ COMMANDS = {
     "edit",
     "remove",
     "reset",
+    "delete",
 }
 
 
@@ -2025,3 +2026,295 @@ def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None
         ).fetchone()
 
     assert portfolio == ("stocks", None)
+
+
+def test_delete_requires_initialized_database(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert not (data_dir / "fundlog.db").exists()
+
+
+def test_delete_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_delete_requires_yes(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+
+    result = runner.invoke(app, ["delete", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Delete requires the --yes confirmation flag." in result.output
+
+
+def test_delete_without_yes_does_not_change_data(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+
+    result = runner.invoke(app, ["delete", "stocks"])
+
+    assert result.exit_code == 1
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_deleted_at = connection.execute(
+            "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
+        ).fetchone()[0]
+        entry_deleted_at = connection.execute(
+            "SELECT deleted_at FROM capital_entries"
+        ).fetchone()[0]
+
+    assert portfolio_deleted_at is None
+    assert entry_deleted_at is None
+
+
+def test_delete_soft_deletes_portfolio_and_active_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["outflow", "stocks", "250"])
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 0
+    assert "Portfolio 'stocks' deleted." in result.output
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolios = connection.execute(
+            "SELECT name, deleted_at FROM portfolios"
+        ).fetchall()
+        entries = connection.execute(
+            "SELECT id, deleted_at FROM capital_entries ORDER BY id"
+        ).fetchall()
+
+    assert len(portfolios) == 1
+    assert portfolios[0][0] == "stocks"
+    assert portfolios[0][1] is not None
+    assert [entry[0] for entry in entries] == [1, 2]
+    assert all(entry[1] is not None for entry in entries)
+
+
+def test_delete_preserves_existing_soft_deleted_entry_timestamp(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
+            ("2000-01-01 00:00:00",),
+        )
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            "SELECT id, deleted_at FROM capital_entries ORDER BY id"
+        ).fetchall()
+
+    assert entries[0][1] is not None
+    assert entries[1] == (2, "2000-01-01 00:00:00")
+
+
+def test_delete_does_not_affect_other_portfolios(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["create", "crypto", "--initial", "500"])
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        rows = connection.execute(
+            """
+            SELECT p.name, p.deleted_at, e.deleted_at
+            FROM portfolios AS p
+            JOIN capital_entries AS e ON e.portfolio_id = p.id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert rows[0] == ("crypto", None, None)
+    assert rows[1][0] == "stocks"
+    assert rows[1][1] is not None
+    assert rows[1][2] is not None
+
+
+def test_deleted_portfolio_disappears_from_summary_all(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["summary", "--all"])
+
+    assert result.exit_code == 0
+    assert "crypto" in result.output
+    assert "stocks" not in result.output
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["summary", "stocks"],
+        ["log", "stocks"],
+        ["inflow", "stocks", "100"],
+        ["outflow", "stocks", "100"],
+        ["edit", "stocks", "1", "--note", "changed"],
+        ["remove", "stocks", "1"],
+        ["reset", "stocks", "--yes"],
+    ],
+)
+def test_deleted_portfolio_rejects_portfolio_commands(
+    tmp_path: Path,
+    monkeypatch,
+    arguments: list[str],
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_deleted_portfolio_name_can_be_reused(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["create", "stocks", "--initial", "500"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolios = connection.execute(
+            "SELECT name, deleted_at FROM portfolios ORDER BY id"
+        ).fetchall()
+        active_entries = connection.execute(
+            """
+            SELECT e.amount_minor
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            WHERE p.deleted_at IS NULL AND e.deleted_at IS NULL
+            """
+        ).fetchall()
+
+    assert portfolios[0][0] == "stocks"
+    assert portfolios[0][1] is not None
+    assert portfolios[1] == ("stocks", None)
+    assert active_entries == [(50000,)]
+
+
+def test_delete_is_atomic_if_portfolio_update_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER reject_portfolio_delete
+            BEFORE UPDATE OF deleted_at ON portfolios
+            WHEN NEW.deleted_at IS NOT NULL
+            BEGIN
+                SELECT RAISE(ABORT, 'forced portfolio failure');
+            END
+            """
+        )
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_deleted_at = connection.execute(
+            "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
+        ).fetchone()[0]
+        entry_deleted_at = connection.execute(
+            "SELECT deleted_at FROM capital_entries"
+        ).fetchone()[0]
+
+    assert portfolio_deleted_at is None
+    assert entry_deleted_at is None
+
+
+def test_delete_keeps_portfolio_active_if_entry_update_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER reject_entry_delete
+            BEFORE UPDATE OF deleted_at ON capital_entries
+            WHEN NEW.deleted_at IS NOT NULL
+            BEGIN
+                SELECT RAISE(ABORT, 'forced entry failure');
+            END
+            """
+        )
+
+    result = runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    assert result.exit_code == 1
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        portfolio_deleted_at = connection.execute(
+            "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
+        ).fetchone()[0]
+        entry_deleted_at = connection.execute(
+            "SELECT deleted_at FROM capital_entries"
+        ).fetchone()[0]
+
+    assert portfolio_deleted_at is None
+    assert entry_deleted_at is None

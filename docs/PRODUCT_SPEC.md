@@ -82,5 +82,6 @@ v0.1 is limited to:
 - Editing capital entries.
 - Soft-removing capital entries.
 - Resetting a portfolio's operations while retaining the portfolio.
+- Soft-deleting a portfolio and its active capital entries.
 
 v0.1 contains portfolios and capital entries only. Future manual trading operations may feed calculated results into Cash, Positions, Realized PnL, and Income. Live pricing, market APIs, market valuation, unrealized PnL, and price-based calculations are not part of FundLog.

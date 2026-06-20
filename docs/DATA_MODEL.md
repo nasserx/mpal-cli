@@ -25,6 +25,9 @@ The v0.1 database contains only these conceptual tables:
 
 - `name` is required.
 - Portfolio names are unique among active portfolios.
+- Portfolios support soft delete and are not physically removed by `delete`.
+- Deleting a portfolio also soft-deletes its active capital entries atomically.
+- A deleted portfolio name may be reused because uniqueness applies only to active portfolios.
 - Removing or resetting records must not create orphaned child records.
 
 ## `capital_entries`
@@ -39,7 +42,7 @@ The v0.1 database contains only these conceptual tables:
 
 - v0.1 entry types are only `inflow` and `outflow`.
 - Amounts are positive and must support exact decimal-safe calculations.
-- Entries support soft delete and are not physically removed by the `remove` or `reset` commands.
+- Entries support soft delete and are not physically removed by `remove`, `reset`, or portfolio `delete`.
 - Active entries determine current balances.
 - Entry changes must preserve enough prior and new state for future audit history.
 - Ledger validation must prevent insufficient-Cash outflows.
@@ -54,7 +57,7 @@ The v0.1 database contains only these conceptual tables:
 
 **Constraints:**
 
-- Edits, removals, and resets must be representable.
+- Edits, removals, resets, and portfolio deletions must be representable.
 - Audit records are append-oriented and must not be silently rewritten by ordinary commands.
 - A reset must be traceable as one user action even when it affects multiple records.
 

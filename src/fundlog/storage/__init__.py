@@ -9,7 +9,11 @@ from fundlog.storage.entries import (
     reset_portfolio_entries,
 )
 from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
-from fundlog.storage.portfolios import create_portfolio, create_portfolio_with_initial
+from fundlog.storage.portfolios import (
+    create_portfolio,
+    create_portfolio_with_initial,
+    delete_portfolio,
+)
 from fundlog.storage.summaries import (
     PortfolioSummary,
     get_all_portfolio_summaries,
@@ -21,6 +25,7 @@ __all__ = [
     "PortfolioSummary",
     "create_portfolio",
     "create_portfolio_with_initial",
+    "delete_portfolio",
     "edit_capital_entry",
     "get_all_portfolio_summaries",
     "get_capital_entry_log",

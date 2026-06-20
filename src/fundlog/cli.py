@@ -18,6 +18,7 @@ from fundlog.output.console import (
 from fundlog.storage import (
     create_portfolio,
     create_portfolio_with_initial,
+    delete_portfolio,
     edit_capital_entry,
     get_all_portfolio_summaries,
     get_capital_entry_log,
@@ -301,3 +302,25 @@ def reset(
         raise typer.Exit(code=1) from error
 
     print_message(f"Portfolio '{portfolio}' reset.")
+
+
+@app.command()
+def delete(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the portfolio deletion."),
+    ] = False,
+) -> None:
+    """Soft-delete a portfolio and its capital entries."""
+    if not yes:
+        typer.echo("Delete requires the --yes confirmation flag.", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        delete_portfolio(portfolio)
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+    print_message(f"Portfolio '{portfolio}' deleted.")

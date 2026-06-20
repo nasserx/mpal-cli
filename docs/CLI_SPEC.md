@@ -245,3 +245,27 @@ fundlog reset stocks --yes
 **Validation:** Portfolio must exist and be active. `--yes` is mandatory.
 
 **Errors:** FundLog is not initialized; missing `--yes`; unknown portfolio; database failure. Without `--yes`, no changes occur.
+
+## `fundlog delete PORTFOLIO --yes`
+
+Example:
+
+```console
+fundlog delete stocks --yes
+```
+
+**Purpose:** Archive a portfolio from normal user views.
+
+**Arguments:**
+
+- `PORTFOLIO`: Existing active portfolio.
+
+**Options:**
+
+- `--yes`: Required confirmation.
+
+**Behavior:** Atomically soft-deletes the portfolio and all its active capital entries. It preserves every database row and does not affect other portfolios. A deleted portfolio is excluded from summaries and cannot be used by portfolio commands. Because names are unique only among active portfolios, the name may be reused by a new portfolio.
+
+**Validation:** Portfolio must exist and be active. `--yes` is mandatory.
+
+**Errors:** FundLog is not initialized; missing `--yes`; unknown or inactive portfolio; database failure. Without `--yes`, no changes occur.
