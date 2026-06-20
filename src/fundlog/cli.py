@@ -33,9 +33,33 @@ from fundlog.storage import (
     reset_portfolio_entries,
 )
 
+HELP_EXAMPLES = """Examples:
+
+  fundlog init
+
+  fundlog create stocks --initial 5000
+
+  fundlog inflow stocks 1000
+
+  fundlog outflow stocks 250
+
+  fundlog summary stocks
+
+  fundlog summary --all
+
+  fundlog log stocks
+
+  fundlog edit stocks 1 --amount 500
+
+  fundlog delete stocks 1
+
+  fundlog delete stocks --yes
+"""
+
 app = typer.Typer(
     name="fundlog",
     help="Manually track portfolio capital from the terminal.",
+    epilog=HELP_EXAMPLES,
     no_args_is_help=True,
 )
 
@@ -64,7 +88,7 @@ def main(
 
 @app.command("init")
 def init_command() -> None:
-    """Initialize FundLog's local data store."""
+    """Initialize FundLog's local database."""
     try:
         database_path = initialize_database()
     except FundLogError as error:
@@ -116,7 +140,7 @@ def inflow(
         typer.Option("--note", help="Optional entry note."),
     ] = None,
 ) -> None:
-    """Record capital entering a portfolio."""
+    """Record money added to a portfolio."""
     try:
         amount_minor = parse_amount_minor(amount)
         entry_date = local_date.today() if date is None else _parse_entry_date(date)
@@ -154,7 +178,7 @@ def outflow(
         typer.Option("--note", help="Optional entry note."),
     ] = None,
 ) -> None:
-    """Record capital leaving a portfolio."""
+    """Record money withdrawn from a portfolio."""
     try:
         amount_minor = parse_amount_minor(amount)
         entry_date = local_date.today() if date is None else _parse_entry_date(date)
@@ -210,7 +234,7 @@ def summary(
 def log(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
 ) -> None:
-    """Show portfolio-local numbered capital entries."""
+    """Show capital entries for a portfolio."""
     try:
         entries = get_capital_entry_log(portfolio)
     except FundLogError as error:
@@ -230,7 +254,7 @@ def edit(
         int,
         typer.Argument(
             metavar="ENTRY_NUMBER",
-            help="Portfolio-local capital entry number.",
+            help="Entry number shown by 'fundlog log <portfolio>'.",
         ),
     ],
     amount: Annotated[
@@ -246,7 +270,7 @@ def edit(
         typer.Option("--note", help="Replacement entry note."),
     ] = None,
 ) -> None:
-    """Edit a capital entry by its portfolio-local number."""
+    """Edit a capital entry by its number in the portfolio log."""
     if amount is None and date is None and note is None:
         print_error("Provide at least one of --amount, --date, or --note.")
         raise typer.Exit(code=1)
@@ -276,7 +300,7 @@ def reset(
         typer.Option("--yes", help="Confirm the portfolio reset."),
     ] = False,
 ) -> None:
-    """Reset portfolio entries while retaining the portfolio."""
+    """Clear all entries from a portfolio while keeping the portfolio."""
     if not yes:
         print_warning("Reset requires the --yes confirmation flag.")
         raise typer.Exit(code=1)
@@ -297,15 +321,18 @@ def delete(
         int | None,
         typer.Argument(
             metavar="ENTRY_NUMBER",
-            help="Portfolio-local entry number to delete.",
+            help="Entry number shown by 'fundlog log <portfolio>'.",
         ),
     ] = None,
     yes: Annotated[
         bool,
-        typer.Option("--yes", help="Confirm deletion of the entire portfolio."),
+        typer.Option(
+            "--yes",
+            help="Soft-delete the entire portfolio and its entries.",
+        ),
     ] = False,
 ) -> None:
-    """Soft-delete one entry or an entire portfolio."""
+    """Delete an entry, or delete a portfolio with --yes."""
     if entry_number is not None:
         if yes:
             print_warning("Do not combine an entry number with --yes.")

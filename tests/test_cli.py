@@ -34,6 +34,9 @@ def test_help_exits_successfully() -> None:
 
     assert result.exit_code == 0
     assert "Manually track portfolio capital" in result.output
+    assert "Examples:" in result.output
+    assert "fundlog create stocks --initial 5000" in result.output
+    assert "fundlog delete stocks --yes" in result.output
 
 
 def test_version_exits_successfully() -> None:
@@ -77,7 +80,26 @@ def test_init_help_exits_successfully() -> None:
     result = runner.invoke(app, ["init", "--help"])
 
     assert result.exit_code == 0
-    assert "Initialize FundLog's local data store" in result.output
+    assert "Initialize FundLog's local database" in result.output
+
+
+def test_edit_help_references_portfolio_log_entry_number() -> None:
+    result = runner.invoke(app, ["edit", "--help"])
+
+    assert result.exit_code == 0
+    assert "Edit a capital entry by its number in the portfolio log." in result.output
+    assert "Entry number shown by 'fundlog log" in result.output
+    assert "<portfolio>'." in result.output
+
+
+def test_delete_help_explains_entry_and_portfolio_soft_delete() -> None:
+    result = runner.invoke(app, ["delete", "--help"])
+
+    assert result.exit_code == 0
+    assert "Delete an entry, or delete a portfolio with --yes." in result.output
+    assert "Entry number shown by 'fundlog log" in result.output
+    assert "<portfolio>'." in result.output
+    assert "Soft-delete the entire portfolio and its entries." in result.output
 
 
 def test_init_creates_database_and_expected_tables(
