@@ -2,6 +2,11 @@
 
 The roadmap is intentionally phased. Items listed for later versions are outside the v0.1 implementation contract.
 
+The next planned phase after the completed v0.1 portfolio and capital ledger is
+the design and later implementation of assets, symbols, and manual trades. Its
+current design is documented in `docs/ASSETS_SPEC.md`; it is not yet an
+implementation contract.
+
 ## v0.1 — Capital ledger foundation
 
 - Portfolios only.
@@ -23,11 +28,10 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 
 ## v0.2 — Record management
 
-- Add symbol tracking.
+- Add symbol tracking through portfolio-owned assets.
 - Add symbols to an existing portfolio.
-- Remove symbols.
-- Rename symbols.
-- Add symbol-level summaries.
+- Remove or archive assets under defined audit rules.
+- Add asset-level lists, summaries, and logs.
 
 ## v0.3 — Investment operations
 
@@ -38,6 +42,8 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 - Calculate open-position book cost.
 - Calculate realized PnL.
 - Feed manual results into Cash, Positions, Book Value, Realized PnL, and Income.
+- Use moving average cost as the proposed initial cost basis method, subject to
+  resolution of the precision rules in `docs/ASSETS_SPEC.md`.
 
 FundLog will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
 

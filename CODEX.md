@@ -23,6 +23,11 @@ Before changing behavior, read:
 
 v0.1 covers portfolio and capital-entry management only.
 
+Assets, symbols, and trades are currently design-only. Their proposed contract
+is documented in `docs/ASSETS_SPEC.md`. Do not implement assets, symbols,
+trades, fees, income commands, storage, migrations, or related behavior until a
+task explicitly requests implementation.
+
 Do not introduce the following into v0.1:
 
 - Symbols.
@@ -36,6 +41,11 @@ Do not introduce the following into v0.1:
 - Unrealized PnL.
 
 FundLog is manual-only now and in its intended future. Future features may support manually recorded symbols and trading operations, but they must not introduce live pricing or automatic market valuation.
+
+Future asset work must reuse the shared CLI theme, `parse_transaction_date()`,
+and `format_money()`. Quantity and unit-price parsing and display require
+separate precision-aware helpers and must not reuse the money formatter. Live
+prices, market APIs, market value, and unrealized PnL remain prohibited.
 
 ## Implemented commands
 
