@@ -210,7 +210,7 @@ def summary(
 def log(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
 ) -> None:
-    """Show the capital-entry log for a portfolio."""
+    """Show portfolio-local numbered capital entries."""
     try:
         entries = get_capital_entry_log(portfolio)
     except FundLogError as error:
@@ -226,7 +226,7 @@ def log(
 @app.command(context_settings={"ignore_unknown_options": True})
 def edit(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_no: Annotated[
+    entry_number: Annotated[
         int,
         typer.Argument(
             metavar="ENTRY_NUMBER",
@@ -246,7 +246,7 @@ def edit(
         typer.Option("--note", help="Replacement entry note."),
     ] = None,
 ) -> None:
-    """Edit a portfolio capital entry."""
+    """Edit a capital entry by its portfolio-local number."""
     if amount is None and date is None and note is None:
         typer.echo(
             "Provide at least one of --amount, --date, or --note.",
@@ -259,7 +259,7 @@ def edit(
         entry_date = None if date is None else _parse_entry_date(date)
         edit_capital_entry(
             portfolio,
-            entry_no,
+            entry_number,
             amount_minor=amount_minor,
             entry_date=entry_date,
             note=note,
@@ -268,7 +268,7 @@ def edit(
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from error
 
-    print_message(f"Capital entry {entry_no} updated for portfolio '{portfolio}'.")
+    print_message(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
 
 
 @app.command()
@@ -296,7 +296,7 @@ def reset(
 @app.command()
 def delete(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_no: Annotated[
+    entry_number: Annotated[
         int | None,
         typer.Argument(
             metavar="ENTRY_NUMBER",
@@ -305,11 +305,11 @@ def delete(
     ] = None,
     yes: Annotated[
         bool,
-        typer.Option("--yes", help="Confirm the portfolio deletion."),
+        typer.Option("--yes", help="Confirm deletion of the entire portfolio."),
     ] = False,
 ) -> None:
     """Soft-delete one entry or an entire portfolio."""
-    if entry_no is not None:
+    if entry_number is not None:
         if yes:
             typer.echo(
                 "Do not combine an entry number with --yes.",
@@ -317,12 +317,14 @@ def delete(
             )
             raise typer.Exit(code=1)
         try:
-            delete_capital_entry(portfolio, entry_no)
+            delete_capital_entry(portfolio, entry_number)
         except FundLogError as error:
             typer.echo(str(error), err=True)
             raise typer.Exit(code=1) from error
 
-        print_message(f"Capital entry {entry_no} deleted from portfolio '{portfolio}'.")
+        print_message(
+            f"Capital entry {entry_number} deleted from portfolio '{portfolio}'."
+        )
         return
 
     if not yes:
