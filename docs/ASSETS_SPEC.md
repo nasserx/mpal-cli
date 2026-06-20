@@ -1,24 +1,35 @@
-# FundLog Assets, Symbols, and Trades Design
+# FundLog Assets, Symbols, and Manual Trades Design
 
-## Status and scope
+## Scope
 
-This document defines the proposed design for FundLog's next phase after the
-v0.1 portfolio and capital ledger. It is a design contract only. Assets,
-symbols, trades, fees, and income commands are not implemented.
+This document defines the future design contract for assets, symbols, manual
+trades, fees, and asset income after the completed v0.1 portfolio and capital
+ledger.
 
-The implemented v0.1 portfolio and capital behavior remains unchanged.
+This is documentation only. None of the commands, storage, calculations, or
+tables described here are implemented. The implemented v0.1 portfolio and
+capital behavior must remain unchanged until asset implementation is explicitly
+requested.
 
-FundLog remains fully manual:
+FundLog remains fully manual. Every future result described here must be derived
+only from records entered by the user.
 
-- No live or automatic prices.
-- No market APIs or market-data integrations.
-- No market value.
-- No unrealized PnL.
-- No broker integration or trade execution.
-- No Python `float` for financial calculations.
+## Explicit non-goals
 
-All future results described here must be derived only from records entered by
-the user.
+The asset phase must not introduce:
+
+- Live, delayed, or automatic prices.
+- Market APIs or other market-data integrations.
+- Broker integration or trade execution.
+- Market value.
+- Unrealized PnL.
+- Automatic asset creation during buy, sell, or income operations.
+- Portfolio-level fee commands or fee summary columns.
+- Python `float` for financial parsing or calculations.
+- Hard deletion or purge behavior.
+
+Positions and Book Value remain book/accounting values. Realized Return is not
+market return.
 
 ## Terminology
 
@@ -26,17 +37,17 @@ the user.
 
 A symbol is a user-entered ticker or code such as `AAPL`, `MSFT`, or `BTC`.
 
-- Input is case-insensitive.
+- Input matching is case-insensitive.
 - Display is always uppercase.
 - A symbol is one token, not a multi-word name.
-- Symbols cannot contain spaces.
-- `/` is reserved as the asset-reference path separator and cannot appear in a
-  symbol.
+- A symbol cannot contain spaces.
+- A symbol cannot contain `/`.
+- `/` is reserved as the asset-reference separator.
 
-The future validation contract should define the remaining allowed characters
-and maximum length before implementation. Symbol normalization must be
-deterministic so that case variants such as `aapl` and `AAPL` identify the same
-symbol within one portfolio.
+Normalization must be deterministic so that case variants such as `aapl` and
+`AAPL` identify the same symbol within one portfolio. The remaining allowed
+character set, maximum length, and numeric storage limits must be finalized
+before implementation.
 
 ### Asset
 
@@ -46,15 +57,15 @@ An asset is a symbol inside a specific portfolio. For example, `AAPL` in the
 - Every asset belongs to exactly one portfolio.
 - The same normalized symbol may exist in different portfolios as separate
   assets.
-- The same normalized symbol must not identify multiple active assets in one
-  portfolio.
+- One portfolio cannot contain multiple active assets with the same normalized
+  symbol.
 - Assets are children of portfolios.
 - Assets do not appear as rows in the portfolio summary.
-- Derived asset and trade results feed the owning portfolio's summary totals.
+- Active asset transactions feed the owning portfolio's summary totals.
 
 ### Asset reference
 
-CLI commands identify an asset as:
+Commands identify an asset using:
 
 ```text
 <portfolio>/<symbol>
@@ -68,28 +79,25 @@ stocks/aapl
 crypto/BTC
 ```
 
-Symbol matching is case-insensitive. Display uses the uppercase symbol and the
-portfolio's stored normalized or original display name. Asset-specific output
-uses a title in symbol-first form:
+Symbol matching is case-insensitive. Output displays the symbol uppercase and
+uses the portfolio's stored normalized or original display name.
+
+Asset-specific output may use a symbol-first title:
 
 ```text
 AAPL/stocks
 ```
 
-The input reference and display title intentionally use different ordering:
-input follows the ownership path, while the title leads with the subject of the
-report.
+The input reference follows the ownership path. The display title leads with
+the subject of the report.
 
-Because `/` separates the two path components, symbols cannot contain `/`.
-Portfolio names used in asset references must also have an unambiguous path
-representation. The implementation phase must either confirm that active
-portfolio-name validation excludes `/` or define an escaping policy before
-these commands are implemented.
+Portfolio names used in asset references also need an unambiguous path
+representation. Before implementation, FundLog must either reject `/` in
+portfolio names or define an escaping rule.
 
-## Proposed CLI contract
+## Commands
 
-The command shapes in this section are proposals for a later implementation.
-They do not modify the implemented v0.1 CLI.
+The commands in this section are future contracts only.
 
 ### Asset management
 
@@ -102,248 +110,303 @@ fundlog asset log <portfolio>/<symbol>
 fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
-`asset add` accepts one or more symbols. Each symbol is normalized for matching
-and displayed uppercase. The operation should be atomic when multiple symbols
-are supplied: either every valid, non-conflicting asset is added or none are.
-
-The current proposed baseline is that buy, sell, and income operations require
-an existing active asset. They should not silently auto-create one. This remains
-an explicit open decision below and must be settled before implementation.
-
-`asset delete` requires `--yes`. Its behavior when the asset has operation
-history or an open quantity remains unresolved.
+`asset add` accepts one or more symbols. Symbols are normalized for matching and
+displayed uppercase. A multi-symbol add must be atomic: either all supplied
+symbols are added or none are.
 
 ### Manual trading and income
 
 ```console
-fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> --fee <fee>
-fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> --fee <fee>
+fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>]
+fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>]
 fundlog income <portfolio>/<symbol> <amount>
 ```
 
-Documentation should prefer the long option names `--price`, `--quantity`, and
-`--fee`. Short aliases such as `-p`, `-q`, and `-f` may be considered later but
-are not part of the initial required design.
+- Buy, sell, and income require an existing active asset.
+- These operations never auto-create an asset. This prevents a typo such as
+  `APPL` from silently creating a different asset.
+- `--fee` is optional and defaults to zero.
+- Documentation uses the long options `--price`, `--quantity`, and `--fee`.
+  Short aliases may be considered later but are not required.
+- Fees belong only to manual asset trades. They use money parsing and money
+  formatting.
 
-Future transaction records need an effective date and may support a note. If a
-date is omitted, it should use the current local date. Any user-provided date
-must use the shared `parse_transaction_date()` helper, accept strict ISO
-`YYYY-MM-DD`, and reject dates later than the current local date. The exact
-`--date` and `--note` command surface should be finalized before implementation.
+Buy, sell, and income records need an effective date and may include a note.
+The initial command contract should provide optional `--date` and `--note`
+options for all three operations. An omitted date uses the current local date.
+Every explicit date must use the shared `parse_transaction_date()` helper,
+accept strict ISO `YYYY-MM-DD`, and reject a date later than the current local
+date.
 
-All state-changing operations must be atomic and must reject invalid input
-without leaving partial records or partially changed derived balances.
+Buy and sell also need a future exact-cash-total override for broker statements
+and otherwise unrepresentable calculated totals. `--total` is the working name,
+but the exact option name may be finalized during CLI implementation design.
+Its accounting semantics are fixed in the precision section below.
 
-## Portfolio integration
+All state-changing commands must be atomic. Invalid input must not leave partial
+records or partially changed derived balances.
 
-The existing portfolio summary columns remain exactly:
+## Tables
 
-`Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return`
+All future tables must reuse the semantic theme from
+`src/fundlog/output/theme.py`. Colors must not be hardcoded.
 
-Assets must not add rows to this table. Active manual records for all assets in
-a portfolio contribute to the portfolio row:
+- Headers use `TABLE_HEADER`.
+- Borders use `TABLE_BORDER`.
+- Normal cells use `TABLE_CELL`.
+- Profit values use `PROFIT`.
+- Loss values use `LOSS`.
+- Income may use `INFO` when the result remains visually calm.
+- Buy and sell operation labels use normal cell styling, not profit/loss
+  styling.
 
-- **Capital** = external capital only: inflows minus outflows.
-- **Cash** = inflows minus outflows minus buy cash outflows plus sell cash
-  inflows plus income.
-- **Positions** = total open book cost of asset positions.
-- **Book Value** = Cash plus Positions.
-- **Realized PnL** = total realized profit or loss from manual sells.
-- **Income** = total manually recorded asset income or distributions.
-- **Return** = `(Realized PnL + Income) / Capital`.
+Asset tables should include a small title above the table using the existing
+CLI style or the closest clean Rich equivalent:
 
-If Capital is zero, Return must deterministically display `0.00%`.
+```text
+-- AAPL/stocks --------------------------------
+```
 
-These values are accounting results from manual records. Positions and Book
-Value do not represent market value, and Return does not include unrealized
-market movement.
+Color must not be the only way meaning is communicated.
 
-## Asset list
+### Asset list
 
-Proposed command:
+Command:
 
 ```console
 fundlog asset list <portfolio>
 ```
 
-Proposed columns:
+Columns:
 
 | Symbol | Quantity | Cost Basis | Realized PnL | Income | Realized Return |
 |---|---:|---:|---:|---:|---:|
 
 Rules:
 
-- `Symbol` is displayed uppercase.
-- `Quantity` is the current open quantity and uses a future
-  `format_quantity()`, never `format_money()`.
-- `Cost Basis` is the open book cost of the current position.
-- `Cost Basis`, `Realized PnL`, and `Income` use `format_money()`.
-- `Realized Return` uses percent formatting and must describe realized results
-  only.
-- Profit and loss values use the semantic profit and loss styles when
-  implemented.
-- Income may use the existing informational soft-blue style only when it
-  remains visually calm.
-- Ordering must be deterministic. Alphabetical ordering by normalized symbol is
-  the proposed default.
+- Symbol is displayed uppercase.
+- Quantity is the current open quantity and uses future `format_quantity()`.
+- Cost Basis is the current open book cost.
+- Cost Basis, Realized PnL, and Income use `format_money()`.
+- Realized Return uses percent formatting and the asset-level formula defined
+  below.
+- Normal cells use the unified table-cell style.
+- Ordering is deterministic. Alphabetical ordering by normalized symbol is the
+  initial design.
 
-## Asset summary
+### Asset log
 
-Proposed command:
-
-```console
-fundlog asset summary <portfolio>/<symbol>
-```
-
-Proposed columns:
-
-| Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
-|---:|---:|---:|---:|---:|---:|
-
-Rules:
-
-- `Quantity` is the current open quantity.
-- `Cost Basis` is the open book cost of the current position.
-- `Average Cost = Cost Basis / Quantity` when Quantity is greater than zero.
-- When Quantity is zero, Average Cost must use a deterministic nonnumeric
-  placeholder such as `--`, not an invented zero-cost position.
-- `Average Cost` uses the future price-formatting rules, not money formatting,
-  because it is a per-unit value that may require precision beyond two decimal
-  places.
-- `Realized PnL` is realized profit or loss from sells.
-- `Income` is manually recorded income or distributions for this asset.
-- `Realized Return` is a realized-result percentage only. It must not imply
-  market return and must not include unrealized PnL.
-
-The denominator for asset-level Realized Return is not yet defined and is
-listed as an open accounting question. It must be settled before this column is
-implemented.
-
-## Asset log
-
-Proposed command:
+Command:
 
 ```console
 fundlog asset log <portfolio>/<symbol>
 ```
 
-Proposed columns:
+Columns:
 
 | # | Date | Type | Price | Quantity | Fee | Total | Note |
 |---:|---|---|---:|---:|---:|---:|---|
 
 Rules:
 
-- `#` is stable and local to one asset log, similar to portfolio-local capital
-  entry numbers.
-- `Type` is `buy`, `sell`, or `income`.
-- Buy and sell labels are normal operation types and must not be colored as
-  profit or loss.
-- `Price` uses future `format_price()`, never `format_money()`.
-- `Quantity` uses future `format_quantity()`, never `format_money()`.
-- `Fee` and `Total` use `format_money()`.
+- `#` is stable and local to one asset log.
+- Buy, sell, and income records all receive local entry numbers.
+- Entry numbers start at 1 for each asset row and are never reused after soft
+  deletion.
+- Type is `buy`, `sell`, or `income`.
+- Price uses future `format_price()`.
+- Quantity uses future `format_quantity()`.
+- Fee and Total use `format_money()`.
 - For income rows, Price, Quantity, and Fee may display `--`; Total displays the
   income amount.
-- Ordering must be deterministic by effective date and then asset-local entry
+- Ordering is deterministic by effective date and then asset-local entry
   number.
+- Buy and sell types and totals are normal operations and do not use
+  profit/loss coloring.
 
-`Total` represents the cash effect for the row:
+Total is the final cash effect represented as a positive displayed amount:
 
-- Buy: gross buy cost plus fee, displayed as a positive outflow amount.
-- Sell: gross proceeds minus fee, displayed as a positive inflow amount.
-- Income: the income amount.
+- Buy: total buy cash outflow.
+- Sell: net sell proceeds.
+- Income: income amount.
 
-Direction remains explicit through `Type`; normal buy and sell Total cells do
-not use profit/loss coloring.
+Direction is communicated by Type.
 
-## Manual accounting model
+### Asset summary
+
+Command:
+
+```console
+fundlog asset summary <portfolio>/<symbol>
+```
+
+Columns:
+
+| Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
+|---:|---:|---:|---:|---:|---:|
+
+Rules:
+
+- Quantity is the current open quantity.
+- Cost Basis is the current open book cost.
+- `Average Cost = Cost Basis / Quantity` when Quantity is greater than zero.
+- When Quantity is zero, Average Cost displays `--`.
+- Average Cost uses future price formatting because it is a per-unit value that
+  may require more than two decimal places.
+- Realized PnL contains realized sell results only.
+- Income contains manually recorded income or distributions for this asset.
+- Realized Return uses the asset-level formula below.
+- The table contains no market value or unrealized PnL.
+
+## Accounting rules
 
 ### Cost basis method
 
-The proposed initial cost basis method is moving average cost.
+The initial cost basis method is moving average cost.
 
-Moving average is preferred over FIFO for the initial manual CLI because it
-requires one aggregate open quantity and open cost basis per asset conceptually,
-is easier for users to reconcile, and avoids exposing lot-selection behavior.
-FIFO remains a valid alternative if lot-level reporting or tax-lot semantics
-become a product requirement, but it is not the proposed initial method.
+Moving average fits a manual CLI because it maintains one aggregate open
+quantity and open cost basis per asset, is straightforward to reconcile, and
+does not require lot selection. FIFO may be considered later if FundLog adds
+lot-level or tax-lot requirements, but FIFO is not the initial method.
 
-The implementation design must use decimal-safe or integer-safe arithmetic
-throughout. Python `float` is prohibited.
+All calculations use exact decimal or integer arithmetic. Python `float` is
+prohibited.
 
 ### Buy
 
-For a manual buy:
-
 ```text
 gross buy cost = price × quantity
-buy cash outflow = gross buy cost + fee
+buy fee = fee
+total buy cash outflow = gross buy cost + buy fee
 new open quantity = prior open quantity + bought quantity
-new open cost basis = prior open cost basis + gross buy cost + fee
+new open cost basis = prior open cost basis + total buy cash outflow
 ```
 
-- Cash decreases by the buy cash outflow.
-- Positions increases by the amount added to open cost basis.
-- The buy fee is included in cost basis.
+- Fee defaults to zero.
+- Buy fee is included in cost basis.
+- Portfolio Cash decreases by total buy cash outflow.
+- Portfolio Positions increases by total buy cash outflow.
 - Capital, Realized PnL, and Income do not change.
+- Cumulative Total Buy Cost increases by total buy cash outflow.
 
-The resulting trade amount must be representable as integer minor-unit money
-under the precision policy selected before implementation.
+If an exact-cash-total override is supplied, that money amount is the total buy
+cash outflow and the amount added to Cost Basis, Positions, and cumulative Total
+Buy Cost. Price, quantity, and fee remain recorded transaction details, but the
+override controls the final cash accounting.
 
 ### Sell
 
-For a manual sell:
-
 ```text
-gross proceeds = price × quantity
-net proceeds = gross proceeds - fee
-relieved cost basis = sold quantity × current moving average cost
-realized PnL = net proceeds - relieved cost basis
+gross sell proceeds = price × quantity
+sell fee = fee
+net sell proceeds = gross sell proceeds - sell fee
+relieved cost basis = moving-average cost allocated to sold quantity
+realized PnL = net sell proceeds - relieved cost basis
 ```
 
-- Cash increases by net proceeds.
-- Positions decreases by the relieved cost basis.
-- Realized PnL increases or decreases by the realized PnL from the sell.
-- The sell fee reduces realized PnL through net proceeds.
+- Fee defaults to zero.
+- Sell fee reduces net proceeds and therefore reduces Realized PnL.
+- Portfolio Cash increases by net sell proceeds.
+- Portfolio Positions decreases by relieved cost basis.
+- Portfolio Realized PnL changes by realized PnL.
 - Capital and Income do not change.
 - A sell cannot exceed the current open quantity.
+- A sell must have positive net proceeds.
 
-Cost-basis relief must preserve accounting invariants in integer minor units.
-In particular, selling the entire remaining quantity must relieve the entire
-remaining cost basis so no rounding residue remains. The precise allocation
-and rounding rule for partial sells must be documented before implementation.
+If an exact-cash-total override is supplied, that money amount is net sell
+proceeds. Price, quantity, and fee remain recorded transaction details, but the
+override controls the final cash accounting and realized PnL calculation.
+
+For a partial sell:
+
+```text
+exact allocation =
+    prior open cost basis × sold quantity / prior open quantity
+```
+
+The relieved cost basis is the exact allocation rounded to the nearest integer
+minor unit using round-half-even. This is a documented internal cost allocation,
+not silent rounding of a trade cash effect. A sale of the entire remaining
+quantity always relieves the entire remaining Cost Basis so no residual remains.
 
 ### Income
-
-For manually recorded asset income:
 
 ```text
 cash increase = income amount
 income increase = income amount
 ```
 
-- Cash increases by the income amount.
-- Income increases by the income amount.
-- Capital, Positions, and Realized PnL do not change.
+- Income requires an existing active asset.
+- Portfolio Cash increases by the income amount.
+- Portfolio Income increases by the income amount.
+- Income does not affect Cost Basis, Positions, Capital, or Realized PnL.
+- Income is included in asset and portfolio return calculations.
 - Income is not a market gain.
-- Income is included in portfolio Return.
 
-Whether income requires an existing active asset is an open decision. The
-proposed baseline is yes, consistent with buy and sell.
+### Asset-level Realized Return
+
+```text
+Realized Return = (Realized PnL + Income) / Total Buy Cost
+```
+
+Total Buy Cost is the cumulative total of active buy cash outflows for the
+asset, including buy fees and any exact-cash-total overrides. Sells do not
+reduce Total Buy Cost.
+
+If Total Buy Cost is zero, Realized Return displays `0.00%`.
+
+This is a realized accounting result. It does not include market value,
+unrealized PnL, or market movement.
 
 ## Precision and formatting
 
 ### Money
 
-- Store money as integer minor units.
-- Parse and calculate money without Python `float`.
-- Display money with the existing `format_money()`.
-- Display thousands separators and exactly two decimal places.
-- Fees, trade cash totals, cost basis, realized PnL, and income are money.
+- Money is stored as integer minor units.
+- Monetary input and calculations never use Python `float`.
+- Money displays through the existing `format_money()`.
+- Money displays thousands separators and exactly two decimal places.
+- Fees, final trade cash totals, Cost Basis, Income, and Realized PnL are money.
+
+### Exact trade cash effects
+
+Price and quantity are future exact Decimal-like values. Multiplication must
+remain exact through validation.
+
+FundLog must not silently round a calculated buy or sell cash effect:
+
+```text
+buy cash effect = price × quantity + fee
+sell cash effect = price × quantity - fee
+```
+
+Without an exact-cash-total override, the final calculated cash effect must be
+exactly representable as integer minor units. If it is not, the operation is
+rejected.
+
+With the future exact-cash-total override:
+
+- The supplied total must itself be valid integer-minor-unit money.
+- For a buy, it represents total buy cash outflow after fees.
+- For a sell, it represents net sell proceeds after fees.
+- It is authoritative for Cash, Cost Basis or Realized PnL, Positions, the log
+  Total column, and Total Buy Cost where applicable.
+- Price, quantity, and fee remain recorded for audit and display.
+
+This supports broker-statement totals without hiding sub-cent discrepancies
+from values such as `0.000533 × 0.0538`.
+
+### Fees
+
+- Fees belong to buy and sell operations only.
+- `--fee` is optional and defaults to zero.
+- Fees are valid nonnegative money amounts in integer minor units.
+- Fees use money parsing and `format_money()`.
+- Fees never use price or quantity parsing or formatting.
 
 ### Quantity
 
-Quantities must support values such as:
+Quantities must support:
 
 ```text
 3
@@ -352,14 +415,14 @@ Quantities must support values such as:
 123456.0543
 ```
 
-A future `format_quantity()` must:
+Future `format_quantity()` must:
 
-- Remain separate from `format_money()`.
+- Be separate from `format_money()` and `format_price()`.
 - Add thousands separators only to the integer part.
 - Preserve meaningful fractional precision.
-- Not force exactly two decimal places.
+- Not force two decimal places.
 
-Expected examples:
+Examples:
 
 ```text
 123456      -> 123,456
@@ -367,127 +430,125 @@ Expected examples:
 0.0538      -> 0.0538
 ```
 
-The implementation design must define accepted maximum precision, storage
-representation, normalization of trailing zeros, and upper bounds before
-quantity parsing is added.
+The accepted maximum precision, storage representation, trailing-zero
+normalization, and upper bounds must be finalized before implementation.
 
 ### Price
 
-Prices must support values such as:
+Prices must support:
 
 ```text
 234.43
 0.000533
 ```
 
-A future `format_price()` must:
+Future `format_price()` must:
 
-- Remain separate from `format_money()`.
+- Be separate from `format_money()` and `format_quantity()`.
 - Preserve meaningful precision.
-- Not force exactly two decimal places.
-- Avoid Python `float`.
+- Not force two decimal places.
+- Never use Python `float`.
 
-The implementation design must define accepted maximum precision, storage
-representation, normalization of trailing zeros, and upper bounds before price
-parsing is added.
+The accepted maximum precision, storage representation, trailing-zero
+normalization, and upper bounds must be finalized before implementation.
 
 ### Percentages
 
-Portfolio Return retains the existing percentage display behavior. Asset-level
-Realized Return should use the same visual percent convention once its
-accounting denominator is defined. Zero denominators must have deterministic
-behavior and must never cause a runtime error.
+Asset Realized Return and portfolio Return use the existing visual percent
+convention. A zero denominator displays `0.00%` and never causes a runtime
+error.
 
-## Output and theme
+## Portfolio integration
 
-All future asset output must reuse the semantic theme from
-`src/fundlog/output/theme.py`. Colors must not be hardcoded.
+The portfolio summary columns remain exactly:
 
-- Table headers use `TABLE_HEADER`.
-- Table borders use `TABLE_BORDER`.
-- Normal cells use `TABLE_CELL`.
-- Profit values use `PROFIT`.
-- Loss values use `LOSS`.
-- Income values may use `INFO` when that remains subtle and readable.
-- Buy and sell operation labels use normal cell styling.
+`Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return`
 
-Asset tables should include a small title or header above the table using the
-existing CLI style or the closest clean Rich equivalent, for example:
+Assets never appear as additional rows in the portfolio summary. Active asset
+transactions contribute to the owning portfolio row:
 
-```text
--- AAPL/stocks --------------------------------
+- **Capital** = external inflows minus external outflows.
+- **Cash** = inflows minus outflows minus buy cash outflows plus sell net
+  proceeds plus income.
+- **Positions** = total open Cost Basis across active assets.
+- **Book Value** = Cash plus Positions.
+- **Realized PnL** = total realized profit or loss from active manual sells.
+- **Income** = total active manually recorded asset income.
+- **Return** = `(Realized PnL + Income) / Capital`.
+
+If Capital is zero, Return displays `0.00%`.
+
+These are accounting results from manual records. Positions and Book Value are
+not market value, and Return excludes unrealized market movement.
+
+## Deletion rules
+
+```console
+fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
-Color must not be the only way meaning is communicated.
+- `--yes` is mandatory.
+- Asset deletion is a soft delete.
+- The operation atomically soft-deletes the asset and all its active buy, sell,
+  and income transactions.
+- Database rows and audit-ready metadata are preserved.
+- Soft-deleted asset transactions no longer contribute to Cash, Positions,
+  Book Value, Realized PnL, Income, Total Buy Cost, or returns.
+- The operation therefore removes all active accounting effects of the asset
+  from its portfolio summary.
+- Asset-local entry numbers from the deleted asset row are not reused.
+- Hard delete and purge remain future work.
 
-## Validation and error principles
+The implementation must validate the resulting portfolio state before
+committing the deletion. If removing the asset's active transaction effects
+would violate a portfolio invariant such as nonnegative Cash, the deletion must
+fail atomically and leave the asset and transactions active.
 
-The detailed error messages remain implementation work, but the future
-behavior must follow these principles:
+## Validation principles
 
-- Portfolio and asset references must resolve to active records.
-- Symbol input is normalized case-insensitively and displayed uppercase.
+- Portfolio and asset references resolve only to active records.
+- Buy, sell, and income require an existing active asset.
+- Symbol input is matched case-insensitively and displayed uppercase.
 - Symbols reject spaces and `/`.
-- Monetary, price, and quantity input must be positive where the operation
-  requires a positive value.
-- Malformed, non-finite, zero, negative, unsupported-precision, and
-  out-of-range numeric input must be rejected as applicable.
-- Fees cannot make sell net proceeds negative unless an explicit later design
-  permits and explains that behavior.
+- Prices and quantities are positive exact decimal values.
+- Income amounts are positive money values.
+- Fees are nonnegative money values and default to zero.
+- Malformed, non-finite, unsupported-precision, and out-of-range numeric input
+  is rejected.
 - Sells cannot exceed open quantity.
-- User-provided transaction dates use the shared date helper and cannot be in
-  the future.
+- Sell net proceeds must be positive.
+- Calculated trade cash effects that are not exact minor-unit money are rejected
+  unless an exact-cash-total override is supplied.
+- Explicit transaction dates use the shared date helper and cannot be in the
+  future.
 - Failed commands exit nonzero and leave no partial changes.
 
-## Open design questions
+## Remaining open questions
 
-These questions must be resolved and incorporated into the relevant contracts
-before implementation:
+The accounting direction and command behavior are resolved. These bounded
+representation details remain for implementation design:
 
-1. **Trade-total precision:** Should `price × quantity` be rounded to
-   two-decimal money using a documented deterministic rounding mode, or should a
-   trade be rejected when its exact total cannot be represented in integer
-   minor units?
-2. **Asset creation:** Should buy and sell require an explicitly existing asset,
-   as currently proposed, or may the first buy auto-create it? Silent
-   auto-creation increases convenience but weakens explicit asset management.
-3. **Fees:** Must `--fee` be supplied for every buy and sell, or should it
-   default to zero? If optional, output and stored records must still represent
-   zero fees deterministically.
-4. **Income ownership:** Must an asset already exist before income can be
-   recorded? The current proposed baseline is yes.
-5. **Asset deletion:** Should deletion be rejected when an asset has operation
-   history or an open quantity, should it archive only the asset while
-   preserving its records and derived accounting effects, or should it
-   soft-delete the asset and its trades atomically? Removing historical effects
-   would alter portfolio totals and needs particularly careful audit semantics.
-6. **Partial-sell cost allocation:** Which deterministic minor-unit rounding
-   rule should moving-average cost-basis relief use for a partial sell?
-7. **Asset Realized Return:** What denominator should the asset-level
-   `Realized Return` use? The numerator is realized PnL plus income, but possible
-   denominators such as relieved cost basis or cumulative deployed cost have
-   different meanings, especially for partially open positions.
-8. **Transaction options:** Should buy, sell, and income all expose `--date` and
-   `--note` in their first implementation? Regardless of command shape, all
-   explicit dates must use the shared date helper.
-9. **Reference grammar:** Should portfolio names containing `/` be prohibited
-   before asset references are introduced, or should the CLI define escaping?
+1. What exact allowed-character set and maximum length should symbols use
+   beyond the fixed no-space and no-`/` rules?
+2. What maximum precision, storage representation, trailing-zero policy, and
+   numeric bounds should price and quantity use?
+3. Should `/` be prohibited in portfolio names before asset references are
+   implemented, or should references define escaping?
+4. Should the exact-cash-total option keep the working name `--total`, or use a
+   more explicit name? Its accounting semantics are already fixed above.
 
-## Implementation sequence for a later phase
+## Future implementation sequence
 
-No part of this sequence is authorized by this design document. Once the open
-questions are settled and implementation is explicitly requested, work can be
-split into reviewable steps:
+This document does not authorize implementation. After the remaining
+representation details are finalized and implementation is explicitly
+requested, work can proceed in reviewable steps:
 
-1. Finalize symbol/reference validation and numeric precision contracts.
-2. Finalize moving-average allocation, trade-total rounding, return, and
-   deletion semantics.
-3. Design storage and migrations without changing existing v0.1 behavior.
-4. Add separate exact parsers and formatters for quantity and price.
-5. Add asset management behavior.
-6. Add buy, sell, and income behavior with shared date validation.
-7. Feed derived results into the unchanged portfolio summary columns.
+1. Finalize symbol/reference grammar and exact price/quantity representation.
+2. Design storage and migrations without changing existing v0.1 behavior.
+3. Add separate exact parsers and formatters for quantity and price.
+4. Add asset management and soft-deletion behavior.
+5. Add buy, sell, and income behavior with shared date validation.
+6. Add exact-total validation and moving-average accounting.
+7. Feed active asset results into the unchanged portfolio summary columns.
 8. Add themed asset list, summary, and log output.
-9. Add focused unit, integration, accounting-invariant, and failure-atomicity
-   tests.
-
+9. Add focused unit, integration, accounting-invariant, and atomicity tests.

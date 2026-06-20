@@ -30,7 +30,7 @@ implementation contract.
 
 - Add symbol tracking through portfolio-owned assets.
 - Add symbols to an existing portfolio.
-- Remove or archive assets under defined audit rules.
+- Soft-delete assets and their active transactions under audit-ready rules.
 - Add asset-level lists, summaries, and logs.
 
 ## v0.3 — Investment operations
@@ -42,8 +42,9 @@ implementation contract.
 - Calculate open-position book cost.
 - Calculate realized PnL.
 - Feed manual results into Cash, Positions, Book Value, Realized PnL, and Income.
-- Use moving average cost as the proposed initial cost basis method, subject to
-  resolution of the precision rules in `docs/ASSETS_SPEC.md`.
+- Use moving average cost as the initial cost basis method.
+- Reject inexact minor-unit trade cash effects unless an explicit exact cash
+  total is supplied.
 
 FundLog will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
 

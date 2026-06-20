@@ -44,8 +44,10 @@ FundLog is manual-only now and in its intended future. Future features may suppo
 
 Future asset work must reuse the shared CLI theme, `parse_transaction_date()`,
 and `format_money()`. Quantity and unit-price parsing and display require
-separate precision-aware helpers and must not reuse the money formatter. Live
-prices, market APIs, market value, and unrealized PnL remain prohibited.
+separate precision-aware `format_quantity()` and `format_price()` helpers and
+must not reuse the money formatter. Future trade calculations must not silently
+round cash effects that are not exactly representable in integer minor units.
+Live prices, market APIs, market value, and unrealized PnL remain prohibited.
 
 ## Implemented commands
 
