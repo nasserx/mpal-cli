@@ -124,12 +124,31 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/config.py`: Application metadata and local database path resolution.
 - `src/fundlog/errors.py`: Expected application exception types.
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
-- `src/fundlog/output/`: Rich console and table rendering.
+- `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.
 
 Keep persistence and business validation out of Rich output helpers. Keep command handlers thin and use the existing storage and amount helpers.
+
+## CLI theme
+
+Use the shared semantic palette in `src/fundlog/output/theme.py` for all Rich
+output. Future assets, symbols, trades, positions, and reports must reuse this
+theme instead of defining local colors.
+
+- Use `TABLE_HEADER` for table headers.
+- Use `TABLE_BORDER` for table borders.
+- Use `TABLE_CELL` for every normal table body cell, including names, numbers,
+  dates, types, amounts, notes, and summary values.
+- Use `MUTED` only for secondary text outside normal table cells.
+- Reserve `SUCCESS`, `ERROR`, and `WARNING` for status messages.
+- Use `INFO` for informational messages where appropriate.
+- Use `PROFIT` and `LOSS` only for values with clear profit, loss, or return
+  semantics. Never use them for normal inflow or outflow rows.
+- Keep colors subtle and preserve readable text labels; color must not carry
+  meaning by itself.
+- Do not assign a different color to every table column or financial field.
 
 ## Development workflow
 

@@ -11,9 +11,12 @@ from fundlog.config import APP_NAME
 from fundlog.errors import FundLogError, InvalidEntryDateError
 from fundlog.output.console import (
     print_capital_entry_log,
-    print_message,
+    print_error,
+    print_info,
     print_portfolio_summaries,
     print_portfolio_summary,
+    print_success,
+    print_warning,
 )
 from fundlog.storage import (
     create_portfolio,
@@ -65,10 +68,10 @@ def init_command() -> None:
     try:
         database_path = initialize_database()
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"FundLog initialized at {database_path}")
+    print_success(f"FundLog initialized at {database_path}")
 
 
 @app.command()
@@ -91,13 +94,13 @@ def create(
                 local_date.today(),
             )
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
     if initial is None:
-        print_message(f"Portfolio '{name}' created.")
+        print_success(f"Portfolio '{name}' created.")
     else:
-        print_message(f"Portfolio '{name}' created with initial capital.")
+        print_success(f"Portfolio '{name}' created with initial capital.")
 
 
 @app.command(context_settings={"ignore_unknown_options": True})
@@ -119,10 +122,10 @@ def inflow(
         entry_date = local_date.today() if date is None else _parse_entry_date(date)
         record_inflow(portfolio, amount_minor, entry_date, note)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"Inflow recorded for portfolio '{portfolio}'.")
+    print_success(f"Inflow recorded for portfolio '{portfolio}'.")
 
 
 def _parse_entry_date(value: str) -> local_date:
@@ -157,10 +160,10 @@ def outflow(
         entry_date = local_date.today() if date is None else _parse_entry_date(date)
         record_outflow(portfolio, amount_minor, entry_date, note)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"Outflow recorded for portfolio '{portfolio}'.")
+    print_success(f"Outflow recorded for portfolio '{portfolio}'.")
 
 
 @app.command()
@@ -176,31 +179,28 @@ def summary(
 ) -> None:
     """Show one portfolio summary or all portfolio summaries."""
     if all_portfolios and portfolio is not None:
-        typer.echo(
-            "A portfolio name cannot be combined with --all.",
-            err=True,
-        )
+        print_error("A portfolio name cannot be combined with --all.")
         raise typer.Exit(code=1)
     if all_portfolios:
         try:
             portfolio_summaries = get_all_portfolio_summaries()
         except FundLogError as error:
-            typer.echo(str(error), err=True)
+            print_error(str(error))
             raise typer.Exit(code=1) from error
 
         if not portfolio_summaries:
-            print_message("No active portfolios.")
+            print_info("No active portfolios.")
             return
         print_portfolio_summaries(portfolio_summaries)
         return
     if portfolio is None:
-        typer.echo("A portfolio name is required.", err=True)
+        print_error("A portfolio name is required.")
         raise typer.Exit(code=1)
 
     try:
         portfolio_summary = get_portfolio_summary(portfolio)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
     print_portfolio_summary(portfolio_summary)
@@ -214,11 +214,11 @@ def log(
     try:
         entries = get_capital_entry_log(portfolio)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
     if not entries:
-        print_message(f"No active capital entries for portfolio '{portfolio}'.")
+        print_info(f"No active capital entries for portfolio '{portfolio}'.")
         return
     print_capital_entry_log(entries)
 
@@ -248,10 +248,7 @@ def edit(
 ) -> None:
     """Edit a capital entry by its portfolio-local number."""
     if amount is None and date is None and note is None:
-        typer.echo(
-            "Provide at least one of --amount, --date, or --note.",
-            err=True,
-        )
+        print_error("Provide at least one of --amount, --date, or --note.")
         raise typer.Exit(code=1)
 
     try:
@@ -265,10 +262,10 @@ def edit(
             note=note,
         )
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
+    print_success(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
 
 
 @app.command()
@@ -281,16 +278,16 @@ def reset(
 ) -> None:
     """Reset portfolio entries while retaining the portfolio."""
     if not yes:
-        typer.echo("Reset requires the --yes confirmation flag.", err=True)
+        print_warning("Reset requires the --yes confirmation flag.")
         raise typer.Exit(code=1)
 
     try:
         reset_portfolio_entries(portfolio)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"Portfolio '{portfolio}' reset.")
+    print_success(f"Portfolio '{portfolio}' reset.")
 
 
 @app.command()
@@ -311,30 +308,27 @@ def delete(
     """Soft-delete one entry or an entire portfolio."""
     if entry_number is not None:
         if yes:
-            typer.echo(
-                "Do not combine an entry number with --yes.",
-                err=True,
-            )
+            print_warning("Do not combine an entry number with --yes.")
             raise typer.Exit(code=1)
         try:
             delete_capital_entry(portfolio, entry_number)
         except FundLogError as error:
-            typer.echo(str(error), err=True)
+            print_error(str(error))
             raise typer.Exit(code=1) from error
 
-        print_message(
+        print_success(
             f"Capital entry {entry_number} deleted from portfolio '{portfolio}'."
         )
         return
 
     if not yes:
-        typer.echo("Delete requires the --yes confirmation flag.", err=True)
+        print_warning("Delete requires the --yes confirmation flag.")
         raise typer.Exit(code=1)
 
     try:
         delete_portfolio(portfolio)
     except FundLogError as error:
-        typer.echo(str(error), err=True)
+        print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_message(f"Portfolio '{portfolio}' deleted.")
+    print_success(f"Portfolio '{portfolio}' deleted.")
