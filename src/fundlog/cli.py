@@ -49,28 +49,63 @@ from fundlog.storage import (
     reset_portfolio_entries,
 )
 
-HELP_EXAMPLES = """Examples:
+ASSET_ADD_SHAPE = r"fundlog asset add <portfolio> <symbol> \[symbol...]"
+BUY_SHAPE = (
+    "fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> "
+    "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
+)
+SELL_SHAPE = (
+    "fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> "
+    "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
+)
 
-  fundlog init
+HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
+    (
+        "fundlog init",
+        "fundlog create <portfolio> [--initial <amount>]",
+        "fundlog inflow <portfolio> <amount> [--date <date>] [--note <text>]",
+        "fundlog outflow <portfolio> <amount> [--date <date>] [--note <text>]",
+        "fundlog summary <portfolio>",
+        "fundlog summary --all",
+        "fundlog log <portfolio>",
+        "fundlog edit <portfolio> <entry-number>",
+        "fundlog delete <portfolio> <entry-number>",
+        "fundlog delete <portfolio> --yes",
+        "fundlog reset <portfolio> --yes",
+        ASSET_ADD_SHAPE,
+        "fundlog asset list <portfolio>",
+        "fundlog asset log <portfolio>/<symbol>",
+        "fundlog asset summary <portfolio>/<symbol>",
+        "fundlog asset delete <portfolio>/<symbol> --yes",
+        (
+            "fundlog income <portfolio>/<symbol> <amount> "
+            "[--date <date>] [--note <text>]"
+        ),
+        BUY_SHAPE,
+        SELL_SHAPE,
+    )
+)
 
-  fundlog create stocks --initial 5000
+ASSET_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
+    (
+        ASSET_ADD_SHAPE,
+        "fundlog asset list <portfolio>",
+        "fundlog asset log <portfolio>/<symbol>",
+        "fundlog asset summary <portfolio>/<symbol>",
+        "fundlog asset delete <portfolio>/<symbol> --yes",
+    )
+)
 
-  fundlog inflow stocks 1000
+INCOME_HELP_EXAMPLES = """Examples:
 
-  fundlog outflow stocks 250
+  fundlog income <portfolio>/<symbol> <amount>
 
-  fundlog summary stocks
-
-  fundlog summary --all
-
-  fundlog log stocks
-
-  fundlog edit stocks 1 --amount 500
-
-  fundlog delete stocks 1
-
-  fundlog delete stocks --yes
+  fundlog income <portfolio>/<symbol> <amount> --date <date> --note <text>
 """
+
+BUY_HELP_EXAMPLES = f"Example:\n\n  {BUY_SHAPE}"
+
+SELL_HELP_EXAMPLES = f"Example:\n\n  {SELL_SHAPE}"
 
 app = typer.Typer(
     name="fundlog",
@@ -81,6 +116,7 @@ app = typer.Typer(
 asset_app = typer.Typer(
     name="asset",
     help="Manage symbols inside a portfolio.",
+    epilog=ASSET_HELP_EXAMPLES,
     no_args_is_help=True,
 )
 app.add_typer(asset_app)
@@ -228,7 +264,10 @@ def asset_log(
     print_asset_transaction_log(portfolio, symbol, transactions)
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(
+    context_settings={"ignore_unknown_options": True},
+    epilog=INCOME_HELP_EXAMPLES,
+)
 def income(
     reference: Annotated[
         str,
@@ -271,7 +310,10 @@ def income(
     print_success(f"Income recorded for asset '{symbol}/{portfolio}'.")
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(
+    context_settings={"ignore_unknown_options": True},
+    epilog=BUY_HELP_EXAMPLES,
+)
 def buy(
     reference: Annotated[
         str,
@@ -288,7 +330,7 @@ def buy(
     ] = None,
     total: Annotated[
         str | None,
-        typer.Option("--total", help="Exact total cash outflow including fees."),
+        typer.Option("--total", help="Exact buy cash outflow including fees."),
     ] = None,
     date: Annotated[
         str | None,
@@ -338,7 +380,10 @@ def buy(
     print_success(f"Buy recorded for asset '{symbol}/{portfolio}'.")
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(
+    context_settings={"ignore_unknown_options": True},
+    epilog=SELL_HELP_EXAMPLES,
+)
 def sell(
     reference: Annotated[
         str,
@@ -355,7 +400,7 @@ def sell(
     ] = None,
     total: Annotated[
         str | None,
-        typer.Option("--total", help="Exact net cash inflow after fees."),
+        typer.Option("--total", help="Exact net sell proceeds after fees."),
     ] = None,
     date: Annotated[
         str | None,
