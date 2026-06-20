@@ -80,7 +80,7 @@ v0.1 is limited to:
 - Showing one-portfolio or all-portfolio summaries.
 - Showing a portfolio's capital entry log.
 - Editing capital entries.
-- Soft-removing capital entries.
+- Soft-deleting capital entries by stable portfolio-local entry number.
 - Resetting a portfolio's operations while retaining the portfolio.
 - Soft-deleting a portfolio and its active capital entries.
 

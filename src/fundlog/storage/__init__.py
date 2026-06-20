@@ -2,10 +2,10 @@
 
 from fundlog.storage.database import initialize_database
 from fundlog.storage.entries import (
+    delete_capital_entry,
     edit_capital_entry,
     record_inflow,
     record_outflow,
-    remove_capital_entry,
     reset_portfolio_entries,
 )
 from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
@@ -25,6 +25,7 @@ __all__ = [
     "PortfolioSummary",
     "create_portfolio",
     "create_portfolio_with_initial",
+    "delete_capital_entry",
     "delete_portfolio",
     "edit_capital_entry",
     "get_all_portfolio_summaries",
@@ -33,6 +34,5 @@ __all__ = [
     "initialize_database",
     "record_inflow",
     "record_outflow",
-    "remove_capital_entry",
     "reset_portfolio_entries",
 ]

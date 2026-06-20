@@ -47,8 +47,8 @@ FundLog is manual-only now and in its intended future. Future features may suppo
 - `fundlog summary <portfolio>`
 - `fundlog summary --all`
 - `fundlog log <portfolio>`
-- `fundlog edit <portfolio> <entry-id>`
-- `fundlog remove <portfolio> <entry-id>`
+- `fundlog edit <portfolio> <entry-number>`
+- `fundlog delete <portfolio> <entry-number>`
 - `fundlog reset <portfolio> --yes`
 - `fundlog delete <portfolio> --yes`
 
@@ -103,11 +103,15 @@ Database path resolution:
 
 Current tables are `portfolios` and `capital_entries`.
 
+Capital entries have a stable, portfolio-local `entry_no` used by `log`, `edit`, and entry `delete`. Numbering starts at 1 for each portfolio row and never reuses numbers after soft delete or reset. Internal database IDs are not part of the CLI contract.
+
+Every normal storage connection verifies the initialized schema and applies pending idempotent migrations before querying or writing data. `fundlog init` also applies migrations. Do not add command-specific migration calls.
+
 Soft delete is the default deletion model:
 
-- `remove` soft-deletes one capital entry.
+- `delete <portfolio> <entry-number>` soft-deletes one capital entry.
 - `reset` soft-deletes all active entries for one portfolio while preserving the portfolio.
-- `delete` soft-deletes a portfolio and its active entries.
+- `delete <portfolio> --yes` soft-deletes a portfolio and its active entries.
 
 Do not hard-delete rows unless a future task explicitly designs and authorizes a hard-delete feature. Multi-record changes must be atomic. Queries and calculations normally operate on active rows only.
 

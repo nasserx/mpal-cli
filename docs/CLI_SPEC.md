@@ -5,7 +5,8 @@
 - A command names the main action: `create`, `inflow`, `edit`, and so on.
 - Options use long names beginning with `--`.
 - Short options such as `-x` may be introduced only when they provide clear value.
-- Action-like pseudo-options such as `-inflow`, `-edit`, and `-remove` are not valid.
+- Internal database IDs are not part of the CLI contract.
+- Capital entry numbers are stable and local to one portfolio.
 - Amounts are positive, decimal-safe numbers. Zero, negative, malformed, non-finite, or unsupported-precision amounts must be rejected.
 - Explicit dates use ISO format `YYYY-MM-DD`. An omitted date uses the current local date.
 - A failed command exits nonzero and must not leave partial changes.
@@ -164,13 +165,13 @@ fundlog log stocks
 
 **Options:** None in v0.1.
 
-**Behavior:** Displays active inflow and outflow entries with at least entry ID, type, amount, date, and note. Ordering must be deterministic.
+**Behavior:** Displays active inflow and outflow entries with the portfolio-local entry number (`#`), type, amount, date, and note. Internal database IDs are not displayed. Ordering is deterministic by date and then entry number.
 
 **Validation:** Portfolio must exist and be active.
 
 **Errors:** FundLog is not initialized; unknown portfolio; database failure.
 
-## `fundlog edit PORTFOLIO ENTRY_ID`
+## `fundlog edit PORTFOLIO ENTRY_NUMBER`
 
 Examples:
 
@@ -185,7 +186,7 @@ fundlog edit stocks 2 --note "corrected deposit"
 **Arguments:**
 
 - `PORTFOLIO`: Existing active portfolio.
-- `ENTRY_ID`: Existing active entry belonging to that portfolio.
+- `ENTRY_NUMBER`: Existing active portfolio-local entry number.
 
 **Options:**
 
@@ -193,34 +194,11 @@ fundlog edit stocks 2 --note "corrected deposit"
 - `--date DATE`: Replacement date in `YYYY-MM-DD`.
 - `--note TEXT`: Replacement note.
 
-**Behavior:** Updates only the supplied fields, preserves the entry ID and type, recalculates derived balances, and records enough audit information for future audit history.
+**Behavior:** Updates only the supplied fields, preserves the portfolio-local entry number and type, recalculates derived balances, and records enough audit information for future audit history.
 
-**Validation:** At least one editable option is required. The entry must belong to `PORTFOLIO` and must not be removed. The resulting ledger must remain valid; in particular, editing must not produce insufficient Cash at any point under the ledger's deterministic ordering.
+**Validation:** At least one editable option is required. The entry number must exist and be active within `PORTFOLIO`. An entry number from another portfolio is not found. The resulting ledger must remain valid; in particular, editing must not produce insufficient Cash at any point under the ledger's deterministic ordering.
 
-**Errors:** FundLog is not initialized; unknown portfolio or entry; entry belongs to another portfolio; removed entry; no edit option; invalid amount or date; edit would invalidate Cash; database failure.
-
-## `fundlog remove PORTFOLIO ENTRY_ID`
-
-Example:
-
-```console
-fundlog remove stocks 2
-```
-
-**Purpose:** Soft-delete a capital entry within a portfolio.
-
-**Arguments:**
-
-- `PORTFOLIO`: Existing active portfolio.
-- `ENTRY_ID`: Existing active entry belonging to that portfolio.
-
-**Options:** None in v0.1.
-
-**Behavior:** Marks the entry removed without physically deleting it, recalculates derived balances, and retains audit-ready metadata.
-
-**Validation:** The entry must belong to `PORTFOLIO` and be active. Removing it must leave a valid ledger with no insufficient-Cash state.
-
-**Errors:** FundLog is not initialized; unknown portfolio or entry; entry belongs to another portfolio; entry already removed; removal would invalidate Cash; database failure.
+**Errors:** FundLog is not initialized; unknown portfolio; unknown or inactive entry number; no edit option; invalid amount or date; edit would invalidate Cash; database failure.
 
 ## `fundlog reset PORTFOLIO --yes`
 
@@ -246,6 +224,29 @@ fundlog reset stocks --yes
 
 **Errors:** FundLog is not initialized; missing `--yes`; unknown portfolio; database failure. Without `--yes`, no changes occur.
 
+## `fundlog delete PORTFOLIO ENTRY_NUMBER`
+
+Example:
+
+```console
+fundlog delete stocks 2
+```
+
+**Purpose:** Soft-delete one active capital entry.
+
+**Arguments:**
+
+- `PORTFOLIO`: Existing active portfolio.
+- `ENTRY_NUMBER`: Existing active portfolio-local entry number.
+
+**Options:** None.
+
+**Behavior:** Soft-deletes the selected entry without physically deleting its row. The entry number is never reused.
+
+**Validation:** The entry number must exist and be active within `PORTFOLIO`. Deletion must leave a valid nonnegative Cash balance.
+
+**Errors:** FundLog is not initialized; unknown portfolio; unknown or inactive entry number; deletion would invalidate Cash; database failure.
+
 ## `fundlog delete PORTFOLIO --yes`
 
 Example:
@@ -264,7 +265,7 @@ fundlog delete stocks --yes
 
 - `--yes`: Required confirmation.
 
-**Behavior:** Atomically soft-deletes the portfolio and all its active capital entries. It preserves every database row and does not affect other portfolios. A deleted portfolio is excluded from summaries and cannot be used by portfolio commands. Because names are unique only among active portfolios, the name may be reused by a new portfolio.
+**Behavior:** Atomically soft-deletes the portfolio and all its active capital entries. It preserves every database row and does not affect other portfolios. A deleted portfolio is excluded from summaries and cannot be used by portfolio commands. Because names are unique only among active portfolios, the name may be reused by a new portfolio row, whose entry numbering starts again at 1.
 
 **Validation:** Portfolio must exist and be active. `--yes` is mandatory.
 

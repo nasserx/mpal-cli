@@ -15,7 +15,7 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 - Show all portfolio summaries.
 - Show a portfolio capital-entry log.
 - Edit portfolio capital entries.
-- Soft-remove portfolio capital entries.
+- Soft-delete portfolio capital entries.
 - Reset a portfolio.
 - Use a local database.
 - Maintain an audit-ready design.

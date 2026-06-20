@@ -1,13 +1,10 @@
 """Portfolio summary queries."""
 
-import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-from fundlog.config import get_database_path
-from fundlog.errors import DatabaseNotInitializedError, PortfolioNotFoundError
-
-REQUIRED_TABLES = {"portfolios", "capital_entries"}
+from fundlog.errors import PortfolioNotFoundError
+from fundlog.storage.database import connect_database
 
 
 @dataclass(frozen=True)
@@ -28,24 +25,7 @@ def get_portfolio_summary(
     database_path: Path | None = None,
 ) -> PortfolioSummary:
     """Return a summary derived from active capital entries."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         row = connection.execute(
             """
             SELECT
@@ -81,24 +61,7 @@ def get_all_portfolio_summaries(
     database_path: Path | None = None,
 ) -> list[PortfolioSummary]:
     """Return summaries for all active portfolios ordered by name."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         rows = connection.execute(
             """
             SELECT

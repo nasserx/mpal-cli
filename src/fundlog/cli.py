@@ -18,6 +18,7 @@ from fundlog.output.console import (
 from fundlog.storage import (
     create_portfolio,
     create_portfolio_with_initial,
+    delete_capital_entry,
     delete_portfolio,
     edit_capital_entry,
     get_all_portfolio_summaries,
@@ -26,7 +27,6 @@ from fundlog.storage import (
     initialize_database,
     record_inflow,
     record_outflow,
-    remove_capital_entry,
     reset_portfolio_entries,
 )
 
@@ -35,8 +35,6 @@ app = typer.Typer(
     help="Manually track portfolio capital from the terminal.",
     no_args_is_help=True,
 )
-
-PLACEHOLDER_MESSAGE = "Not implemented yet."
 
 
 def version_callback(value: bool) -> None:
@@ -61,15 +59,15 @@ def main(
     """FundLog manages manually recorded portfolio capital."""
 
 
-def show_placeholder() -> None:
-    """Report that a command has not been implemented."""
-    print_message(PLACEHOLDER_MESSAGE)
-
-
 @app.command("init")
 def init_command() -> None:
     """Initialize FundLog's local data store."""
-    database_path = initialize_database()
+    try:
+        database_path = initialize_database()
+    except FundLogError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
     print_message(f"FundLog initialized at {database_path}")
 
 
@@ -228,7 +226,13 @@ def log(
 @app.command(context_settings={"ignore_unknown_options": True})
 def edit(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_id: Annotated[int, typer.Argument(help="Capital entry ID.")],
+    entry_no: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Portfolio-local capital entry number.",
+        ),
+    ],
     amount: Annotated[
         str | None,
         typer.Option("--amount", help="Replacement entry amount."),
@@ -255,7 +259,7 @@ def edit(
         entry_date = None if date is None else _parse_entry_date(date)
         edit_capital_entry(
             portfolio,
-            entry_id,
+            entry_no,
             amount_minor=amount_minor,
             entry_date=entry_date,
             note=note,
@@ -264,22 +268,7 @@ def edit(
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from error
 
-    print_message(f"Capital entry {entry_id} updated for portfolio '{portfolio}'.")
-
-
-@app.command()
-def remove(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_id: Annotated[int, typer.Argument(help="Capital entry ID.")],
-) -> None:
-    """Soft-remove a portfolio capital entry."""
-    try:
-        remove_capital_entry(portfolio, entry_id)
-    except FundLogError as error:
-        typer.echo(str(error), err=True)
-        raise typer.Exit(code=1) from error
-
-    print_message(f"Capital entry {entry_id} removed from portfolio '{portfolio}'.")
+    print_message(f"Capital entry {entry_no} updated for portfolio '{portfolio}'.")
 
 
 @app.command()
@@ -307,12 +296,35 @@ def reset(
 @app.command()
 def delete(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    entry_no: Annotated[
+        int | None,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Portfolio-local entry number to delete.",
+        ),
+    ] = None,
     yes: Annotated[
         bool,
         typer.Option("--yes", help="Confirm the portfolio deletion."),
     ] = False,
 ) -> None:
-    """Soft-delete a portfolio and its capital entries."""
+    """Soft-delete one entry or an entire portfolio."""
+    if entry_no is not None:
+        if yes:
+            typer.echo(
+                "Do not combine an entry number with --yes.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        try:
+            delete_capital_entry(portfolio, entry_no)
+        except FundLogError as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from error
+
+        print_message(f"Capital entry {entry_no} deleted from portfolio '{portfolio}'.")
+        return
+
     if not yes:
         typer.echo("Delete requires the --yes confirmation flag.", err=True)
         raise typer.Exit(code=1)

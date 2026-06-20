@@ -46,14 +46,14 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
     """Print active capital entries using the documented log columns."""
     table = Table()
-    table.add_column("id", justify="right")
+    table.add_column("#", justify="right")
     table.add_column("Date")
     table.add_column("Type")
     table.add_column("Amount", justify="right")
     table.add_column("Note")
     for entry in entries:
         table.add_row(
-            str(entry.entry_id),
+            str(entry.entry_no),
             entry.entry_date,
             entry.entry_type,
             format_amount_minor(entry.amount_minor),

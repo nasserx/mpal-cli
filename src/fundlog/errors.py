@@ -9,6 +9,10 @@ class DatabaseNotInitializedError(FundLogError):
     """Raised when a command requires an initialized database."""
 
 
+class StorageError(FundLogError):
+    """Raised when SQLite cannot complete a storage operation safely."""
+
+
 class PortfolioAlreadyExistsError(FundLogError):
     """Raised when an active portfolio name is already in use."""
 
@@ -37,13 +41,9 @@ class CapitalEntryNotFoundError(FundLogError):
     """Raised when a capital entry does not exist or is inactive."""
 
 
-class CapitalEntryPortfolioMismatchError(FundLogError):
-    """Raised when a capital entry belongs to another portfolio."""
-
-
 class InvalidLedgerEditError(FundLogError):
     """Raised when an edit would make the active ledger invalid."""
 
 
-class InvalidLedgerRemoveError(FundLogError):
-    """Raised when a removal would make the active ledger invalid."""
+class InvalidLedgerDeleteError(FundLogError):
+    """Raised when entry deletion would make the active ledger invalid."""

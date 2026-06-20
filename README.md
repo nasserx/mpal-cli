@@ -38,13 +38,15 @@ fundlog summary --all
 fundlog log stocks
 
 fundlog edit stocks 2 --amount 500
-fundlog remove stocks 2
+fundlog delete stocks 2
 
 fundlog reset stocks --yes
 fundlog delete stocks --yes
 ```
 
-v0.1 covers initialization, portfolio creation, optional initial capital, inflows, outflows, summaries, logs, capital-entry correction, soft removal, portfolio reset, and soft deletion of portfolios.
+Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
+
+v0.1 covers initialization, portfolio creation, optional initial capital, inflows, outflows, summaries, logs, capital-entry correction and deletion, portfolio reset, and soft deletion of portfolios.
 
 ## Planned capabilities
 

@@ -4,15 +4,12 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from fundlog.config import get_database_path
 from fundlog.errors import (
-    DatabaseNotInitializedError,
     InvalidPortfolioNameError,
     PortfolioAlreadyExistsError,
     PortfolioNotFoundError,
 )
-
-REQUIRED_TABLES = {"portfolios", "capital_entries"}
+from fundlog.storage.database import connect_database, next_entry_no
 
 
 def create_portfolio(name: str, database_path: Path | None = None) -> int:
@@ -20,24 +17,7 @@ def create_portfolio(name: str, database_path: Path | None = None) -> int:
     if not name.strip():
         raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
 
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         try:
             cursor = connection.execute(
                 "INSERT INTO portfolios (name) VALUES (?)",
@@ -63,26 +43,7 @@ def create_portfolio_with_initial(
     if not name.strip():
         raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
 
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         try:
             portfolio_cursor = connection.execute(
                 "INSERT INTO portfolios (name) VALUES (?)",
@@ -101,13 +62,19 @@ def create_portfolio_with_initial(
             """
             INSERT INTO capital_entries (
                 portfolio_id,
+                entry_no,
                 entry_type,
                 amount_minor,
                 entry_date
             )
-            VALUES (?, 'inflow', ?, ?)
+            VALUES (?, ?, 'inflow', ?, ?)
             """,
-            (portfolio_id, amount_minor, entry_date.isoformat()),
+            (
+                portfolio_id,
+                next_entry_no(connection, portfolio_id),
+                amount_minor,
+                entry_date.isoformat(),
+            ),
         )
 
     return portfolio_id
@@ -118,26 +85,7 @@ def delete_portfolio(
     database_path: Path | None = None,
 ) -> None:
     """Atomically soft-delete a portfolio and all its active entries."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (name,),

@@ -1,21 +1,16 @@
 """Capital entry persistence operations."""
 
-import sqlite3
 from datetime import date
 from pathlib import Path
 
-from fundlog.config import get_database_path
 from fundlog.errors import (
     CapitalEntryNotFoundError,
-    CapitalEntryPortfolioMismatchError,
-    DatabaseNotInitializedError,
     InsufficientCashError,
+    InvalidLedgerDeleteError,
     InvalidLedgerEditError,
-    InvalidLedgerRemoveError,
     PortfolioNotFoundError,
 )
-
-REQUIRED_TABLES = {"portfolios", "capital_entries"}
+from fundlog.storage.database import connect_database, next_entry_no
 
 
 def record_inflow(
@@ -25,26 +20,8 @@ def record_inflow(
     note: str | None = None,
     database_path: Path | None = None,
 ) -> int:
-    """Record an inflow for an active portfolio and return the entry ID."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    """Record an inflow and return its internal row ID."""
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (portfolio_name,),
@@ -58,18 +35,25 @@ def record_inflow(
             """
             INSERT INTO capital_entries (
                 portfolio_id,
+                entry_no,
                 entry_type,
                 amount_minor,
                 entry_date,
                 note
             )
-            VALUES (?, 'inflow', ?, ?, ?)
+            VALUES (?, ?, 'inflow', ?, ?, ?)
             """,
-            (portfolio[0], amount_minor, entry_date.isoformat(), note),
+            (
+                portfolio[0],
+                next_entry_no(connection, portfolio[0]),
+                amount_minor,
+                entry_date.isoformat(),
+                note,
+            ),
         )
 
     if cursor.lastrowid is None:
-        raise RuntimeError("SQLite did not return a capital entry ID.")
+        raise RuntimeError("SQLite did not return an internal entry row ID.")
     return cursor.lastrowid
 
 
@@ -80,27 +64,8 @@ def record_outflow(
     note: str | None = None,
     database_path: Path | None = None,
 ) -> int:
-    """Record an outflow when the active portfolio has sufficient cash."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    """Record an outflow and return its internal row ID."""
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (portfolio_name,),
@@ -135,24 +100,31 @@ def record_outflow(
             """
             INSERT INTO capital_entries (
                 portfolio_id,
+                entry_no,
                 entry_type,
                 amount_minor,
                 entry_date,
                 note
             )
-            VALUES (?, 'outflow', ?, ?, ?)
+            VALUES (?, ?, 'outflow', ?, ?, ?)
             """,
-            (portfolio[0], amount_minor, entry_date.isoformat(), note),
+            (
+                portfolio[0],
+                next_entry_no(connection, portfolio[0]),
+                amount_minor,
+                entry_date.isoformat(),
+                note,
+            ),
         )
 
     if cursor.lastrowid is None:
-        raise RuntimeError("SQLite did not return a capital entry ID.")
+        raise RuntimeError("SQLite did not return an internal entry row ID.")
     return cursor.lastrowid
 
 
 def edit_capital_entry(
     portfolio_name: str,
-    entry_id: int,
+    entry_no: int,
     *,
     amount_minor: int | None = None,
     entry_date: date | None = None,
@@ -160,26 +132,7 @@ def edit_capital_entry(
     database_path: Path | None = None,
 ) -> None:
     """Atomically update supplied fields on one active capital entry."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (portfolio_name,),
@@ -191,21 +144,19 @@ def edit_capital_entry(
 
         entry = connection.execute(
             """
-            SELECT portfolio_id, entry_type, amount_minor, deleted_at
+            SELECT id, entry_type, amount_minor, deleted_at
             FROM capital_entries
-            WHERE id = ?
+            WHERE portfolio_id = ? AND entry_no = ?
             """,
-            (entry_id,),
+            (portfolio[0], entry_no),
         ).fetchone()
         if entry is None:
-            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} does not exist.")
-        if entry[3] is not None:
-            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} is not active.")
-        if entry[0] != portfolio[0]:
-            raise CapitalEntryPortfolioMismatchError(
-                f"Capital entry {entry_id} does not belong to portfolio "
+            raise CapitalEntryNotFoundError(
+                f"Capital entry {entry_no} does not exist in portfolio "
                 f"'{portfolio_name}'."
             )
+        if entry[3] is not None:
+            raise CapitalEntryNotFoundError(f"Capital entry {entry_no} is not active.")
 
         if amount_minor is not None:
             cash_without_entry = connection.execute(
@@ -224,7 +175,7 @@ def edit_capital_entry(
                     AND deleted_at IS NULL
                     AND id != ?
                 """,
-                (portfolio[0], entry_id),
+                (portfolio[0], entry[0]),
             ).fetchone()[0]
             edited_effect = amount_minor if entry[1] == "inflow" else -amount_minor
             if cash_without_entry + edited_effect < 0:
@@ -242,7 +193,7 @@ def edit_capital_entry(
             assignments.append("note = ?")
             values.append(note)
         assignments.append("updated_at = CURRENT_TIMESTAMP")
-        values.append(entry_id)
+        values.append(entry[0])
 
         connection.execute(
             f"UPDATE capital_entries SET {', '.join(assignments)} WHERE id = ?",
@@ -250,32 +201,13 @@ def edit_capital_entry(
         )
 
 
-def remove_capital_entry(
+def delete_capital_entry(
     portfolio_name: str,
-    entry_id: int,
+    entry_no: int,
     database_path: Path | None = None,
 ) -> None:
     """Atomically soft-delete one active capital entry."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (portfolio_name,),
@@ -287,21 +219,19 @@ def remove_capital_entry(
 
         entry = connection.execute(
             """
-            SELECT portfolio_id, deleted_at
+            SELECT id, deleted_at
             FROM capital_entries
-            WHERE id = ?
+            WHERE portfolio_id = ? AND entry_no = ?
             """,
-            (entry_id,),
+            (portfolio[0], entry_no),
         ).fetchone()
         if entry is None:
-            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} does not exist.")
-        if entry[1] is not None:
-            raise CapitalEntryNotFoundError(f"Capital entry {entry_id} is not active.")
-        if entry[0] != portfolio[0]:
-            raise CapitalEntryPortfolioMismatchError(
-                f"Capital entry {entry_id} does not belong to portfolio "
+            raise CapitalEntryNotFoundError(
+                f"Capital entry {entry_no} does not exist in portfolio "
                 f"'{portfolio_name}'."
             )
+        if entry[1] is not None:
+            raise CapitalEntryNotFoundError(f"Capital entry {entry_no} is not active.")
 
         cash_without_entry = connection.execute(
             """
@@ -319,10 +249,10 @@ def remove_capital_entry(
                 AND deleted_at IS NULL
                 AND id != ?
             """,
-            (portfolio[0], entry_id),
+            (portfolio[0], entry[0]),
         ).fetchone()[0]
         if cash_without_entry < 0:
-            raise InvalidLedgerRemoveError("Remove would make portfolio cash negative.")
+            raise InvalidLedgerDeleteError("Delete would make portfolio cash negative.")
 
         connection.execute(
             """
@@ -331,7 +261,7 @@ def remove_capital_entry(
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
-            (entry_id,),
+            (entry[0],),
         )
 
 
@@ -340,26 +270,7 @@ def reset_portfolio_entries(
     database_path: Path | None = None,
 ) -> int:
     """Atomically soft-delete all active entries for one active portfolio."""
-    path = database_path if database_path is not None else get_database_path()
-    if not path.is_file():
-        raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
-        )
-
-    with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("BEGIN IMMEDIATE")
-        tables = {
-            row[0]
-            for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        if not REQUIRED_TABLES.issubset(tables):
-            raise DatabaseNotInitializedError(
-                "FundLog is not initialized. Run 'fundlog init' first."
-            )
-
+    with connect_database(database_path) as connection:
         portfolio = connection.execute(
             "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
             (portfolio_name,),

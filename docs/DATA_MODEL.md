@@ -34,15 +34,19 @@ The v0.1 database contains only these conceptual tables:
 
 **Purpose:** Store the operations from which portfolio balances are derived.
 
-**Important conceptual fields:** Stable entry ID, portfolio ID, entry type, decimal-safe amount, effective date, optional note, creation and update timestamps, and soft-delete metadata.
+**Important conceptual fields:** Internal stable ID, portfolio ID, portfolio-local entry number, entry type, decimal-safe amount, effective date, optional note, creation and update timestamps, and soft-delete metadata.
 
 **Relationships:** Every entry belongs to exactly one portfolio. Audit records may identify the entry and its changes.
 
 **Constraints:**
 
 - v0.1 entry types are only `inflow` and `outflow`.
+- Entry numbers start at 1 independently for each portfolio row.
+- Entry numbers are unique within a portfolio and are not reused after soft delete or reset.
+- Internal database IDs are never exposed as user-facing entry numbers.
+- Initialization idempotently adds and backfills missing entry numbers for older databases, ordered by internal ID within each portfolio.
 - Amounts are positive and must support exact decimal-safe calculations.
-- Entries support soft delete and are not physically removed by `remove`, `reset`, or portfolio `delete`.
+- Entries support soft delete and are not physically removed by entry `delete`, `reset`, or portfolio `delete`.
 - Active entries determine current balances.
 - Entry changes must preserve enough prior and new state for future audit history.
 - Ledger validation must prevent insufficient-Cash outflows.

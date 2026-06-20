@@ -20,7 +20,6 @@ COMMANDS = {
     "summary",
     "log",
     "edit",
-    "remove",
     "reset",
     "delete",
 }
@@ -50,6 +49,28 @@ def test_placeholder_commands_are_registered() -> None:
     assert result.exit_code == 0
     for command in COMMANDS:
         assert command in result.output
+
+
+def test_remove_command_is_not_supported() -> None:
+    result = runner.invoke(app, ["remove", "stocks", "1"])
+
+    assert result.exit_code == 2
+    assert "No such command 'remove'" in result.output
+
+
+def test_delete_rejects_entry_number_with_yes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+
+    result = runner.invoke(app, ["delete", "stocks", "1", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Do not combine an entry number with --yes." in result.output
 
 
 def test_init_help_exits_successfully() -> None:
@@ -99,6 +120,7 @@ def test_init_creates_database_and_expected_tables(
     assert entry_columns == {
         "id",
         "portfolio_id",
+        "entry_no",
         "entry_type",
         "amount_minor",
         "entry_date",
@@ -128,6 +150,194 @@ def test_init_is_idempotent(tmp_path: Path, monkeypatch) -> None:
         ).fetchone()[0]
 
     assert portfolio_count == 1
+
+
+def test_init_migrates_and_backfills_portfolio_entry_numbers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    data_dir.mkdir()
+    database_path = data_dir / "fundlog.db"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE portfolios (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TEXT
+            );
+            CREATE TABLE capital_entries (
+                id INTEGER PRIMARY KEY,
+                portfolio_id INTEGER NOT NULL,
+                entry_type TEXT NOT NULL,
+                amount_minor INTEGER NOT NULL,
+                entry_date TEXT NOT NULL,
+                note TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TEXT
+            );
+            INSERT INTO portfolios (id, name) VALUES (10, 'stocks'), (20, 'crypto');
+            INSERT INTO capital_entries (
+                id, portfolio_id, entry_type, amount_minor, entry_date
+            )
+            VALUES
+                (5, 10, 'inflow', 100000, '2026-06-18'),
+                (9, 10, 'outflow', 25000, '2026-06-19'),
+                (12, 20, 'inflow', 50000, '2026-06-20');
+            """
+        )
+
+    first_result = runner.invoke(app, ["init"])
+    second_result = runner.invoke(app, ["init"])
+
+    assert first_result.exit_code == 0
+    assert second_result.exit_code == 0
+    with sqlite3.connect(database_path) as connection:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(capital_entries)")
+        }
+        entries = connection.execute(
+            """
+            SELECT portfolio_id, id, entry_no
+            FROM capital_entries
+            ORDER BY portfolio_id, id
+            """
+        ).fetchall()
+        indexes = {
+            row[1] for row in connection.execute("PRAGMA index_list(capital_entries)")
+        }
+
+    assert "entry_no" in columns
+    assert entries == [(10, 5, 1), (10, 9, 2), (20, 12, 1)]
+    assert "uq_portfolio_entry_no" in indexes
+    log_result = runner.invoke(app, ["log", "stocks"])
+    assert log_result.exit_code == 0
+    assert "│ 1 │" in log_result.output
+    assert "│ 2 │" in log_result.output
+    assert "│ 5 │" not in log_result.output
+    assert "│ 9 │" not in log_result.output
+
+
+def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    data_dir.mkdir()
+    database_path = data_dir / "fundlog.db"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE portfolios (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TEXT
+            );
+            CREATE TABLE capital_entries (
+                id INTEGER PRIMARY KEY,
+                portfolio_id INTEGER NOT NULL,
+                entry_type TEXT NOT NULL,
+                amount_minor INTEGER NOT NULL,
+                entry_date TEXT NOT NULL,
+                note TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TEXT
+            );
+            INSERT INTO portfolios (id, name) VALUES (10, 'stocks'), (20, 'crypto');
+            INSERT INTO capital_entries (
+                id, portfolio_id, entry_type, amount_minor, entry_date, note
+            )
+            VALUES
+                (5, 10, 'inflow', 100000, '2026-06-18', 'deposit'),
+                (9, 10, 'outflow', 25000, '2026-06-19', 'withdrawal'),
+                (12, 20, 'inflow', 50000, '2026-06-20', 'crypto deposit');
+            """
+        )
+
+    first_log = runner.invoke(app, ["log", "stocks"])
+    second_log = runner.invoke(app, ["log", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "stocks"])
+    edit_result = runner.invoke(
+        app,
+        ["edit", "stocks", "1", "--amount", "1250"],
+    )
+    delete_result = runner.invoke(app, ["delete", "stocks", "2"])
+    final_log = runner.invoke(app, ["log", "stocks"])
+
+    for result in (
+        first_log,
+        second_log,
+        summary_result,
+        edit_result,
+        delete_result,
+        final_log,
+    ):
+        assert result.exit_code == 0
+        assert "Traceback" not in result.output
+
+    assert "│ 1 │" in first_log.output
+    assert "│ 2 │" in first_log.output
+    assert "│ 5 │" not in first_log.output
+    assert "│ 9 │" not in first_log.output
+    assert "750.00" in summary_result.output
+    assert "1250.00" in final_log.output
+    assert "withdrawal" not in final_log.output
+
+    with sqlite3.connect(database_path) as connection:
+        entries = connection.execute(
+            """
+            SELECT portfolio_id, id, entry_no, amount_minor, deleted_at
+            FROM capital_entries
+            ORDER BY portfolio_id, id
+            """
+        ).fetchall()
+
+    assert entries[0][0:4] == (10, 5, 1, 125000)
+    assert entries[0][4] is None
+    assert entries[1][0:3] == (10, 9, 2)
+    assert entries[1][4] is not None
+    assert entries[2][0:4] == (20, 12, 1, 50000)
+
+
+def test_schema_errors_are_concise_without_traceback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    data_dir.mkdir()
+    database_path = data_dir / "fundlog.db"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE portfolios (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                deleted_at TEXT
+            );
+            CREATE TABLE capital_entries (
+                id INTEGER PRIMARY KEY,
+                portfolio_id INTEGER NOT NULL
+            );
+            INSERT INTO portfolios (id, name) VALUES (1, 'stocks');
+            """
+        )
+
+    result = runner.invoke(app, ["log", "stocks"])
+
+    assert result.exit_code == 1
+    assert "FundLog could not access the local database safely." in result.output
+    assert "Traceback" not in result.output
+    assert "sqlite3." not in result.output
 
 
 def test_create_portfolio_after_init(tmp_path: Path, monkeypatch) -> None:
@@ -216,13 +426,21 @@ def test_create_with_initial_creates_portfolio_and_inflow(
         ).fetchone()
         entries = connection.execute(
             """
-            SELECT portfolio_id, entry_type, amount_minor, entry_date, deleted_at
+            SELECT
+                portfolio_id,
+                entry_no,
+                entry_type,
+                amount_minor,
+                entry_date,
+                deleted_at
             FROM capital_entries
             """
         ).fetchall()
 
     assert portfolio[1:] == ("stocks", None)
-    assert entries == [(portfolio[0], "inflow", 500000, date.today().isoformat(), None)]
+    assert entries == [
+        (portfolio[0], 1, "inflow", 500000, date.today().isoformat(), None)
+    ]
 
 
 def test_create_with_initial_supports_decimal_amount(
@@ -1127,8 +1345,9 @@ def test_log_shows_inflow_entry_with_date_note_and_amount(
     result = runner.invoke(app, ["log", "stocks"])
 
     assert result.exit_code == 0
-    for heading in ("id", "Date", "Type", "Amount", "Note"):
+    for heading in ("#", "Date", "Type", "Amount", "Note"):
         assert heading in result.output
+    assert "│ id " not in result.output
     assert "2026-06-19" in result.output
     assert "inflow" in result.output
     assert "1000.50" in result.output
@@ -1211,7 +1430,104 @@ def test_log_only_shows_selected_portfolio(
     assert "crypto entry" not in result.output
 
 
-def test_log_ordering_is_date_then_id(tmp_path: Path, monkeypatch) -> None:
+def test_entry_numbers_start_at_one_for_each_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "stocks", "100"])
+    runner.invoke(app, ["inflow", "crypto", "200"])
+
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            """
+            SELECT p.name, e.entry_no
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert entries == [("crypto", 1), ("stocks", 1)]
+
+
+def test_new_entries_increment_portfolio_entry_numbers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    runner.invoke(app, ["outflow", "stocks", "100"])
+
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            "SELECT entry_no, entry_type FROM capital_entries ORDER BY entry_no"
+        ).fetchall()
+
+    assert entries == [(1, "inflow"), (2, "inflow"), (3, "outflow")]
+
+
+def test_deleted_and_reset_entries_do_not_reuse_entry_numbers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["inflow", "stocks", "250"])
+    runner.invoke(app, ["delete", "stocks", "2"])
+    runner.invoke(app, ["inflow", "stocks", "300"])
+    runner.invoke(app, ["reset", "stocks", "--yes"])
+    runner.invoke(app, ["inflow", "stocks", "400"])
+
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            "SELECT entry_no, deleted_at FROM capital_entries ORDER BY entry_no"
+        ).fetchall()
+
+    assert [entry[0] for entry in entries] == [1, 2, 3, 4]
+    assert entries[3][1] is None
+
+
+def test_reused_portfolio_name_starts_entry_numbers_at_one(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["delete", "stocks", "--yes"])
+    runner.invoke(app, ["create", "stocks", "--initial", "500"])
+
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            """
+            SELECT p.id, p.deleted_at, e.entry_no
+            FROM portfolios AS p
+            JOIN capital_entries AS e ON e.portfolio_id = p.id
+            ORDER BY p.id
+            """
+        ).fetchall()
+
+    assert entries[0][1] is not None
+    assert entries[0][2] == 1
+    assert entries[1][1] is None
+    assert entries[1][2] == 1
+
+
+def test_log_ordering_is_date_then_entry_number(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
@@ -1413,7 +1729,7 @@ def test_edit_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["edit", "stocks", "99", "--amount", "500"])
 
     assert result.exit_code == 1
-    assert "Capital entry 99 does not exist." in result.output
+    assert "Capital entry 99 does not exist in portfolio 'stocks'." in result.output
 
 
 def test_edit_fails_when_entry_belongs_to_another_portfolio(
@@ -1430,7 +1746,35 @@ def test_edit_fails_when_entry_belongs_to_another_portfolio(
     result = runner.invoke(app, ["edit", "stocks", "1", "--amount", "500"])
 
     assert result.exit_code == 1
-    assert "does not belong to portfolio 'stocks'" in result.output
+    assert "Capital entry 1 does not exist in portfolio 'stocks'." in result.output
+
+
+def test_edit_targets_portfolio_local_entry_number(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "crypto", "200"])
+    runner.invoke(app, ["inflow", "stocks", "100"])
+
+    result = runner.invoke(app, ["edit", "stocks", "1", "--amount", "150"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            """
+            SELECT p.name, e.entry_no, e.amount_minor
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert entries == [("crypto", 1, 20000), ("stocks", 1, 15000)]
 
 
 def test_edit_fails_for_soft_deleted_entry(tmp_path: Path, monkeypatch) -> None:
@@ -1641,17 +1985,17 @@ def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
     assert "original" not in result.output
 
 
-def test_remove_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> None:
+def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["create", "stocks"])
     runner.invoke(app, ["inflow", "stocks", "1000"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 0
-    assert "Capital entry 1 removed from portfolio 'stocks'." in result.output
+    assert "Capital entry 1 deleted from portfolio 'stocks'." in result.output
     with sqlite3.connect(data_dir / "fundlog.db") as connection:
         row = connection.execute(
             "SELECT id, deleted_at FROM capital_entries WHERE id = 1"
@@ -1661,13 +2005,13 @@ def test_remove_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> None:
     assert row[1] is not None
 
 
-def test_removed_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
+def test_deleted_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["create", "stocks"])
     runner.invoke(app, ["inflow", "stocks", "1000", "--note", "removed entry"])
-    runner.invoke(app, ["remove", "stocks", "1"])
+    runner.invoke(app, ["delete", "stocks", "1"])
 
     result = runner.invoke(app, ["log", "stocks"])
 
@@ -1676,7 +2020,7 @@ def test_removed_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
     assert "removed entry" not in result.output
 
 
-def test_removed_entry_is_ignored_by_summary(
+def test_deleted_entry_is_ignored_by_summary(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1686,7 +2030,7 @@ def test_removed_entry_is_ignored_by_summary(
     runner.invoke(app, ["create", "stocks"])
     runner.invoke(app, ["inflow", "stocks", "1000"])
     runner.invoke(app, ["inflow", "stocks", "250"])
-    runner.invoke(app, ["remove", "stocks", "2"])
+    runner.invoke(app, ["delete", "stocks", "2"])
 
     result = runner.invoke(app, ["summary", "stocks"])
 
@@ -1695,41 +2039,44 @@ def test_removed_entry_is_ignored_by_summary(
     assert "1250.00" not in result.output
 
 
-def test_remove_fails_before_init(tmp_path: Path, monkeypatch) -> None:
+def test_delete_entry_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
     assert not (data_dir / "fundlog.db").exists()
 
 
-def test_remove_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
+def test_delete_entry_fails_for_unknown_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
 
 
-def test_remove_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
+def test_delete_entry_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["create", "stocks"])
 
-    result = runner.invoke(app, ["remove", "stocks", "99"])
+    result = runner.invoke(app, ["delete", "stocks", "99"])
 
     assert result.exit_code == 1
-    assert "Capital entry 99 does not exist." in result.output
+    assert "Capital entry 99 does not exist in portfolio 'stocks'." in result.output
 
 
-def test_remove_fails_when_entry_belongs_to_another_portfolio(
+def test_delete_entry_number_in_another_portfolio_is_not_found(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1740,13 +2087,43 @@ def test_remove_fails_when_entry_belongs_to_another_portfolio(
     runner.invoke(app, ["create", "crypto"])
     runner.invoke(app, ["inflow", "crypto", "1000"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
-    assert "does not belong to portfolio 'stocks'" in result.output
+    assert "Capital entry 1 does not exist in portfolio 'stocks'." in result.output
 
 
-def test_remove_fails_for_already_soft_deleted_entry(
+def test_delete_targets_portfolio_local_entry_number(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["create", "crypto"])
+    runner.invoke(app, ["inflow", "crypto", "200"])
+    runner.invoke(app, ["inflow", "stocks", "100"])
+
+    result = runner.invoke(app, ["delete", "stocks", "1"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entries = connection.execute(
+            """
+            SELECT p.name, e.entry_no, e.deleted_at
+            FROM capital_entries AS e
+            JOIN portfolios AS p ON p.id = e.portfolio_id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert entries[0] == ("crypto", 1, None)
+    assert entries[1][0:2] == ("stocks", 1)
+    assert entries[1][2] is not None
+
+
+def test_delete_entry_fails_for_already_soft_deleted_entry(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1755,15 +2132,15 @@ def test_remove_fails_for_already_soft_deleted_entry(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["create", "stocks"])
     runner.invoke(app, ["inflow", "stocks", "1000"])
-    runner.invoke(app, ["remove", "stocks", "1"])
+    runner.invoke(app, ["delete", "stocks", "1"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
     assert "Capital entry 1 is not active." in result.output
 
 
-def test_removing_outflow_succeeds_and_increases_cash(
+def test_deleting_outflow_succeeds_and_increases_cash(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1774,16 +2151,16 @@ def test_removing_outflow_succeeds_and_increases_cash(
     runner.invoke(app, ["inflow", "stocks", "1000"])
     runner.invoke(app, ["outflow", "stocks", "750"])
 
-    remove_result = runner.invoke(app, ["remove", "stocks", "2"])
+    delete_result = runner.invoke(app, ["delete", "stocks", "2"])
     summary_result = runner.invoke(app, ["summary", "stocks"])
 
-    assert remove_result.exit_code == 0
+    assert delete_result.exit_code == 0
     assert summary_result.exit_code == 0
     assert summary_result.output.count("1000.00") == 3
     assert "250.00" not in summary_result.output
 
 
-def test_removing_inflow_fails_if_cash_would_be_negative(
+def test_deleting_inflow_fails_if_cash_would_be_negative(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1794,13 +2171,16 @@ def test_removing_inflow_fails_if_cash_would_be_negative(
     runner.invoke(app, ["inflow", "stocks", "1000"])
     runner.invoke(app, ["outflow", "stocks", "750"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
-    assert "Remove would make portfolio cash negative." in result.output
+    assert "Delete would make portfolio cash negative." in result.output
 
 
-def test_failed_remove_keeps_entry_active(tmp_path: Path, monkeypatch) -> None:
+def test_failed_delete_entry_keeps_entry_active(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
@@ -1808,7 +2188,7 @@ def test_failed_remove_keeps_entry_active(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["inflow", "stocks", "1000"])
     runner.invoke(app, ["outflow", "stocks", "750"])
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 1
     with sqlite3.connect(data_dir / "fundlog.db") as connection:
@@ -1819,7 +2199,7 @@ def test_failed_remove_keeps_entry_active(tmp_path: Path, monkeypatch) -> None:
     assert deleted_at is None
 
 
-def test_remove_cash_validation_ignores_soft_deleted_entries(
+def test_delete_entry_cash_validation_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1834,7 +2214,7 @@ def test_remove_cash_validation_ignores_soft_deleted_entries(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
         )
 
-    result = runner.invoke(app, ["remove", "stocks", "1"])
+    result = runner.invoke(app, ["delete", "stocks", "1"])
 
     assert result.exit_code == 0
 
@@ -2197,7 +2577,7 @@ def test_deleted_portfolio_disappears_from_summary_all(
         ["inflow", "stocks", "100"],
         ["outflow", "stocks", "100"],
         ["edit", "stocks", "1", "--note", "changed"],
-        ["remove", "stocks", "1"],
+        ["delete", "stocks", "1"],
         ["reset", "stocks", "--yes"],
     ],
 )
