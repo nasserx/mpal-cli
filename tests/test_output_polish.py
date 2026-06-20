@@ -68,7 +68,7 @@ def _sell(*, price: str, quantity: str) -> None:
     assert result.exit_code == 0
 
 
-def test_asset_outputs_use_plain_title_without_rich_rule(
+def test_asset_outputs_omit_standalone_title_and_keep_tables(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -80,10 +80,14 @@ def test_asset_outputs_use_plain_title_without_rich_rule(
 
     for result in (log_result, summary_result):
         assert result.exit_code == 0
-        assert any(line.strip() == "AAPL/stocks" for line in result.output.splitlines())
-        assert not any(
-            "AAPL/stocks" in line and "─" in line for line in result.output.splitlines()
-        )
+        assert "AAPL/stocks" not in result.output
+
+    assert "Date" in log_result.output
+    assert "Type" in log_result.output
+    assert "100.00" in log_result.output
+    assert "Quantity" in summary_result.output
+    assert "Cost Basis" in summary_result.output
+    assert "100.00" in summary_result.output
 
 
 def test_positive_profit_and_returns_show_explicit_plus_sign(

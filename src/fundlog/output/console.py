@@ -131,7 +131,6 @@ def print_assets(assets: list[Asset]) -> None:
 def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
     """Print one active asset's derived accounting summary."""
     console = Console(width=120)
-    console.print(Text(f"{asset.symbol}/{portfolio_name}", style=TABLE_HEADER))
 
     table = Table(
         header_style=TABLE_HEADER,
@@ -165,7 +164,6 @@ def print_asset_transaction_log(
 ) -> None:
     """Print one asset's active transactions using the documented columns."""
     console = Console(width=120)
-    console.print(Text(f"{symbol}/{portfolio_name}", style=TABLE_HEADER))
 
     table = Table(
         header_style=TABLE_HEADER,

@@ -145,7 +145,7 @@ def test_empty_asset_summary_has_documented_columns_and_values(
     )
     positions = [result.output.index(column) for column in columns]
     assert positions == sorted(positions)
-    assert "AAPL/stocks" in result.output
+    assert "AAPL/stocks" not in result.output
     assert " ID " not in result.output.upper()
     assert "--" in result.output
     assert result.output.count("0.00") >= 4

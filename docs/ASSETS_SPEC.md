@@ -100,17 +100,8 @@ stocks/aapl
 crypto/BTC
 ```
 
-Symbol matching is case-insensitive. Output displays the symbol uppercase and
-uses the portfolio's stored normalized or original display name.
-
-Asset-specific output may use a symbol-first title:
-
-```text
-AAPL/stocks
-```
-
-The input reference follows the ownership path. The display title leads with
-the subject of the report.
+Symbol matching is case-insensitive. Output displays symbols uppercase where
+they appear as table data.
 
 An asset reference splits on exactly one `/`:
 
@@ -204,11 +195,8 @@ All tables must reuse the semantic theme from
 - Buy and sell operation labels use normal cell styling, not profit/loss
   styling.
 
-Asset log and summary tables use a short plain title above the table:
-
-```text
-AAPL/stocks
-```
+Asset log and summary output does not repeat the asset reference as a separate
+title above the table.
 
 Color must not be the only way meaning is communicated.
 

@@ -307,7 +307,7 @@ def test_asset_log_displays_title_columns_and_formatted_values(
     result = runner.invoke(app, ["asset", "log", "stocks/aapl"])
 
     assert result.exit_code == 0
-    assert "AAPL/stocks" in result.output
+    assert "AAPL/stocks" not in result.output
     for column in ("#", "Date", "Type", "Price", "Quantity", "Fee", "Total", "Note"):
         assert column in result.output
     assert "123,456.0543" in result.output
