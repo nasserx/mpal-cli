@@ -18,6 +18,11 @@ trade cash effect must be exactly representable in minor units or the trade must
 use the planned exact-money `--total` override described in
 `docs/ASSETS_SPEC.md`.
 
+The reusable `parse_quantity()`, `format_quantity()`, `parse_price()`, and
+`format_price()` helpers implement the exact input and display contract.
+Quantity and price formatting remain separate from `format_money()` and do not
+force two decimal places.
+
 ## Summary table
 
 The summary output has exactly these columns:

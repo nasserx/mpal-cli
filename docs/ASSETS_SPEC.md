@@ -230,7 +230,7 @@ Columns:
 Rules:
 
 - Symbol is displayed uppercase.
-- Quantity is the current open quantity and uses future `format_quantity()`.
+- Quantity is the current open quantity and uses `format_quantity()`.
 - Cost Basis is the current open book cost.
 - Cost Basis, Realized PnL, and Income use `format_money()`.
 - Realized Return uses percent formatting and the asset-level formula defined
@@ -259,8 +259,8 @@ Rules:
 - Entry numbers start at 1 for each asset row and are never reused after soft
   deletion.
 - Type is `buy`, `sell`, or `income`.
-- Price uses future `format_price()`.
-- Quantity uses future `format_quantity()`.
+- Price uses `format_price()`.
+- Quantity uses `format_quantity()`.
 - Fee and Total use `format_money()`.
 - For income rows, Price, Quantity, and Fee may display `--`; Total displays the
   income amount.
@@ -487,12 +487,14 @@ Quantities must support:
 123456.0543
 ```
 
-Future `format_quantity()` must:
+The implemented `parse_quantity()` and `format_quantity()` helpers:
 
 - Be separate from `format_money()` and `format_price()`.
 - Add thousands separators only to the integer part.
 - Preserve meaningful fractional precision.
 - Not force two decimal places.
+- Use exact `Decimal` values and never Python `float`.
+- Normalize parsed values before returning them.
 
 Examples:
 
@@ -527,12 +529,13 @@ Prices must support:
 0.000533
 ```
 
-Future `format_price()` must:
+The implemented `parse_price()` and `format_price()` helpers:
 
 - Be separate from `format_money()` and `format_quantity()`.
 - Preserve meaningful precision.
 - Not force two decimal places.
 - Never use Python `float`.
+- Normalize parsed values before returning them.
 
 The accepted maximum precision, storage representation, trailing-zero
 normalization, and upper bounds are:
@@ -633,11 +636,10 @@ remain implementation-planning details rather than unresolved product rules.
 The implemented foundation does not authorize later features. Future work can
 proceed in reviewable steps only when explicitly requested:
 
-1. Add separate exact parsers and formatters for quantity and price.
-2. Design asset transaction storage and migrations.
-3. Add buy, sell, and income behavior with shared date validation.
-4. Extend asset deletion for future transaction records.
-5. Add `--total` validation and moving-average accounting.
-6. Feed active asset results into the unchanged portfolio summary columns.
-7. Add themed asset summary and log output.
-8. Add focused accounting-invariant and transaction atomicity tests.
+1. Design asset transaction storage and migrations.
+2. Add buy, sell, and income behavior with shared date validation.
+3. Extend asset deletion for future transaction records.
+4. Add `--total` validation and moving-average accounting.
+5. Feed active asset results into the unchanged portfolio summary columns.
+6. Add themed asset summary and log output.
+7. Add focused accounting-invariant and transaction atomicity tests.

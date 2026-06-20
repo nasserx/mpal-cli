@@ -45,14 +45,15 @@ Do not introduce the following into v0.1:
 FundLog is manual-only now and in its intended future. Future features may support manually recorded symbols and trading operations, but they must not introduce live pricing or automatic market valuation.
 
 Future asset work must reuse the shared CLI theme, `parse_transaction_date()`,
-and `format_money()`. Quantity and unit-price parsing and display require
-separate precision-aware `format_quantity()` and `format_price()` helpers and
-must not reuse the money formatter. Future trade calculations must not silently
-round cash effects that are not exactly representable in integer minor units.
-Quantity and price must use exact decimal representations, never Python
-`float`. `/` is reserved for future `<portfolio>/<symbol>` references and is
-not escaped. Live prices, market APIs, market value, and unrealized PnL remain
-prohibited.
+and `format_money()`. Future quantity input/display must use
+`parse_quantity()`/`format_quantity()`, and unit-price input/display must use
+`parse_price()`/`format_price()` from `src/fundlog/numbers.py`. These helpers
+are precision-aware and must not be replaced with the money formatter. Future
+trade calculations must not silently round cash effects that are not exactly
+representable in integer minor units. Quantity and price use exact `Decimal`
+representations, never Python `float`. `/` is reserved for future
+`<portfolio>/<symbol>` references and is not escaped. Live prices, market APIs,
+market value, and unrealized PnL remain prohibited.
 
 ## Implemented commands
 
@@ -148,6 +149,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/cli.py`: Typer command definitions and CLI-level validation/output flow.
 - `src/fundlog/amounts.py`: Exact monetary parsing and formatting.
 - `src/fundlog/assets.py`: Asset symbol normalization and validation.
+- `src/fundlog/numbers.py`: Exact quantity and unit-price parsing and formatting.
 - `src/fundlog/dates.py`: Strict transaction-date parsing and future-date validation.
 - `src/fundlog/config.py`: Application metadata and local database path resolution.
 - `src/fundlog/errors.py`: Expected application exception types.
@@ -159,6 +161,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `tests/test_dates.py`: Focused shared transaction-date validation tests.
 - `tests/test_assets.py`: Focused asset symbol validation tests.
 - `tests/test_asset_cli.py`: Asset foundation CLI and persistence tests.
+- `tests/test_numbers.py`: Focused quantity and unit-price helper tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.
 

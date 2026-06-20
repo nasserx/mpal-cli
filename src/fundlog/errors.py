@@ -45,6 +45,14 @@ class InvalidAmountError(FundLogError):
     """Raised when a monetary amount is invalid."""
 
 
+class InvalidQuantityError(FundLogError):
+    """Raised when an asset quantity is invalid."""
+
+
+class InvalidPriceError(FundLogError):
+    """Raised when an asset unit price is invalid."""
+
+
 class InvalidEntryDateError(FundLogError):
     """Raised when a capital entry date is invalid."""
 
