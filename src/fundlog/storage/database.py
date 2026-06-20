@@ -100,6 +100,21 @@ def next_entry_no(connection: sqlite3.Connection, portfolio_id: int) -> int:
     ).fetchone()[0]
 
 
+def next_asset_transaction_no(
+    connection: sqlite3.Connection,
+    asset_id: int,
+) -> int:
+    """Return the next stable transaction number for an asset."""
+    return connection.execute(
+        """
+        SELECT COALESCE(MAX(entry_no), 0) + 1
+        FROM asset_transactions
+        WHERE asset_id = ?
+        """,
+        (asset_id,),
+    ).fetchone()[0]
+
+
 def _ensure_entry_numbers(connection: sqlite3.Connection) -> None:
     """Add and backfill portfolio-local entry numbers when needed."""
     columns = {

@@ -21,6 +21,7 @@ COMMANDS = {
     "summary",
     "log",
     "edit",
+    "income",
     "reset",
     "delete",
 }

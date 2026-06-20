@@ -36,6 +36,7 @@ from fundlog.storage import (
     get_capital_entry_log,
     get_portfolio_summary,
     initialize_database,
+    record_income,
     record_inflow,
     record_outflow,
     reset_portfolio_entries,
@@ -200,6 +201,49 @@ def asset_log(
         print_info(f"No active transactions for asset '{symbol}/{portfolio}'.")
         return
     print_asset_transaction_log(portfolio, symbol, transactions)
+
+
+@app.command(context_settings={"ignore_unknown_options": True})
+def income(
+    reference: Annotated[
+        str,
+        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+    ],
+    amount: Annotated[str, typer.Argument(help="Asset income amount.")],
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help=(
+                "Transaction date in YYYY-MM-DD; defaults to today "
+                "and cannot be future."
+            ),
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional income note."),
+    ] = None,
+) -> None:
+    """Record manual income for an existing asset."""
+    try:
+        portfolio, symbol = parse_asset_reference(reference)
+        amount_minor = parse_amount_minor(amount)
+        transaction_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
+        record_income(
+            portfolio,
+            symbol,
+            amount_minor,
+            transaction_date,
+            note,
+        )
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Income recorded for asset '{symbol}/{portfolio}'.")
 
 
 @app.command()

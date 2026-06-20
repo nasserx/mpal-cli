@@ -48,7 +48,8 @@ In v0.1:
 
 `Cash = total active inflows - total active outflows`
 
-Future manual trading operations may feed calculated buy costs, sell proceeds, and income or distributions into Cash. Those operations are not implemented in v0.1.
+Implemented manual asset income increases Cash. Future buy and sell operations
+may feed buy costs and sell proceeds into Cash.
 
 ### Positions
 
@@ -78,21 +79,22 @@ In v0.1:
 
 ### Income
 
-Cash income from future manually recorded distributions or dividends.
+Cash income from manually recorded asset distributions or dividends.
 
-In v0.1:
-
-`Income = 0.00`
+Implemented income transactions increase both Cash and Income. Soft-deleted
+transactions and transactions belonging to soft-deleted assets do not
+contribute.
 
 ### Return
 
 Return is based on realized results only, not unrealized market movement.
 
-The future formula is:
+The formula is:
 
 `Return = (Realized PnL + Income) / Capital`
 
-In v0.1, Return is always `0.00%`. If Capital is zero, Return is also displayed as `0.00%`.
+With income implemented and Realized PnL still zero, Return reflects active
+Income divided by Capital. If Capital is zero, Return displays `0.00%`.
 
 Future asset-level Realized Return uses:
 
@@ -112,6 +114,8 @@ remains balanced. This is book cost allocation, not market valuation.
 - An outflow decreases Capital and Cash by the same amount.
 - An outflow is rejected if Cash is insufficient.
 - An outflow does not affect Realized PnL or Income.
+- Manual asset income increases Cash and Income by the same amount.
+- Income does not affect Capital, Positions, Cost Basis, or Realized PnL.
 - Active entries alone contribute to current calculations.
 - Soft-deleted entries do not contribute.
 - Portfolio reset soft-deletes portfolio entries.

@@ -1,5 +1,7 @@
 """Rich terminal output helpers."""
 
+from decimal import ROUND_HALF_EVEN, Decimal
+
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
@@ -86,7 +88,10 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
             format_money(summary.book_value_minor),
             format_money(summary.realized_pnl_minor),
             format_money(summary.income_minor),
-            "0.00%",
+            _format_return(
+                summary.realized_pnl_minor + summary.income_minor,
+                summary.capital_minor,
+            ),
         )
     Console(width=120).print(table)
 
@@ -110,7 +115,7 @@ def print_assets(assets: list[Asset]) -> None:
             "0",
             format_money(0),
             format_money(0),
-            format_money(0),
+            format_money(asset.income_minor),
             "0.00%",
         )
     Console().print(table)
@@ -154,11 +159,25 @@ def print_asset_transaction_log(
                 if transaction.quantity_text is None
                 else format_quantity(transaction.quantity_text)
             ),
-            format_money(transaction.fee_minor),
+            (
+                "--"
+                if transaction.transaction_type == "income"
+                else format_money(transaction.fee_minor)
+            ),
             format_money(transaction.total_minor),
             transaction.note or "",
         )
     console.print(table)
+
+
+def _format_return(result_minor: int, capital_minor: int) -> str:
+    """Format realized return with deterministic zero-capital behavior."""
+    if capital_minor == 0:
+        return "0.00%"
+    percentage = (
+        Decimal(result_minor) * Decimal(100) / Decimal(capital_minor)
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+    return f"{percentage:.2f}%"
 
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:

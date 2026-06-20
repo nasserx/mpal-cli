@@ -319,10 +319,11 @@ fundlog asset list stocks
 
 **Behavior:** Displays active assets ordered by uppercase symbol using
 `Symbol`, `Quantity`, `Cost Basis`, `Realized PnL`, `Income`, and
-`Realized Return`. Until trading and income are implemented, the derived
-columns display `0`, `0.00`, `0.00`, `0.00`, and `0.00%`. Internal database IDs
-are not displayed. An existing portfolio with no assets prints a deterministic
-empty-list message.
+`Realized Return`. Quantity, Cost Basis, and Realized PnL remain zero until
+buy/sell accounting exists. Income displays the sum of active income
+transactions. Realized Return remains `0.00%` while Total Buy Cost is zero.
+Internal database IDs are not displayed. An existing portfolio with no assets
+prints a deterministic empty-list message.
 
 **Validation:** The portfolio must exist and be active.
 
@@ -383,8 +384,8 @@ and quantity use their separate precision-aware formatters; Fee and Total use
 money formatting. Internal database IDs are not displayed. An asset with no
 active transactions prints a deterministic empty-state message.
 
-No public command creates asset transactions yet, so this command normally
-shows the empty state.
+Income transactions appear in this log. Assets without income or future trade
+records show the empty state.
 
 **Validation:** The reference must contain exactly one `/` with a nonempty
 portfolio and symbol. The portfolio and asset must both be active. The symbol
@@ -392,3 +393,41 @@ uses the normal symbol validation rules.
 
 **Errors:** FundLog is not initialized; invalid asset reference; unknown or
 inactive portfolio; unknown or inactive asset; database failure.
+
+## `fundlog income PORTFOLIO/SYMBOL AMOUNT`
+
+Examples:
+
+```console
+fundlog income stocks/AAPL 32
+fundlog income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
+```
+
+**Purpose:** Record manual income or a distribution for an existing active
+asset.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+- `AMOUNT`: Positive money amount.
+
+**Options:**
+
+- `--date DATE`: Transaction date in `YYYY-MM-DD`; defaults to the current local
+  date and cannot be in the future.
+- `--note TEXT`: Optional note.
+
+**Behavior:** Creates an asset-local `income` transaction with no price,
+quantity, or fee. Total, positive cash effect, and income equal `AMOUNT`.
+Position effect and realized PnL are zero. The transaction appears in
+`asset log`, contributes to the asset list Income column, and increases the
+portfolio Cash, Book Value, Income, and realized Return. It does not change
+Capital, Positions, Cost Basis, or Realized PnL.
+
+**Validation:** The reference, active portfolio, active asset, amount, and date
+must be valid. The amount uses the shared money parser and must be greater than
+zero. Explicit dates use the shared date helper.
+
+**Errors:** FundLog is not initialized; invalid asset reference; unknown or
+inactive portfolio; unknown or inactive asset; invalid amount or date; database
+failure.

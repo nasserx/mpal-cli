@@ -1,6 +1,7 @@
 """Local persistence primitives."""
 
 from fundlog.storage.asset_logs import AssetTransaction, get_asset_transaction_log
+from fundlog.storage.asset_transactions import record_income
 from fundlog.storage.assets import Asset, create_assets, delete_asset, get_assets
 from fundlog.storage.database import initialize_database
 from fundlog.storage.entries import (
@@ -41,6 +42,7 @@ __all__ = [
     "get_portfolio_summary",
     "initialize_database",
     "record_inflow",
+    "record_income",
     "record_outflow",
     "reset_portfolio_entries",
 ]

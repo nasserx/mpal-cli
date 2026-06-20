@@ -6,11 +6,11 @@ infrastructure.
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
 The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
-`asset_transactions` tables are implemented. No public command creates
-transactions, and transaction-derived accounting is not connected to portfolio
-summaries. Monetary fields use integer minor units. User-entered quantity and
-price fields use normalized decimal text, never SQLite floating point or Python
-`float`.
+`asset_transactions` tables are implemented. The income command creates income
+transactions, and active income fields contribute to asset lists and portfolio
+summaries. Buy and sell creation and accounting are not implemented. Monetary
+fields use integer minor units. User-entered quantity and price fields use
+normalized decimal text, never SQLite floating point or Python `float`.
 
 ## Implemented scope
 
@@ -82,7 +82,8 @@ creation and update timestamps, and soft-delete state.
 - The same symbol may exist in different portfolios.
 - Active-only uniqueness allows a symbol to be reused after a previous asset row
   is soft-deleted.
-- `asset delete` updates `deleted_at` and `updated_at` without removing the row.
+- `asset delete` atomically soft-deletes the asset and its active transaction
+  rows without removing them.
 - Active asset queries exclude soft-deleted rows.
 - Internal asset IDs are not exposed by the CLI.
 - Active asset lists are ordered by symbol.
@@ -105,8 +106,8 @@ creation and update timestamps, and soft-delete state.
 
 ## `asset_transactions`
 
-**Purpose:** Store the future manual buy, sell, and income ledger and support
-the read-only asset log.
+**Purpose:** Store manual asset transactions and support the asset log and
+derived accounting.
 
 **Important fields:** Internal stable ID, asset ID, asset-local entry number,
 transaction type, effective date, nullable exact price and quantity text, fee
@@ -132,9 +133,10 @@ timestamps, and soft-delete state.
 - Internal IDs are not exposed by the CLI.
 - The table contains no market value or unrealized PnL.
 
-The table is currently a storage and display foundation only. No public command
-inserts transaction rows, and no portfolio calculation reads its accounting
-effect fields.
+The income command inserts `income` rows with null price and quantity, zero fee,
+positive total/cash/income fields, and zero position/realized-PnL fields.
+Portfolio summaries currently read active income effects only. Buy and sell
+writers and their accounting remain future work.
 
 ## Future `schema_migrations`
 

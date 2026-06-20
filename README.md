@@ -56,6 +56,8 @@ fundlog asset add stocks AAPL AMZN MSFT
 fundlog asset list stocks
 fundlog asset log stocks/AAPL
 fundlog asset delete stocks/AAPL --yes
+
+fundlog income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
 ```
 
 Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
@@ -68,8 +70,8 @@ inflows, outflows, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The initial asset foundation
 adds manual symbol creation, listing, and soft deletion under existing
 portfolios. The read-only asset log and its transaction storage foundation are
-also present, but no command records trades or income. Trading and asset
-accounting are not implemented.
+also present. Manual asset income updates the asset list and portfolio summary.
+Buy, sell, cost-basis accounting, and realized PnL are not implemented.
 
 ## Planned capabilities
 

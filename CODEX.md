@@ -26,11 +26,11 @@ v0.1 covers portfolio and capital-entry management only.
 The asset foundation implements `fundlog asset add`, `fundlog asset list`,
 `fundlog asset log <portfolio>/<symbol>`,
 `fundlog asset delete <portfolio>/<symbol> --yes`, asset-reference parsing,
-symbol normalization, and the `assets` and `asset_transactions` tables. The
-asset log is read-only; no public command creates transactions. All trades,
-fees, income commands, asset summary behavior, and trade accounting remain
-design-only in `docs/ASSETS_SPEC.md`. Do not implement them until a task
-explicitly requests implementation.
+symbol normalization, and the `assets` and `asset_transactions` tables.
+`fundlog income` creates income transactions and feeds active income into asset
+lists and portfolio Cash, Book Value, Income, and Return. Buy, sell, fees, asset
+summary behavior, cost-basis accounting, and realized PnL remain design-only in
+`docs/ASSETS_SPEC.md`. Do not implement them until explicitly requested.
 
 Do not introduce the following into v0.1:
 
@@ -75,6 +75,7 @@ market value, and unrealized PnL remain prohibited.
 - `fundlog asset list <portfolio>`
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
+- `fundlog income <portfolio>/<symbol> <amount>`
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
 
@@ -91,17 +92,18 @@ Never use Python `float` for money.
 - Do not use `format_money()` for quantities or unit prices. Future quantity and
   price features require separate precision-aware formatting helpers.
 
-v0.1 calculations:
+Base portfolio calculations plus implemented income:
 
 - Capital = active inflows - active outflows.
-- Cash = active inflows - active outflows.
+- Cash = active inflows - active outflows + active asset income.
 - Positions = `0.00`.
 - Book Value = Cash + Positions.
 - Realized PnL = `0.00`.
-- Income = `0.00`.
-- Return = `0.00%`.
+- Income = active asset income.
+- Return = `(Realized PnL + Income) / Capital`, or `0.00%` when Capital is zero.
 
-Future manual trading features may feed calculated results into Cash, Positions, Realized PnL, and Income. They must not introduce live market prices.
+Future buy and sell features may feed calculated results into Cash, Positions,
+and Realized PnL. They must not introduce live market prices.
 
 ## Portfolio summary contract
 
@@ -165,6 +167,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
 - `src/fundlog/storage/assets.py`: Asset creation and active-asset listing.
 - `src/fundlog/storage/asset_logs.py`: Read-only active asset transaction logs.
+- `src/fundlog/storage/asset_transactions.py`: Manual asset income persistence.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
 - `tests/test_amounts.py`: Focused exact money display-formatting tests.
@@ -172,6 +175,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `tests/test_assets.py`: Focused asset symbol validation tests.
 - `tests/test_asset_cli.py`: Asset foundation CLI and persistence tests.
 - `tests/test_asset_log.py`: Asset transaction migration and read-only log tests.
+- `tests/test_income.py`: Income command, aggregation, and deletion tests.
 - `tests/test_numbers.py`: Focused quantity and unit-price helper tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.

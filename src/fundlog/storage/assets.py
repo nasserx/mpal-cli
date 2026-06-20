@@ -18,6 +18,7 @@ class Asset:
     """One active portfolio-owned asset."""
 
     symbol: str
+    income_minor: int
 
 
 def create_assets(
@@ -87,15 +88,30 @@ def get_assets(
 
         rows = connection.execute(
             """
-            SELECT symbol
-            FROM assets
-            WHERE portfolio_id = ? AND deleted_at IS NULL
-            ORDER BY symbol ASC
+            SELECT
+                a.symbol,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN t.transaction_type = 'income'
+                            THEN t.income_minor
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
+            FROM assets AS a
+            LEFT JOIN asset_transactions AS t
+                ON t.asset_id = a.id
+                AND t.deleted_at IS NULL
+            WHERE a.portfolio_id = ? AND a.deleted_at IS NULL
+            GROUP BY a.id, a.symbol
+            ORDER BY a.symbol ASC
             """,
             (portfolio[0],),
         ).fetchall()
 
-    return [Asset(symbol=row[0]) for row in rows]
+    return [Asset(symbol=row[0], income_minor=row[1]) for row in rows]
 
 
 def delete_asset(
@@ -130,6 +146,15 @@ def delete_asset(
                 f"'{portfolio_name}'."
             )
 
+        connection.execute(
+            """
+            UPDATE asset_transactions
+            SET deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE asset_id = ? AND deleted_at IS NULL
+            """,
+            (asset[0],),
+        )
         connection.execute(
             """
             UPDATE assets
