@@ -12,10 +12,14 @@ from fundlog.cli import app
 
 runner = CliRunner()
 
-COMMANDS = {
+VISIBLE_COMMANDS = {
     "asset",
-    "buy",
+    "capital",
     "init",
+    "portfolio",
+}
+LEGACY_COMMANDS = {
+    "buy",
     "create",
     "inflow",
     "outflow",
@@ -39,8 +43,8 @@ def test_help_exits_successfully() -> None:
     assert result.exit_code == 0
     assert "Manually track portfolio capital" in result.output
     assert "Examples:" in result.output
-    assert "fundlog create <portfolio> [--initial <amount>]" in result.output
-    assert "fundlog delete <portfolio> --yes" in result.output
+    assert "fundlog portfolio create <portfolio> [--initial <amount>]" in result.output
+    assert "fundlog capital delete <portfolio> <entry-number>" in result.output
 
 
 def test_version_exits_successfully() -> None:
@@ -54,11 +58,13 @@ def test_commands_are_registered() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    for command in COMMANDS:
+    for command in VISIBLE_COMMANDS:
         assert command in result.output
+    for command in LEGACY_COMMANDS:
+        assert f"│ {command} " not in result.output
 
 
-@pytest.mark.parametrize("command", sorted(COMMANDS))
+@pytest.mark.parametrize("command", sorted(VISIBLE_COMMANDS | LEGACY_COMMANDS))
 def test_command_help_exits_successfully(command: str) -> None:
     result = runner.invoke(app, [command, "--help"])
 
@@ -101,8 +107,7 @@ def test_edit_help_references_portfolio_log_entry_number() -> None:
 
     assert result.exit_code == 0
     assert "Edit a capital entry by its number in the portfolio log." in result.output
-    assert "Entry number shown by 'fundlog log" in result.output
-    assert "<portfolio>'." in result.output
+    assert "Entry number shown by the portfolio" in result.output
 
 
 def test_delete_help_explains_entry_and_portfolio_soft_delete() -> None:
@@ -110,8 +115,8 @@ def test_delete_help_explains_entry_and_portfolio_soft_delete() -> None:
 
     assert result.exit_code == 0
     assert "Delete an entry, or delete a portfolio with --yes." in result.output
-    assert "Entry number shown by 'fundlog log" in result.output
-    assert "<portfolio>'." in result.output
+    assert "Entry number shown by the portfolio" in result.output
+    assert "capital log." in result.output
     assert "Soft-delete the entire portfolio and its entries." in result.output
 
 

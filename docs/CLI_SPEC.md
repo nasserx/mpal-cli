@@ -2,14 +2,10 @@
 
 ## Command hierarchy status
 
-The organized hierarchy below is the official target interface for FundLog.
-It is a documentation and migration design; the current executable still uses
-the implemented command spellings documented later in this file. A future
-implementation step will add the organized commands first, preserve existing
-root commands as hidden compatibility aliases, and then update help output.
-
-No command is removed by this design. Compatibility aliases remain available
-during the transition and may be reconsidered before a stable v1 release.
+The organized hierarchy below is the official implemented interface for
+FundLog. Top-level help shows `init`, `portfolio`, `capital`, and `asset`.
+Earlier root commands remain callable as hidden compatibility aliases and may
+be reconsidered before a stable v1 release.
 
 ## Official command hierarchy
 
@@ -68,8 +64,7 @@ portfolio-owned asset.
 
 ## Legacy compatibility aliases
 
-When the organized hierarchy is implemented, existing commands should remain
-temporarily as hidden compatibility aliases:
+Existing commands remain temporarily as hidden compatibility aliases:
 
 | Existing command | Official command |
 |---|---|
@@ -127,15 +122,11 @@ whether to retain, deprecate, or remove them.
 
 ## Future implementation steps
 
-1. Add `portfolio` and `capital` Typer command groups without changing storage
-   or accounting services.
-2. Move asset income, buy, and sell command registration under `asset` while
-   reusing the existing handlers and validation.
-3. Register current root spellings as hidden aliases that delegate to the same
-   implementation paths.
-4. Update help tests and user documentation only after the organized commands
-   are executable.
-5. Evaluate compatibility alias removal separately before stable v1.
+1. Keep grouped and compatibility commands delegated to the same handlers and
+   services as behavior evolves.
+2. Avoid adding new examples that recommend hidden root aliases.
+3. Evaluate compatibility alias retention, deprecation, or removal separately
+   before stable v1.
 
 ## Command conventions
 
@@ -149,11 +140,12 @@ whether to retain, deprecate, or remove them.
 - A failed command exits nonzero and must not leave partial changes.
 - Portfolio uniqueness must be enforced consistently, including whatever case-normalization policy implementation adopts.
 
-## Current implemented command contracts
+## Compatibility command contracts
 
-The sections below describe the command spellings implemented before the
-hierarchy migration. Their validation and behavior remain authoritative for
-the corresponding future official commands and compatibility aliases.
+The sections below retain the earlier root spellings to document compatibility
+behavior. Their validation and behavior also apply to the corresponding
+official grouped commands unless a grouped command section explicitly says
+otherwise.
 
 ## `fundlog init`
 

@@ -31,9 +31,9 @@ FundLog only works with the records you enter manually.
 
 Portfolio summaries use book/accounting values. Book Value is derived from manual records and is not market value.
 
-## Planned official command hierarchy
+## Official command hierarchy
 
-The final organized CLI will group commands by the records they manage:
+FundLog groups commands by the records they manage:
 
 ```console
 fundlog init
@@ -61,12 +61,9 @@ fundlog asset buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
 fundlog asset sell stocks/AAPL --price 235.50 --quantity 1 --fee 1.25
 ```
 
-This hierarchy is currently a design target, not implemented CLI behavior.
-Existing root commands remain the executable interface until the migration is
-implemented. They are planned to remain temporarily as hidden compatibility
-aliases so existing usage does not break abruptly.
-
-The asset-summary portion is implemented now: `fundlog asset summary stocks`
+The earlier root commands remain callable as hidden compatibility aliases so
+existing scripts do not break abruptly. Official help and examples use the
+grouped commands. `fundlog asset summary stocks`
 shows all active asset summaries in the portfolio, while
 `fundlog asset summary stocks/AAPL` shows one asset. The older
 `fundlog asset list stocks` spelling remains callable as a hidden compatibility

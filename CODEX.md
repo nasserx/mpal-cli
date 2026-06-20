@@ -27,11 +27,12 @@ The asset foundation implements `fundlog asset add`, `fundlog asset list`,
 `fundlog asset log <portfolio>/<symbol>`,
 `fundlog asset delete <portfolio>/<symbol> --yes`, asset-reference parsing,
 symbol normalization, and the `assets` and `asset_transactions` tables.
-`fundlog income` creates income transactions and feeds active income into asset
-lists and portfolio Cash, Book Value, Income, and Return. `fundlog buy` records
-exact manual buys and feeds quantity, Cost Basis, Cash, and Positions.
-`fundlog sell` records exact manual sells, applies moving-average cost-basis
-relief, and feeds quantity, Cost Basis, Cash, Positions, and Realized PnL.
+`fundlog asset income` creates income transactions and feeds active income into
+asset summaries and portfolio Cash, Book Value, Income, and Return.
+`fundlog asset buy` records exact manual buys and feeds quantity, Cost Basis,
+Cash, and Positions. `fundlog asset sell` records exact manual sells, applies
+moving-average cost-basis relief, and feeds quantity, Cost Basis, Cash,
+Positions, and Realized PnL.
 `fundlog asset summary` reports active asset accounting totals, including
 price-formatted Average Cost and asset-level Realized Return.
 
@@ -60,61 +61,46 @@ representations, never Python `float`. `/` is reserved for future
 `<portfolio>/<symbol>` references and is not escaped. Live prices, market APIs,
 market value, and unrealized PnL remain prohibited.
 
-## Implemented commands
+## Official implemented commands
 
 - `fundlog init`
-- `fundlog create <portfolio>`
-- `fundlog create <portfolio> --initial <amount>`
-- `fundlog inflow <portfolio> <amount>`
-- `fundlog outflow <portfolio> <amount>`
-- `fundlog summary <portfolio>`
-- `fundlog summary --all`
-- `fundlog log <portfolio>`
-- `fundlog edit <portfolio> <entry-number>`
-- `fundlog delete <portfolio> <entry-number>`
-- `fundlog reset <portfolio> --yes`
-- `fundlog delete <portfolio> --yes`
+- `fundlog portfolio create <portfolio> [--initial <amount>]`
+- `fundlog portfolio summary <portfolio>`
+- `fundlog portfolio summary --all`
+- `fundlog portfolio reset <portfolio> --yes`
+- `fundlog portfolio delete <portfolio> --yes`
+- `fundlog capital inflow <portfolio> <amount>`
+- `fundlog capital outflow <portfolio> <amount>`
+- `fundlog capital log <portfolio>`
+- `fundlog capital edit <portfolio> <entry-number>`
+- `fundlog capital delete <portfolio> <entry-number>`
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset summary <portfolio>`
 - `fundlog asset summary <portfolio>/<symbol>`
-- `fundlog asset list <portfolio>` (hidden compatibility alias)
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
-- `fundlog income <portfolio>/<symbol> <amount>`
-- `fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity>`
-- `fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity>`
+- `fundlog asset income <portfolio>/<symbol> <amount>`
+- `fundlog asset buy <portfolio>/<symbol> --price <price> --quantity <quantity>`
+- `fundlog asset sell <portfolio>/<symbol> --price <price> --quantity <quantity>`
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
 
-## Official command hierarchy design
+## Hidden compatibility aliases
 
-The final organized hierarchy is documented in `docs/CLI_SPEC.md` and is not
-implemented yet:
+The earlier root commands remain callable but are hidden from top-level help:
 
-- Root: `fundlog init`
-- Portfolio: `portfolio create`, `portfolio summary`, `portfolio reset`,
-  `portfolio delete`
-- Capital: `capital inflow`, `capital outflow`, `capital log`, `capital edit`,
-  `capital delete`
-- Asset: `asset add`, `asset summary`, `asset log`, `asset delete`,
-  `asset income`, `asset buy`, `asset sell`
+- `create`, `summary`, `reset`, and portfolio-form `delete`
+- `inflow`, `outflow`, `log`, `edit`, and entry-form `delete`
+- `income`, `buy`, and `sell`
+- `asset list <portfolio>` for `asset summary <portfolio>`
 
 `asset summary <portfolio>` shows every active asset summary in a portfolio.
 `asset summary <portfolio>/<symbol>` shows one asset. `asset list <portfolio>`
 is implemented as a hidden compatibility alias with identical output.
 
-When implementation is explicitly authorized:
-
-- Official grouped commands should be visible in help and documentation.
-- Existing root commands should remain temporarily as hidden compatibility
-  aliases and delegate to the same handlers/services.
-- Do not duplicate accounting or persistence logic for aliases.
-- Preserve `asset list <portfolio>` as the hidden compatibility alias for
-  `asset summary <portfolio>`.
-- Do not remove compatibility aliases before a separate pre-v1 decision.
-
-Until that migration is implemented, preserve the current executable command
-structure and do not update runtime help to advertise unavailable commands.
+Grouped commands and compatibility aliases must delegate to the same handlers
+or services. Do not duplicate accounting or persistence logic. Do not remove
+compatibility aliases before a separate pre-v1 decision.
 
 ## Financial model
 

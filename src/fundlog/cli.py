@@ -50,39 +50,72 @@ from fundlog.storage import (
 )
 
 ASSET_ADD_SHAPE = r"fundlog asset add <portfolio> <symbol> \[symbol...]"
-BUY_SHAPE = (
-    "fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> "
+ASSET_BUY_SHAPE = (
+    "fundlog asset buy <portfolio>/<symbol> --price <price> "
+    "--quantity <quantity> "
     "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
 )
-SELL_SHAPE = (
-    "fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> "
+ASSET_SELL_SHAPE = (
+    "fundlog asset sell <portfolio>/<symbol> --price <price> "
+    "--quantity <quantity> "
     "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
 )
 
 HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
     (
         "fundlog init",
-        "fundlog create <portfolio> [--initial <amount>]",
-        "fundlog inflow <portfolio> <amount> [--date <date>] [--note <text>]",
-        "fundlog outflow <portfolio> <amount> [--date <date>] [--note <text>]",
-        "fundlog summary <portfolio>",
-        "fundlog summary --all",
-        "fundlog log <portfolio>",
-        "fundlog edit <portfolio> <entry-number>",
-        "fundlog delete <portfolio> <entry-number>",
-        "fundlog delete <portfolio> --yes",
-        "fundlog reset <portfolio> --yes",
+        "fundlog portfolio create <portfolio> [--initial <amount>]",
+        "fundlog portfolio summary <portfolio>",
+        "fundlog portfolio summary --all",
+        ("fundlog capital inflow <portfolio> <amount> [--date <date>] [--note <text>]"),
+        (
+            "fundlog capital outflow <portfolio> <amount> "
+            "[--date <date>] [--note <text>]"
+        ),
+        "fundlog capital log <portfolio>",
+        "fundlog capital edit <portfolio> <entry-number>",
+        "fundlog capital delete <portfolio> <entry-number>",
         ASSET_ADD_SHAPE,
         "fundlog asset summary <portfolio>",
         "fundlog asset log <portfolio>/<symbol>",
         "fundlog asset summary <portfolio>/<symbol>",
         "fundlog asset delete <portfolio>/<symbol> --yes",
         (
-            "fundlog income <portfolio>/<symbol> <amount> "
+            "fundlog asset income <portfolio>/<symbol> <amount> "
             "[--date <date>] [--note <text>]"
         ),
-        BUY_SHAPE,
-        SELL_SHAPE,
+        ASSET_BUY_SHAPE,
+        ASSET_SELL_SHAPE,
+    )
+)
+
+PORTFOLIO_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
+    (
+        "fundlog portfolio create <portfolio> [--initial <amount>]",
+        "fundlog portfolio summary <portfolio>",
+        "fundlog portfolio summary --all",
+        "fundlog portfolio reset <portfolio> --yes",
+        "fundlog portfolio delete <portfolio> --yes",
+    )
+)
+
+PORTFOLIO_SUMMARY_HELP_EXAMPLES = """Examples:
+
+  fundlog portfolio summary <portfolio>
+
+  fundlog portfolio summary --all
+"""
+
+CAPITAL_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
+    (
+        ("fundlog capital inflow <portfolio> <amount> [--date <date>] [--note <text>]"),
+        (
+            "fundlog capital outflow <portfolio> <amount> "
+            "[--date <date>] [--note <text>]"
+        ),
+        "fundlog capital log <portfolio>",
+        "fundlog capital edit <portfolio> <entry-number>",
+        "fundlog capital delete <portfolio> <entry-number>",
     )
 )
 
@@ -93,24 +126,42 @@ ASSET_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
         "fundlog asset summary <portfolio>/<symbol>",
         "fundlog asset log <portfolio>/<symbol>",
         "fundlog asset delete <portfolio>/<symbol> --yes",
+        (
+            "fundlog asset income <portfolio>/<symbol> <amount> "
+            "[--date <date>] [--note <text>]"
+        ),
+        ASSET_BUY_SHAPE,
+        ASSET_SELL_SHAPE,
     )
 )
 
 INCOME_HELP_EXAMPLES = """Examples:
 
-  fundlog income <portfolio>/<symbol> <amount>
+  fundlog asset income <portfolio>/<symbol> <amount>
 
-  fundlog income <portfolio>/<symbol> <amount> --date <date> --note <text>
+  fundlog asset income <portfolio>/<symbol> <amount> --date <date> --note <text>
 """
 
-BUY_HELP_EXAMPLES = f"Example:\n\n  {BUY_SHAPE}"
+BUY_HELP_EXAMPLES = f"Example:\n\n  {ASSET_BUY_SHAPE}"
 
-SELL_HELP_EXAMPLES = f"Example:\n\n  {SELL_SHAPE}"
+SELL_HELP_EXAMPLES = f"Example:\n\n  {ASSET_SELL_SHAPE}"
 
 app = typer.Typer(
     name="fundlog",
     help="Manually track portfolio capital from the terminal.",
     epilog=HELP_EXAMPLES,
+    no_args_is_help=True,
+)
+portfolio_app = typer.Typer(
+    name="portfolio",
+    help="Manage portfolio lifecycle and summaries.",
+    epilog=PORTFOLIO_HELP_EXAMPLES,
+    no_args_is_help=True,
+)
+capital_app = typer.Typer(
+    name="capital",
+    help="Manage external portfolio capital entries.",
+    epilog=CAPITAL_HELP_EXAMPLES,
     no_args_is_help=True,
 )
 asset_app = typer.Typer(
@@ -119,6 +170,8 @@ asset_app = typer.Typer(
     epilog=ASSET_HELP_EXAMPLES,
     no_args_is_help=True,
 )
+app.add_typer(portfolio_app)
+app.add_typer(capital_app)
 app.add_typer(asset_app)
 
 
@@ -276,6 +329,12 @@ def asset_log(
 
 
 @app.command(
+    hidden=True,
+    context_settings={"ignore_unknown_options": True},
+    epilog=INCOME_HELP_EXAMPLES,
+)
+@asset_app.command(
+    "income",
     context_settings={"ignore_unknown_options": True},
     epilog=INCOME_HELP_EXAMPLES,
 )
@@ -322,6 +381,12 @@ def income(
 
 
 @app.command(
+    hidden=True,
+    context_settings={"ignore_unknown_options": True},
+    epilog=BUY_HELP_EXAMPLES,
+)
+@asset_app.command(
+    "buy",
     context_settings={"ignore_unknown_options": True},
     epilog=BUY_HELP_EXAMPLES,
 )
@@ -392,6 +457,12 @@ def buy(
 
 
 @app.command(
+    hidden=True,
+    context_settings={"ignore_unknown_options": True},
+    epilog=SELL_HELP_EXAMPLES,
+)
+@asset_app.command(
+    "sell",
     context_settings={"ignore_unknown_options": True},
     epilog=SELL_HELP_EXAMPLES,
 )
@@ -461,7 +532,8 @@ def sell(
     print_success(f"Sell recorded for asset '{symbol}/{portfolio}'.")
 
 
-@app.command()
+@app.command(hidden=True)
+@portfolio_app.command("create")
 def create(
     name: Annotated[str, typer.Argument(help="Name of the portfolio to create.")],
     initial: Annotated[
@@ -490,7 +562,8 @@ def create(
         print_success(f"Portfolio '{name}' created with initial capital.")
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
+@capital_app.command("inflow", context_settings={"ignore_unknown_options": True})
 def inflow(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     amount: Annotated[str, typer.Argument(help="Capital inflow amount.")],
@@ -520,7 +593,8 @@ def inflow(
     print_success(f"Inflow recorded for portfolio '{portfolio}'.")
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
+@capital_app.command("outflow", context_settings={"ignore_unknown_options": True})
 def outflow(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     amount: Annotated[str, typer.Argument(help="Capital outflow amount.")],
@@ -550,7 +624,11 @@ def outflow(
     print_success(f"Outflow recorded for portfolio '{portfolio}'.")
 
 
-@app.command()
+@app.command(hidden=True)
+@portfolio_app.command(
+    "summary",
+    epilog=PORTFOLIO_SUMMARY_HELP_EXAMPLES,
+)
 def summary(
     portfolio: Annotated[
         str | None,
@@ -590,7 +668,8 @@ def summary(
     print_portfolio_summary(portfolio_summary)
 
 
-@app.command()
+@app.command(hidden=True)
+@capital_app.command("log")
 def log(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
 ) -> None:
@@ -607,14 +686,15 @@ def log(
     print_capital_entry_log(entries)
 
 
-@app.command(context_settings={"ignore_unknown_options": True})
+@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
+@capital_app.command("edit", context_settings={"ignore_unknown_options": True})
 def edit(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     entry_number: Annotated[
         int,
         typer.Argument(
             metavar="ENTRY_NUMBER",
-            help="Entry number shown by 'fundlog log <portfolio>'.",
+            help="Entry number shown by the portfolio capital log.",
         ),
     ],
     amount: Annotated[
@@ -655,7 +735,8 @@ def edit(
     print_success(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
 
 
-@app.command()
+@app.command(hidden=True)
+@portfolio_app.command("reset")
 def reset(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     yes: Annotated[
@@ -677,14 +758,44 @@ def reset(
     print_success(f"Portfolio '{portfolio}' reset.")
 
 
-@app.command()
+@portfolio_app.command("delete")
+def portfolio_delete(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help="Soft-delete the entire portfolio and its entries.",
+        ),
+    ] = False,
+) -> None:
+    """Soft-delete an entire portfolio and its entries."""
+    _delete_portfolio_command(portfolio, yes)
+
+
+@capital_app.command("delete")
+def capital_delete(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    entry_number: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Entry number shown by the portfolio capital log.",
+        ),
+    ],
+) -> None:
+    """Soft-delete one capital entry by its portfolio-local number."""
+    _delete_capital_entry_command(portfolio, entry_number)
+
+
+@app.command(hidden=True)
 def delete(
     portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     entry_number: Annotated[
         int | None,
         typer.Argument(
             metavar="ENTRY_NUMBER",
-            help="Entry number shown by 'fundlog log <portfolio>'.",
+            help="Entry number shown by the portfolio capital log.",
         ),
     ] = None,
     yes: Annotated[
@@ -700,17 +811,25 @@ def delete(
         if yes:
             print_warning("Do not combine an entry number with --yes.")
             raise typer.Exit(code=1)
-        try:
-            delete_capital_entry(portfolio, entry_number)
-        except FundLogError as error:
-            print_error(str(error))
-            raise typer.Exit(code=1) from error
-
-        print_success(
-            f"Capital entry {entry_number} deleted from portfolio '{portfolio}'."
-        )
+        _delete_capital_entry_command(portfolio, entry_number)
         return
 
+    _delete_portfolio_command(portfolio, yes)
+
+
+def _delete_capital_entry_command(portfolio: str, entry_number: int) -> None:
+    """Run capital-entry deletion for grouped and compatibility commands."""
+    try:
+        delete_capital_entry(portfolio, entry_number)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Capital entry {entry_number} deleted from portfolio '{portfolio}'.")
+
+
+def _delete_portfolio_command(portfolio: str, yes: bool) -> None:
+    """Run portfolio deletion for grouped and compatibility commands."""
     if not yes:
         print_warning("Delete requires the --yes confirmation flag.")
         raise typer.Exit(code=1)
