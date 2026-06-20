@@ -91,6 +91,17 @@ def _ensure_entry_numbers(connection: sqlite3.Connection) -> None:
     )
 
 
+def _ensure_active_portfolio_names(connection: sqlite3.Connection) -> None:
+    """Ensure active portfolio names remain unique on legacy databases."""
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_active_portfolio_name
+        ON portfolios (name)
+        WHERE deleted_at IS NULL
+        """
+    )
+
+
 def _require_initialized_schema(connection: sqlite3.Connection) -> None:
     """Require the existing FundLog v0.1 base tables."""
     tables = {
@@ -122,6 +133,7 @@ def connect_database(
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("BEGIN IMMEDIATE")
         _require_initialized_schema(connection)
+        _ensure_active_portfolio_names(connection)
         _ensure_entry_numbers(connection)
         yield connection
     except sqlite3.Error as error:
@@ -145,15 +157,16 @@ def connect_database(
 def initialize_database(database_path: Path | None = None) -> Path:
     """Create the local database and v0.1 tables if they do not exist."""
     path = database_path if database_path is not None else get_database_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(path) as connection:
             connection.execute("PRAGMA foreign_keys = ON")
             connection.executescript(SCHEMA)
             connection.execute("BEGIN IMMEDIATE")
+            _ensure_active_portfolio_names(connection)
             _ensure_entry_numbers(connection)
-    except sqlite3.Error as error:
+    except (OSError, sqlite3.Error) as error:
         raise StorageError(
             "FundLog could not initialize the local database."
         ) from error

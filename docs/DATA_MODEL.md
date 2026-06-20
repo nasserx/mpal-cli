@@ -1,23 +1,26 @@
-# FundLog Planned Data Model
+# FundLog Data Model
 
-This document describes the database conceptually. It does not prescribe a database engine, SQL schema, migration, or implementation type.
+This document describes the implemented v0.1 SQLite model and planned future
+audit infrastructure.
 
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
-# v0.1 scope
+## v0.1 scope
 
-The v0.1 database contains only these conceptual tables:
+The implemented v0.1 database contains:
 
 - `portfolios`
 - `capital_entries`
-- `audit_log`
-- `schema_migrations`
+
+`audit_log` and `schema_migrations` remain future design concepts; they are not
+implemented v0.1 tables. Current migrations are small, idempotent schema checks
+applied during initialization and normal database access.
 
 ## `portfolios`
 
 **Purpose:** Store each user-managed portfolio.
 
-**Important conceptual fields:** Stable ID, name, creation and update timestamps, and active/removal state.
+**Important conceptual fields:** Internal stable ID, name, creation and update timestamps, and soft-delete state.
 
 **Relationships:** A portfolio owns zero or more portfolio entries. Audit records may reference it.
 
@@ -28,7 +31,7 @@ The v0.1 database contains only these conceptual tables:
 - Portfolios support soft delete and are not physically removed by `delete`.
 - Deleting a portfolio also soft-deletes its active capital entries atomically.
 - A deleted portfolio name may be reused because uniqueness applies only to active portfolios.
-- Removing or resetting records must not create orphaned child records.
+- Deleting entries or resetting a portfolio must not create orphaned child records.
 
 ## `capital_entries`
 
@@ -48,10 +51,10 @@ The v0.1 database contains only these conceptual tables:
 - Amounts are positive and must support exact decimal-safe calculations.
 - Entries support soft delete and are not physically removed by entry `delete`, `reset`, or portfolio `delete`.
 - Active entries determine current balances.
-- Entry changes must preserve enough prior and new state for future audit history.
+- Entry rows and timestamps are retained for future audit tooling.
 - Ledger validation must prevent insufficient-Cash outflows.
 
-## `audit_log`
+## Future `audit_log`
 
 **Purpose:** Preserve an audit-ready history of state-changing actions.
 
@@ -61,11 +64,11 @@ The v0.1 database contains only these conceptual tables:
 
 **Constraints:**
 
-- Edits, removals, resets, and portfolio deletions must be representable.
+- Edits, entry deletions, resets, and portfolio deletions must be representable.
 - Audit records are append-oriented and must not be silently rewritten by ordinary commands.
 - A reset must be traceable as one user action even when it affects multiple records.
 
-## `schema_migrations`
+## Future `schema_migrations`
 
 **Purpose:** Track database schema evolution across FundLog versions.
 
@@ -75,7 +78,7 @@ The v0.1 database contains only these conceptual tables:
 
 **Constraints:**
 
-- Each migration is applied at most once.
+- Each tracked migration is applied at most once.
 - Applied migrations have a deterministic order.
 - Unknown or unsupported schema versions must not be modified blindly.
 - The migration mechanism must allow future schema evolution without discarding existing records.
@@ -86,6 +89,6 @@ The v0.1 database contains only these conceptual tables:
 portfolios
   └── capital_entries
 
-audit_log references affected records and actions
-schema_migrations tracks database evolution
+future audit_log records affected records and actions
+future schema_migrations tracks database evolution
 ```

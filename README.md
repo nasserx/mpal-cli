@@ -4,6 +4,15 @@ FundLog is a fully manual, local-first CLI for recording capital movements acros
 
 The CLI command is `fundlog`. The package/distribution name is `fundlog-cli`.
 
+## Installation
+
+FundLog requires Python 3.11 or later. From a project checkout:
+
+```console
+python -m pip install -e .
+fundlog --help
+```
+
 ## What FundLog is
 
 - A manual capital ledger.
@@ -45,6 +54,9 @@ fundlog delete stocks --yes
 ```
 
 Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
+
+Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
+`--date` is omitted, FundLog uses the current local date.
 
 v0.1 covers initialization, portfolio creation, optional initial capital, inflows, outflows, summaries, logs, capital-entry correction and deletion, portfolio reset, and soft deletion of portfolios.
 

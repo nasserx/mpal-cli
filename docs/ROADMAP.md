@@ -17,6 +17,7 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 - Edit portfolio capital entries.
 - Soft-delete portfolio capital entries.
 - Reset a portfolio.
+- Soft-delete a portfolio and its active entries.
 - Use a local database.
 - Maintain an audit-ready design.
 

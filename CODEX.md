@@ -127,6 +127,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
+- `tests/test_dates.py`: Focused shared transaction-date validation tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.
 

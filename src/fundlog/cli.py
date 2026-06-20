@@ -134,7 +134,10 @@ def inflow(
     amount: Annotated[str, typer.Argument(help="Capital inflow amount.")],
     date: Annotated[
         str | None,
-        typer.Option("--date", help="Entry date in YYYY-MM-DD format."),
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
     ] = None,
     note: Annotated[
         str | None,
@@ -161,7 +164,10 @@ def outflow(
     amount: Annotated[str, typer.Argument(help="Capital outflow amount.")],
     date: Annotated[
         str | None,
-        typer.Option("--date", help="Entry date in YYYY-MM-DD format."),
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
     ] = None,
     note: Annotated[
         str | None,
@@ -255,7 +261,10 @@ def edit(
     ] = None,
     date: Annotated[
         str | None,
-        typer.Option("--date", help="Replacement date in YYYY-MM-DD format."),
+        typer.Option(
+            "--date",
+            help="Replacement date in YYYY-MM-DD; cannot be future.",
+        ),
     ] = None,
     note: Annotated[
         str | None,

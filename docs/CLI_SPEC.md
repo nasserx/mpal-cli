@@ -20,11 +20,11 @@
 
 **Options:** None in v0.1.
 
-**Behavior:** Creates or prepares local storage and records the current schema version. Re-running against a valid initialized database is safe and does not erase data.
+**Behavior:** Creates or prepares local storage and applies known idempotent schema migrations. Re-running against a valid initialized database is safe and does not erase data.
 
 **Validation:** The storage location must be usable and the existing schema, if any, must be recognized.
 
-**Errors:** Inaccessible storage, invalid database, unsupported schema version, or initialization failure.
+**Errors:** Inaccessible storage, invalid database, incompatible existing schema, or initialization failure.
 
 ## `fundlog create NAME`
 
@@ -194,9 +194,9 @@ fundlog edit stocks 2 --note "corrected deposit"
 - `--date DATE`: Replacement date in `YYYY-MM-DD`.
 - `--note TEXT`: Replacement note.
 
-**Behavior:** Updates only the supplied fields, preserves the portfolio-local entry number and type, recalculates derived balances, and records enough audit information for future audit history.
+**Behavior:** Updates only the supplied fields, preserves the portfolio-local entry number and type, recalculates derived balances, and updates the row timestamp. Full before-and-after audit history is future work.
 
-**Validation:** At least one editable option is required. The entry number must exist and be active within `PORTFOLIO`. An entry number from another portfolio is not found. A replacement date cannot be later than the current local date. The resulting ledger must remain valid; in particular, editing must not produce insufficient Cash at any point under the ledger's deterministic ordering.
+**Validation:** At least one editable option is required. The entry number must exist and be active within `PORTFOLIO`. An entry number from another portfolio is not found. A replacement date cannot be later than the current local date. The resulting active-entry Cash balance must not be negative.
 
 **Errors:** FundLog is not initialized; unknown portfolio; unknown or inactive entry number; no edit option; invalid amount or date; edit would invalidate Cash; database failure.
 

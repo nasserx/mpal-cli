@@ -46,12 +46,21 @@ def test_version_exits_successfully() -> None:
     assert f"FundLog {__version__}" in result.output
 
 
-def test_placeholder_commands_are_registered() -> None:
+def test_commands_are_registered() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
     for command in COMMANDS:
         assert command in result.output
+
+
+@pytest.mark.parametrize("command", sorted(COMMANDS))
+def test_command_help_exits_successfully(command: str) -> None:
+    result = runner.invoke(app, [command, "--help"])
+
+    assert result.exit_code == 0
+    assert "Usage:" in result.output
+    assert "Traceback" not in result.output
 
 
 def test_remove_command_is_not_supported() -> None:
@@ -174,6 +183,21 @@ def test_init_is_idempotent(tmp_path: Path, monkeypatch) -> None:
     assert portfolio_count == 1
 
 
+def test_init_reports_unusable_data_directory_without_traceback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_path = tmp_path / "not-a-directory"
+    data_path.write_text("occupied", encoding="utf-8")
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_path))
+
+    result = runner.invoke(app, ["init"])
+
+    assert result.exit_code == 1
+    assert "FundLog could not initialize the local database." in result.output
+    assert "Traceback" not in result.output
+
+
 def test_init_migrates_and_backfills_portfolio_entry_numbers(
     tmp_path: Path,
     monkeypatch,
@@ -288,6 +312,7 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
     first_log = runner.invoke(app, ["log", "stocks"])
     second_log = runner.invoke(app, ["log", "stocks"])
     summary_result = runner.invoke(app, ["summary", "stocks"])
+    duplicate_result = runner.invoke(app, ["create", "stocks"])
     edit_result = runner.invoke(
         app,
         ["edit", "stocks", "1", "--amount", "1250"],
@@ -313,6 +338,11 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
     assert "750.00" in summary_result.output
     assert "1250.00" in final_log.output
     assert "withdrawal" not in final_log.output
+    assert duplicate_result.exit_code == 1
+    assert "An active portfolio named 'stocks' already exists." in (
+        duplicate_result.output
+    )
+    assert "Traceback" not in duplicate_result.output
 
     with sqlite3.connect(database_path) as connection:
         entries = connection.execute(
@@ -322,12 +352,16 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
             ORDER BY portfolio_id, id
             """
         ).fetchall()
+        portfolio_indexes = {
+            row[1] for row in connection.execute("PRAGMA index_list(portfolios)")
+        }
 
     assert entries[0][0:4] == (10, 5, 1, 125000)
     assert entries[0][4] is None
     assert entries[1][0:3] == (10, 9, 2)
     assert entries[1][4] is not None
     assert entries[2][0:4] == (20, 12, 1, 50000)
+    assert "uq_active_portfolio_name" in portfolio_indexes
 
 
 def test_schema_errors_are_concise_without_traceback(

@@ -86,7 +86,9 @@ In v0.1, Return is always `0.00%`. If Capital is zero, Return is also displayed 
 - Active entries alone contribute to current calculations.
 - Soft-deleted entries do not contribute.
 - Portfolio reset soft-deletes portfolio entries.
-- Edits, removals, and resets must remain audit-ready when implemented.
+- Entry deletions, portfolio deletions, and resets retain rows and timestamps.
+  Edits update the existing row timestamp; full before-and-after audit history is
+  future work.
 - FundLog must not invent market value or use price-based valuation.
 - Fees are not a portfolio-level summary field. If supported later, they belong within manual symbol trading calculations.
 
