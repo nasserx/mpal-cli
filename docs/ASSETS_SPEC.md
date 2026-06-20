@@ -21,6 +21,7 @@ The asset phase must not introduce:
 - Live, delayed, or automatic prices.
 - Market APIs or other market-data integrations.
 - Broker integration or trade execution.
+- Automatic valuation.
 - Market value.
 - Unrealized PnL.
 - Automatic asset creation during buy, sell, or income operations.
@@ -40,14 +41,23 @@ A symbol is a user-entered ticker or code such as `AAPL`, `MSFT`, or `BTC`.
 - Input matching is case-insensitive.
 - Display is always uppercase.
 - A symbol is one token, not a multi-word name.
-- A symbol cannot contain spaces.
+- A symbol cannot be empty or contain whitespace.
 - A symbol cannot contain `/`.
 - `/` is reserved as the asset-reference separator.
+- After uppercasing, a symbol must match:
+
+  ```text
+  ^[A-Z0-9][A-Z0-9._-]*$
+  ```
+
+- A symbol has a maximum length of 32 characters after normalization.
+- Letters, numbers, `.`, `-`, and `_` are allowed.
+- A symbol cannot start with `.`, `-`, or `_`.
 
 Normalization must be deterministic so that case variants such as `aapl` and
-`AAPL` identify the same symbol within one portfolio. The remaining allowed
-character set, maximum length, and numeric storage limits must be finalized
-before implementation.
+`AAPL` identify the same symbol within one portfolio. These rules support common
+identifiers such as `BRK.B`, `BTC-USD`, and user-defined symbols while keeping
+asset references readable and unambiguous.
 
 ### Asset
 
@@ -91,9 +101,19 @@ AAPL/stocks
 The input reference follows the ownership path. The display title leads with
 the subject of the report.
 
-Portfolio names used in asset references also need an unambiguous path
-representation. Before implementation, FundLog must either reject `/` in
-portfolio names or define an escaping rule.
+An asset reference splits on exactly one `/`:
+
+- The left side is the portfolio name.
+- The right side is the symbol.
+- A missing portfolio or symbol is invalid.
+- More than one `/` is invalid.
+- The symbol side is normalized uppercase and validated by the symbol rules.
+- The portfolio side uses the existing portfolio lookup behavior.
+
+`/` is reserved and is not escaped or handled through quoted path parsing.
+Once the asset phase begins, new portfolio names must reject `/`. Existing
+portfolio names containing `/`, if any, are legacy edge cases and cannot be
+used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
@@ -117,19 +137,20 @@ symbols are added or none are.
 ### Manual trading and income
 
 ```console
-fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>]
-fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>]
-fundlog income <portfolio>/<symbol> <amount>
+fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
 ```
 
 - Buy, sell, and income require an existing active asset.
 - These operations never auto-create an asset. This prevents a typo such as
   `APPL` from silently creating a different asset.
-- `--fee` is optional and defaults to zero.
+- `--fee` is optional and defaults to `0.00`.
 - Documentation uses the long options `--price`, `--quantity`, and `--fee`.
   Short aliases may be considered later but are not required.
 - Fees belong only to manual asset trades. They use money parsing and money
   formatting.
+- Income amount uses the money parser and must be greater than zero.
 
 Buy, sell, and income records need an effective date and may include a note.
 The initial command contract should provide optional `--date` and `--note`
@@ -138,10 +159,9 @@ Every explicit date must use the shared `parse_transaction_date()` helper,
 accept strict ISO `YYYY-MM-DD`, and reject a date later than the current local
 date.
 
-Buy and sell also need a future exact-cash-total override for broker statements
-and otherwise unrepresentable calculated totals. `--total` is the working name,
-but the exact option name may be finalized during CLI implementation design.
-Its accounting semantics are fixed in the precision section below.
+Buy and sell use the planned `--total` option as an exact-cash-total override
+for broker statements and otherwise unrepresentable calculated totals. It is
+not implemented. Its accounting semantics are fixed in the precision section.
 
 All state-changing commands must be atomic. Invalid input must not leave partial
 records or partially changed derived balances.
@@ -289,7 +309,7 @@ new open cost basis = prior open cost basis + total buy cash outflow
 - Capital, Realized PnL, and Income do not change.
 - Cumulative Total Buy Cost increases by total buy cash outflow.
 
-If an exact-cash-total override is supplied, that money amount is the total buy
+If `--total` is supplied, that money amount is the total buy
 cash outflow and the amount added to Cost Basis, Positions, and cumulative Total
 Buy Cost. Price, quantity, and fee remain recorded transaction details, but the
 override controls the final cash accounting.
@@ -313,7 +333,7 @@ realized PnL = net sell proceeds - relieved cost basis
 - A sell cannot exceed the current open quantity.
 - A sell must have positive net proceeds.
 
-If an exact-cash-total override is supplied, that money amount is net sell
+If `--total` is supplied, that money amount is net sell
 proceeds. Price, quantity, and fee remain recorded transaction details, but the
 override controls the final cash accounting and realized PnL calculation.
 
@@ -324,10 +344,27 @@ exact allocation =
     prior open cost basis × sold quantity / prior open quantity
 ```
 
-The relieved cost basis is the exact allocation rounded to the nearest integer
-minor unit using round-half-even. This is a documented internal cost allocation,
-not silent rounding of a trade cash effect. A sale of the entire remaining
-quantity always relieves the entire remaining Cost Basis so no residual remains.
+Moving average cost determines the average book cost immediately before the
+sell. The relieved cost basis is the exact allocation rounded to the nearest
+integer minor unit using round-half-even when the exact result contains a
+fractional minor unit. The remaining open Cost Basis is then:
+
+```text
+remaining open cost basis =
+    previous open cost basis - relieved cost basis
+```
+
+This guarantees:
+
+```text
+previous open cost basis =
+    relieved cost basis + remaining open cost basis
+```
+
+This is a deterministic allocation of book cost, not silent rounding of a trade
+cash effect and not market valuation. A sale of the entire remaining quantity
+always relieves the entire remaining Cost Basis so no residual remains. Future
+implementation must test partial-sale and final-sale edge cases carefully.
 
 ### Income
 
@@ -350,7 +387,7 @@ Realized Return = (Realized PnL + Income) / Total Buy Cost
 ```
 
 Total Buy Cost is the cumulative total of active buy cash outflows for the
-asset, including buy fees and any exact-cash-total overrides. Sells do not
+asset, including buy fees and any `--total` overrides. Sells do not
 reduce Total Buy Cost.
 
 If Total Buy Cost is zero, Realized Return displays `0.00%`.
@@ -367,6 +404,8 @@ unrealized PnL, or market movement.
 - Money displays through the existing `format_money()`.
 - Money displays thousands separators and exactly two decimal places.
 - Fees, final trade cash totals, Cost Basis, Income, and Realized PnL are money.
+- Money input supports at most two decimal places under the existing money
+  parser contract.
 
 ### Exact trade cash effects
 
@@ -380,18 +419,26 @@ buy cash effect = price × quantity + fee
 sell cash effect = price × quantity - fee
 ```
 
-Without an exact-cash-total override, the final calculated cash effect must be
+Without `--total`, the final calculated cash effect must be
 exactly representable as integer minor units. If it is not, the operation is
 rejected.
 
-With the future exact-cash-total override:
+With `--total`:
 
 - The supplied total must itself be valid integer-minor-unit money.
+- It is parsed with the existing money parser.
+- It must be greater than zero.
 - For a buy, it represents total buy cash outflow after fees.
 - For a sell, it represents net sell proceeds after fees.
 - It is authoritative for Cash, Cost Basis or Realized PnL, Positions, the log
   Total column, and Total Buy Cost where applicable.
 - Price, quantity, and fee remain recorded for audit and display.
+- The calculated value from price, quantity, and fee remains available for
+  validation and audit, but it does not override the explicitly supplied total.
+- A difference between the calculated value and `--total` is allowed because
+  matching an exact broker or exchange statement is the purpose of the option.
+- The implementation must preserve enough information to make that difference
+  explicit and auditable rather than silently replacing an input.
 
 This supports broker-statement totals without hiding sub-cent discrepancies
 from values such as `0.000533 × 0.0538`.
@@ -401,7 +448,7 @@ from values such as `0.000533 × 0.0538`.
 - Fees belong to buy and sell operations only.
 - `--fee` is optional and defaults to zero.
 - Fees are valid nonnegative money amounts in integer minor units.
-- Fees use money parsing and `format_money()`.
+- Fees use the existing money parser and `format_money()`.
 - Fees never use price or quantity parsing or formatting.
 
 ### Quantity
@@ -431,7 +478,20 @@ Examples:
 ```
 
 The accepted maximum precision, storage representation, trailing-zero
-normalization, and upper bounds must be finalized before implementation.
+normalization, and upper bounds are:
+
+- Input uses plain decimal notation only.
+- Scientific notation is rejected.
+- A buy or sell quantity must be greater than zero.
+- Derived current open quantity may be zero.
+- Input supports at most 18 digits before the decimal point and 18 digits after
+  it.
+- Quantity is stored as normalized decimal text in SQLite.
+- Normalization removes unnecessary leading zeros, removes trailing fractional
+  zeros, and removes the decimal point when no fractional digits remain.
+- Zero is normalized as `0`.
+- Quantity is parsed into an exact decimal type for validation and arithmetic.
+- Quantity is never stored or calculated as binary floating point.
 
 ### Price
 
@@ -450,7 +510,18 @@ Future `format_price()` must:
 - Never use Python `float`.
 
 The accepted maximum precision, storage representation, trailing-zero
-normalization, and upper bounds must be finalized before implementation.
+normalization, and upper bounds are:
+
+- Input uses plain decimal notation only.
+- Scientific notation is rejected.
+- Buy and sell prices must be greater than zero.
+- Input supports at most 18 digits before the decimal point and 18 digits after
+  it.
+- User-entered price is stored as normalized decimal text in SQLite.
+- Normalization removes unnecessary leading zeros, removes trailing fractional
+  zeros, and removes the decimal point when no fractional digits remain.
+- Price is parsed into an exact decimal type for validation and arithmetic.
+- Price is never stored or calculated as binary floating point.
 
 ### Percentages
 
@@ -509,33 +580,30 @@ fail atomically and leave the asset and transactions active.
 - Portfolio and asset references resolve only to active records.
 - Buy, sell, and income require an existing active asset.
 - Symbol input is matched case-insensitively and displayed uppercase.
-- Symbols reject spaces and `/`.
+- Symbols must match `^[A-Z0-9][A-Z0-9._-]*$` after uppercasing and cannot
+  exceed 32 characters.
+- Asset references contain exactly one `/` with nonempty portfolio and symbol
+  sides.
+- Portfolio names containing `/` cannot be used with asset references.
 - Prices and quantities are positive exact decimal values.
 - Income amounts are positive money values.
-- Fees are nonnegative money values and default to zero.
+- Fees are nonnegative money values and default to `0.00`.
 - Malformed, non-finite, unsupported-precision, and out-of-range numeric input
   is rejected.
+- Scientific notation is rejected for price and quantity.
 - Sells cannot exceed open quantity.
 - Sell net proceeds must be positive.
 - Calculated trade cash effects that are not exact minor-unit money are rejected
-  unless an exact-cash-total override is supplied.
+  unless `--total` is supplied.
 - Explicit transaction dates use the shared date helper and cannot be in the
   future.
 - Failed commands exit nonzero and leave no partial changes.
 
 ## Remaining open questions
 
-The accounting direction and command behavior are resolved. These bounded
-representation details remain for implementation design:
-
-1. What exact allowed-character set and maximum length should symbols use
-   beyond the fixed no-space and no-`/` rules?
-2. What maximum precision, storage representation, trailing-zero policy, and
-   numeric bounds should price and quantity use?
-3. Should `/` be prohibited in portfolio names before asset references are
-   implemented, or should references define escaping?
-4. Should the exact-cash-total option keep the working name `--total`, or use a
-   more explicit name? Its accounting semantics are already fixed above.
+There are no known open questions blocking the initial asset implementation
+design. Schema shape, command error wording, and internal module boundaries
+remain implementation-planning details rather than unresolved product rules.
 
 ## Future implementation sequence
 
@@ -543,12 +611,11 @@ This document does not authorize implementation. After the remaining
 representation details are finalized and implementation is explicitly
 requested, work can proceed in reviewable steps:
 
-1. Finalize symbol/reference grammar and exact price/quantity representation.
-2. Design storage and migrations without changing existing v0.1 behavior.
-3. Add separate exact parsers and formatters for quantity and price.
-4. Add asset management and soft-deletion behavior.
-5. Add buy, sell, and income behavior with shared date validation.
-6. Add exact-total validation and moving-average accounting.
-7. Feed active asset results into the unchanged portfolio summary columns.
-8. Add themed asset list, summary, and log output.
-9. Add focused unit, integration, accounting-invariant, and atomicity tests.
+1. Design storage and migrations without changing existing v0.1 behavior.
+2. Add separate exact parsers and formatters for quantity and price.
+3. Add asset management and soft-deletion behavior.
+4. Add buy, sell, and income behavior with shared date validation.
+5. Add `--total` validation and moving-average accounting.
+6. Feed active asset results into the unchanged portfolio summary columns.
+7. Add themed asset list, summary, and log output.
+8. Add focused unit, integration, accounting-invariant, and atomicity tests.

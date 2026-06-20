@@ -47,7 +47,10 @@ and `format_money()`. Quantity and unit-price parsing and display require
 separate precision-aware `format_quantity()` and `format_price()` helpers and
 must not reuse the money formatter. Future trade calculations must not silently
 round cash effects that are not exactly representable in integer minor units.
-Live prices, market APIs, market value, and unrealized PnL remain prohibited.
+Quantity and price must use exact decimal representations, never Python
+`float`. `/` is reserved for future `<portfolio>/<symbol>` references and is
+not escaped. Live prices, market APIs, market value, and unrealized PnL remain
+prohibited.
 
 ## Implemented commands
 

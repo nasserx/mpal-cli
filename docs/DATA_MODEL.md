@@ -5,6 +5,13 @@ audit infrastructure.
 
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
+The future asset design is specified in `docs/ASSETS_SPEC.md`. It does not
+authorize schema changes. When implemented, monetary fields such as fees,
+income, trade cash totals, cost basis, realized PnL, and portfolio cash effects
+must use integer minor units. User-entered quantity and price must use normalized
+decimal text or an equivalently exact representation, never SQLite floating
+point or Python `float`.
+
 ## v0.1 scope
 
 The implemented v0.1 database contains:
@@ -28,6 +35,9 @@ applied during initialization and normal database access.
 
 - `name` is required.
 - Portfolio names are unique among active portfolios.
+- Once asset references are implemented, new portfolio names must reject `/`
+  because it is reserved for `<portfolio>/<symbol>`. Legacy names containing
+  `/`, if any, cannot be used with asset commands and are not escaped.
 - Portfolios support soft delete and are not physically removed by `delete`.
 - Deleting a portfolio also soft-deletes its active capital entries atomically.
 - A deleted portfolio name may be reused because uniqueness applies only to active portfolios.
@@ -67,6 +77,27 @@ applied during initialization and normal database access.
 - Edits, entry deletions, resets, and portfolio deletions must be representable.
 - Audit records are append-oriented and must not be silently rewritten by ordinary commands.
 - A reset must be traceable as one user action even when it affects multiple records.
+
+## Future asset storage constraints
+
+This section records representation requirements, not a table or migration
+design.
+
+- Normalized symbols are uppercase, at most 32 characters, and match
+  `^[A-Z0-9][A-Z0-9._-]*$`.
+- Quantity and user-entered price use normalized plain-decimal text.
+- Quantity and price allow at most 18 integer digits and 18 fractional digits.
+- Scientific notation and non-finite values are rejected.
+- Normalization removes unnecessary leading zeros and trailing fractional
+  zeros.
+- Buy and sell input quantities and prices are positive.
+- Derived open quantity may be zero.
+- Money remains integer minor units.
+- Asset-local transaction numbers are stable and are not reused after soft
+  deletion.
+- The future `--total` value is stored as exact money and remains distinguishable
+  from the calculated price-and-quantity amount for auditability.
+- No future asset storage field represents market value or unrealized PnL.
 
 ## Future `schema_migrations`
 

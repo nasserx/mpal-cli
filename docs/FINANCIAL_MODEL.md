@@ -10,6 +10,14 @@ Displayed monetary values use thousands separators and exactly two decimal
 places. This display rule is specific to money and does not define formatting
 for future quantities or unit prices.
 
+Future manual asset calculations must use exact decimal arithmetic for price
+and quantity and integer minor units for every cash effect. Price and quantity
+accept plain decimal notation with at most 18 integer digits and 18 fractional
+digits; scientific notation and Python `float` are prohibited. A calculated
+trade cash effect must be exactly representable in minor units or the trade must
+use the planned exact-money `--total` override described in
+`docs/ASSETS_SPEC.md`.
+
 ## Summary table
 
 The summary output has exactly these columns:
@@ -80,6 +88,18 @@ The future formula is:
 `Return = (Realized PnL + Income) / Capital`
 
 In v0.1, Return is always `0.00%`. If Capital is zero, Return is also displayed as `0.00%`.
+
+Future asset-level Realized Return uses:
+
+`Asset Realized Return = (Asset Realized PnL + Asset Income) / Total Buy Cost`
+
+Total Buy Cost is cumulative buy cash outflow including buy fees. If Total Buy
+Cost is zero, asset Realized Return is `0.00%`.
+
+Future partial sells use moving average book cost. Fractional-minor-unit cost
+allocations are rounded half-even to integer minor units, and remaining book
+cost is calculated as previous book cost minus relieved book cost so the ledger
+remains balanced. This is book cost allocation, not market valuation.
 
 ## Capital entry rules
 
