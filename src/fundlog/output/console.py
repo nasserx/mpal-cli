@@ -112,11 +112,14 @@ def print_assets(assets: list[Asset]) -> None:
     for asset in assets:
         table.add_row(
             asset.symbol,
-            "0",
-            format_money(0),
-            format_money(0),
+            format_quantity(asset.quantity),
+            format_money(asset.cost_basis_minor),
+            format_money(asset.realized_pnl_minor),
             format_money(asset.income_minor),
-            "0.00%",
+            _format_return(
+                asset.realized_pnl_minor + asset.income_minor,
+                asset.total_buy_cost_minor,
+            ),
         )
     Console().print(table)
 

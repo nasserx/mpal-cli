@@ -14,6 +14,7 @@ runner = CliRunner()
 
 COMMANDS = {
     "asset",
+    "buy",
     "init",
     "create",
     "inflow",

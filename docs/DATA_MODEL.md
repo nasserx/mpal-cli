@@ -7,10 +7,11 @@ Portfolio summaries are derived from manual records rather than stored balances.
 
 The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
 `asset_transactions` tables are implemented. The income command creates income
-transactions, and active income fields contribute to asset lists and portfolio
-summaries. Buy and sell creation and accounting are not implemented. Monetary
-fields use integer minor units. User-entered quantity and price fields use
-normalized decimal text, never SQLite floating point or Python `float`.
+transactions, and the buy command creates buy transactions. Active buy and
+income effects contribute to asset lists and portfolio summaries. Sell creation
+and accounting are not implemented. Monetary fields use integer minor units.
+User-entered quantity and price fields use normalized decimal text, never
+SQLite floating point or Python `float`.
 
 ## Implemented scope
 
@@ -135,8 +136,10 @@ timestamps, and soft-delete state.
 
 The income command inserts `income` rows with null price and quantity, zero fee,
 positive total/cash/income fields, and zero position/realized-PnL fields.
-Portfolio summaries currently read active income effects only. Buy and sell
-writers and their accounting remain future work.
+The buy command inserts normalized price and quantity, a nonnegative fee,
+positive total and position effect, negative cash effect, and zero realized-PnL
+and income fields. Portfolio summaries read active buy and income effects. Sell
+writing and accounting remain future work.
 
 ## Future `schema_migrations`
 

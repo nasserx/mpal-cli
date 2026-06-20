@@ -53,6 +53,10 @@ class InvalidPriceError(FundLogError):
     """Raised when an asset unit price is invalid."""
 
 
+class InvalidTradeTotalError(FundLogError):
+    """Raised when a trade cash total is inexact or inconsistent."""
+
+
 class InvalidEntryDateError(FundLogError):
     """Raised when a capital entry date is invalid."""
 

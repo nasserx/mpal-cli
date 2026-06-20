@@ -48,16 +48,15 @@ In v0.1:
 
 `Cash = total active inflows - total active outflows`
 
-Implemented manual asset income increases Cash. Future buy and sell operations
-may feed buy costs and sell proceeds into Cash.
+Implemented manual asset income increases Cash. Implemented buys decrease Cash
+by exact total cash outflow. Future sells may add net proceeds.
 
 ### Positions
 
 The book cost of currently open positions. Positions is not market value, live value, or unrealized value.
 
-In v0.1, no symbols or manual trading positions exist:
-
-`Positions = 0.00`
+Implemented buys increase Positions by total buy cash outflow, including buy
+fees. No sell currently reduces Positions.
 
 ### Book Value
 
@@ -65,9 +64,8 @@ In v0.1, no symbols or manual trading positions exist:
 
 Book Value is a book/accounting value based only on manual records. It must not imply market value.
 
-In v0.1:
-
-`Book Value = Cash`
+With buys implemented, Book Value remains `Cash + Positions`. A buy transfers
+book value from Cash to Positions and does not create profit or loss.
 
 ### Realized PnL
 
@@ -116,6 +114,9 @@ remains balanced. This is book cost allocation, not market valuation.
 - An outflow does not affect Realized PnL or Income.
 - Manual asset income increases Cash and Income by the same amount.
 - Income does not affect Capital, Positions, Cost Basis, or Realized PnL.
+- A manual buy decreases Cash and increases Positions by the same exact total.
+- Buy fees are included in Cost Basis.
+- A buy does not affect Capital, Income, Realized PnL, or portfolio Return.
 - Active entries alone contribute to current calculations.
 - Soft-deleted entries do not contribute.
 - Portfolio reset soft-deletes portfolio entries.

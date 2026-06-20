@@ -7,8 +7,8 @@ from fundlog.errors import InvalidAmountError
 MINOR_UNITS_PER_UNIT = 100
 
 
-def parse_amount_minor(amount: str) -> int:
-    """Parse a positive amount with at most two decimal places."""
+def parse_amount_minor(amount: str, *, allow_zero: bool = False) -> int:
+    """Parse money with at most two decimal places."""
     try:
         decimal_amount = Decimal(amount)
     except InvalidOperation as error:
@@ -16,8 +16,9 @@ def parse_amount_minor(amount: str) -> int:
 
     if not decimal_amount.is_finite():
         raise InvalidAmountError(f"Invalid amount: '{amount}'.")
-    if decimal_amount <= 0:
-        raise InvalidAmountError("Amount must be greater than zero.")
+    if decimal_amount < 0 or (decimal_amount == 0 and not allow_zero):
+        comparison = "nonnegative" if allow_zero else "greater than zero"
+        raise InvalidAmountError(f"Amount must be {comparison}.")
     if decimal_amount.as_tuple().exponent < -2:
         raise InvalidAmountError("Amount cannot have more than 2 decimal places.")
 

@@ -12,14 +12,14 @@ The initial asset foundation is implemented:
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 - `fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]`
+- `fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> ...`
 - Normalized symbol validation.
 - Asset-reference parsing.
 - The portfolio-owned `assets` table.
 - The `asset_transactions` storage foundation.
 
-Buy, sell, asset summary, fees, cost-basis accounting, and realized PnL remain
-design-only. Income transaction creation and its Cash, Income, Book Value, and
-Return integration are implemented.
+Buy and income transaction creation are implemented. Sell, asset summary,
+cost-basis relief, and realized PnL remain design-only.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -184,14 +184,13 @@ fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
 - Income amount uses the money parser and must be greater than zero.
 
 Buy, sell, and income records need an effective date and may include a note.
-Income implements optional `--date` and `--note`; buy and sell retain the same
+Buy and income implement optional `--date` and `--note`; sell retains the same
 future contract. An omitted date uses the current local date. Every explicit
 date uses the shared `parse_transaction_date()` helper, accepts strict ISO
 `YYYY-MM-DD`, and rejects a date later than the current local date.
 
-Buy and sell use the planned `--total` option as an exact-cash-total override
-for broker statements and otherwise unrepresentable calculated totals. It is
-not implemented. Its accounting semantics are fixed in the precision section.
+Buy implements `--total` as an exact-cash-total override. Sell retains the same
+future contract.
 
 All state-changing commands must be atomic. Invalid input must not leave partial
 records or partially changed derived balances.
@@ -344,6 +343,9 @@ new open cost basis = prior open cost basis + total buy cash outflow
 - Capital, Realized PnL, and Income do not change.
 - Cumulative Total Buy Cost increases by total buy cash outflow.
 
+This buy behavior is implemented. No sell operation currently reduces Quantity
+or Cost Basis.
+
 If `--total` is supplied, that money amount is the total buy
 cash outflow and the amount added to Cost Basis, Positions, and cumulative Total
 Buy Cost. Price, quantity, and fee remain recorded transaction details, but the
@@ -474,8 +476,11 @@ With `--total`:
 - Price, quantity, and fee remain recorded for audit and display.
 - The calculated value from price, quantity, and fee remains available for
   validation and audit, but it does not override the explicitly supplied total.
-- A difference between the calculated value and `--total` is allowed because
-  matching an exact broker or exchange statement is the purpose of the option.
+- If the calculated value is exactly representable as minor-unit money, it must
+  match `--total`.
+- If the calculated value is not exactly representable as minor-unit money, a
+  different `--total` is accepted because matching the broker or exchange
+  statement is the purpose of the option.
 - The implementation must preserve enough information to make that difference
   explicit and auditable rather than silently replacing an input.
 
@@ -611,8 +616,8 @@ fundlog asset delete <portfolio>/<symbol> --yes
   applies only to active assets.
 - Hard delete and purge remain future work.
 
-Soft-deleted income transactions stop contributing to asset lists, asset logs,
-and portfolio summaries. Database rows remain preserved.
+Soft-deleted buy and income transactions stop contributing to asset lists,
+asset logs, and portfolio summaries. Database rows remain preserved.
 
 ## Validation principles
 
@@ -649,8 +654,8 @@ remain implementation-planning details rather than unresolved product rules.
 The implemented foundation does not authorize later features. Future work can
 proceed in reviewable steps only when explicitly requested:
 
-1. Add buy and sell behavior with shared date validation.
-2. Add `--total` validation and moving-average accounting.
-3. Feed buy/sell results into the unchanged portfolio summary columns.
+1. Add sell behavior with shared date validation.
+2. Add moving-average cost-basis relief and realized PnL.
+3. Feed sell results into the unchanged portfolio summary columns.
 4. Add themed asset summary output.
-5. Add focused accounting-invariant and trade atomicity tests.
+5. Add focused sell accounting-invariant and atomicity tests.

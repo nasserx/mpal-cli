@@ -431,3 +431,50 @@ zero. Explicit dates use the shared date helper.
 **Errors:** FundLog is not initialized; invalid asset reference; unknown or
 inactive portfolio; unknown or inactive asset; invalid amount or date; database
 failure.
+
+## `fundlog buy PORTFOLIO/SYMBOL --price PRICE --quantity QUANTITY`
+
+Examples:
+
+```console
+fundlog buy stocks/AAPL --price 234.43 --quantity 3
+fundlog buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
+fundlog buy stocks/AAPL --price 0.000533 --quantity 0.0538 --total 0.01
+```
+
+**Purpose:** Record a manual buy for an existing active asset.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+
+**Required options:**
+
+- `--price PRICE`: Positive exact unit price.
+- `--quantity QUANTITY`: Positive exact quantity.
+
+**Optional options:**
+
+- `--fee FEE`: Nonnegative money fee; defaults to `0.00`.
+- `--total AMOUNT`: Exact total cash outflow including fees.
+- `--date DATE`: Transaction date in `YYYY-MM-DD`; defaults to the current local
+  date and cannot be in the future.
+- `--note TEXT`: Optional note.
+
+**Behavior:** Records normalized price and quantity text. The buy total is
+`price × quantity + fee`; Cash decreases and Positions/Cost Basis increase by
+that total. Realized PnL and Income do not change.
+
+Without `--total`, the calculated amount must be exactly representable in
+integer minor units. Otherwise the command fails and requests an exact broker
+or exchange total. With `--total`, that amount controls the cash and position
+effects. If the calculated amount is exactly representable, it must equal the
+provided total.
+
+**Validation:** The database, reference, portfolio, asset, price, quantity, fee,
+total, and date must be valid. No failed command creates a partial transaction.
+
+**Errors:** FundLog is not initialized; invalid reference; unknown or inactive
+portfolio or asset; invalid price, quantity, fee, total, or date; inexact
+calculated total without `--total`; exact calculated/provided total mismatch;
+database failure.

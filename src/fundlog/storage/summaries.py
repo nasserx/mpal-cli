@@ -41,24 +41,27 @@ def get_portfolio_summary(
                 WHERE deleted_at IS NULL
                 GROUP BY portfolio_id
             ),
-            income_totals AS (
+            transaction_totals AS (
                 SELECT
                     a.portfolio_id,
+                    SUM(t.cash_effect_minor) AS cash_effect_minor,
+                    SUM(t.position_effect_minor) AS position_effect_minor,
                     SUM(t.income_minor) AS income_minor
                 FROM assets AS a
                 JOIN asset_transactions AS t ON t.asset_id = a.id
                 WHERE a.deleted_at IS NULL
                     AND t.deleted_at IS NULL
-                    AND t.transaction_type = 'income'
                 GROUP BY a.portfolio_id
             )
             SELECT
                 p.name,
                 COALESCE(c.capital_minor, 0),
-                COALESCE(i.income_minor, 0)
+                COALESCE(t.cash_effect_minor, 0),
+                COALESCE(t.position_effect_minor, 0),
+                COALESCE(t.income_minor, 0)
             FROM portfolios AS p
             LEFT JOIN capital_totals AS c ON c.portfolio_id = p.id
-            LEFT JOIN income_totals AS i ON i.portfolio_id = p.id
+            LEFT JOIN transaction_totals AS t ON t.portfolio_id = p.id
             WHERE p.name = ? AND p.deleted_at IS NULL
             """,
             (portfolio_name,),
@@ -92,24 +95,27 @@ def get_all_portfolio_summaries(
                 WHERE deleted_at IS NULL
                 GROUP BY portfolio_id
             ),
-            income_totals AS (
+            transaction_totals AS (
                 SELECT
                     a.portfolio_id,
+                    SUM(t.cash_effect_minor) AS cash_effect_minor,
+                    SUM(t.position_effect_minor) AS position_effect_minor,
                     SUM(t.income_minor) AS income_minor
                 FROM assets AS a
                 JOIN asset_transactions AS t ON t.asset_id = a.id
                 WHERE a.deleted_at IS NULL
                     AND t.deleted_at IS NULL
-                    AND t.transaction_type = 'income'
                 GROUP BY a.portfolio_id
             )
             SELECT
                 p.name,
                 COALESCE(c.capital_minor, 0),
-                COALESCE(i.income_minor, 0)
+                COALESCE(t.cash_effect_minor, 0),
+                COALESCE(t.position_effect_minor, 0),
+                COALESCE(t.income_minor, 0)
             FROM portfolios AS p
             LEFT JOIN capital_totals AS c ON c.portfolio_id = p.id
-            LEFT JOIN income_totals AS i ON i.portfolio_id = p.id
+            LEFT JOIN transaction_totals AS t ON t.portfolio_id = p.id
             WHERE p.deleted_at IS NULL
             ORDER BY p.name ASC
             """
@@ -118,12 +124,13 @@ def get_all_portfolio_summaries(
     return [_summary_from_row(row) for row in rows]
 
 
-def _summary_from_row(row: tuple[str, int, int]) -> PortfolioSummary:
-    """Build a summary from active capital and income totals."""
+def _summary_from_row(row: tuple[str, int, int, int, int]) -> PortfolioSummary:
+    """Build a summary from active capital and transaction totals."""
     capital_minor = row[1]
-    income_minor = row[2]
-    positions_minor = 0
-    cash_minor = capital_minor + income_minor
+    cash_effect_minor = row[2]
+    positions_minor = row[3]
+    income_minor = row[4]
+    cash_minor = capital_minor + cash_effect_minor
     return PortfolioSummary(
         portfolio_name=row[0],
         capital_minor=capital_minor,

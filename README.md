@@ -58,6 +58,7 @@ fundlog asset log stocks/AAPL
 fundlog asset delete stocks/AAPL --yes
 
 fundlog income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
+fundlog buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
 ```
 
 Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
@@ -71,7 +72,8 @@ portfolio reset, and soft deletion of portfolios. The initial asset foundation
 adds manual symbol creation, listing, and soft deletion under existing
 portfolios. The read-only asset log and its transaction storage foundation are
 also present. Manual asset income updates the asset list and portfolio summary.
-Buy, sell, cost-basis accounting, and realized PnL are not implemented.
+Manual buys update open quantity, Cost Basis, portfolio Cash, and Positions.
+Sell, cost-basis relief, and realized PnL are not implemented.
 
 ## Planned capabilities
 

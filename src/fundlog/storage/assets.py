@@ -1,6 +1,7 @@
 """Asset persistence operations."""
 
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from fundlog.assets import normalize_symbol
@@ -18,7 +19,11 @@ class Asset:
     """One active portfolio-owned asset."""
 
     symbol: str
+    quantity: Decimal
+    cost_basis_minor: int
+    realized_pnl_minor: int
     income_minor: int
+    total_buy_cost_minor: int
 
 
 def create_assets(
@@ -86,32 +91,55 @@ def get_assets(
                 f"Active portfolio '{portfolio_name}' does not exist."
             )
 
-        rows = connection.execute(
+        asset_rows = connection.execute(
             """
-            SELECT
-                a.symbol,
-                COALESCE(
-                    SUM(
-                        CASE
-                            WHEN t.transaction_type = 'income'
-                            THEN t.income_minor
-                            ELSE 0
-                        END
-                    ),
-                    0
-                )
+            SELECT a.id, a.symbol
             FROM assets AS a
-            LEFT JOIN asset_transactions AS t
-                ON t.asset_id = a.id
-                AND t.deleted_at IS NULL
             WHERE a.portfolio_id = ? AND a.deleted_at IS NULL
-            GROUP BY a.id, a.symbol
             ORDER BY a.symbol ASC
             """,
             (portfolio[0],),
         ).fetchall()
 
-    return [Asset(symbol=row[0], income_minor=row[1]) for row in rows]
+        assets: list[Asset] = []
+        for asset_id, symbol in asset_rows:
+            transactions = connection.execute(
+                """
+                SELECT
+                    transaction_type,
+                    quantity_text,
+                    position_effect_minor,
+                    income_minor,
+                    total_minor
+                FROM asset_transactions
+                WHERE asset_id = ? AND deleted_at IS NULL
+                """,
+                (asset_id,),
+            ).fetchall()
+            quantity = sum(
+                (
+                    Decimal(row[1])
+                    for row in transactions
+                    if row[0] == "buy" and row[1] is not None
+                ),
+                Decimal(0),
+            )
+            assets.append(
+                Asset(
+                    symbol=symbol,
+                    quantity=quantity,
+                    cost_basis_minor=sum(
+                        row[2] for row in transactions if row[0] == "buy"
+                    ),
+                    realized_pnl_minor=0,
+                    income_minor=sum(row[3] for row in transactions),
+                    total_buy_cost_minor=sum(
+                        row[4] for row in transactions if row[0] == "buy"
+                    ),
+                )
+            )
+
+    return assets
 
 
 def delete_asset(
