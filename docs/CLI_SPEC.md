@@ -8,7 +8,7 @@
 - Internal database IDs are not part of the CLI contract.
 - Capital entry numbers are stable and local to one portfolio.
 - Amounts are positive, decimal-safe numbers. Zero, negative, malformed, non-finite, or unsupported-precision amounts must be rejected.
-- Explicit dates use ISO format `YYYY-MM-DD`. An omitted date uses the current local date.
+- Explicit dates use ISO format `YYYY-MM-DD` and cannot be in the future. An omitted date uses the current local date.
 - A failed command exits nonzero and must not leave partial changes.
 - Portfolio uniqueness must be enforced consistently, including whatever case-normalization policy implementation adopts.
 
@@ -74,7 +74,7 @@ fundlog inflow stocks 1000 --date 2026-06-19 --note "initial deposit"
 
 **Behavior:** Creates an inflow entry and increases Capital and Cash by `AMOUNT`.
 
-**Validation:** Portfolio must exist and be active; amount and date must be valid.
+**Validation:** Portfolio must exist and be active; amount and date must be valid. An explicit date cannot be later than the current local date.
 
 **Errors:** FundLog is not initialized; unknown portfolio; invalid amount or date; database failure.
 
@@ -101,7 +101,7 @@ fundlog outflow stocks 250 --date 2026-06-19 --note "withdrawal"
 
 **Behavior:** Creates an outflow entry and decreases Capital and Cash by `AMOUNT`.
 
-**Validation:** Portfolio must exist and be active; amount and date must be valid; available Cash must be at least `AMOUNT`.
+**Validation:** Portfolio must exist and be active; amount and date must be valid; an explicit date cannot be later than the current local date; available Cash must be at least `AMOUNT`.
 
 **Errors:** FundLog is not initialized; unknown portfolio; invalid amount or date; insufficient Cash; database failure.
 
@@ -196,7 +196,7 @@ fundlog edit stocks 2 --note "corrected deposit"
 
 **Behavior:** Updates only the supplied fields, preserves the portfolio-local entry number and type, recalculates derived balances, and records enough audit information for future audit history.
 
-**Validation:** At least one editable option is required. The entry number must exist and be active within `PORTFOLIO`. An entry number from another portfolio is not found. The resulting ledger must remain valid; in particular, editing must not produce insufficient Cash at any point under the ledger's deterministic ordering.
+**Validation:** At least one editable option is required. The entry number must exist and be active within `PORTFOLIO`. An entry number from another portfolio is not found. A replacement date cannot be later than the current local date. The resulting ledger must remain valid; in particular, editing must not produce insufficient Cash at any point under the ledger's deterministic ordering.
 
 **Errors:** FundLog is not initialized; unknown portfolio; unknown or inactive entry number; no edit option; invalid amount or date; edit would invalidate Cash; database failure.
 

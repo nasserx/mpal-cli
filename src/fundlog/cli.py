@@ -8,7 +8,8 @@ import typer
 from fundlog import __version__
 from fundlog.amounts import parse_amount_minor
 from fundlog.config import APP_NAME
-from fundlog.errors import FundLogError, InvalidEntryDateError
+from fundlog.dates import parse_transaction_date
+from fundlog.errors import FundLogError
 from fundlog.output.console import (
     print_capital_entry_log,
     print_error,
@@ -143,26 +144,15 @@ def inflow(
     """Record money added to a portfolio."""
     try:
         amount_minor = parse_amount_minor(amount)
-        entry_date = local_date.today() if date is None else _parse_entry_date(date)
+        entry_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
         record_inflow(portfolio, amount_minor, entry_date, note)
     except FundLogError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
     print_success(f"Inflow recorded for portfolio '{portfolio}'.")
-
-
-def _parse_entry_date(value: str) -> local_date:
-    """Parse an ISO entry date."""
-    try:
-        parsed_date = local_date.fromisoformat(value)
-    except ValueError as error:
-        raise InvalidEntryDateError(
-            f"Invalid date: '{value}'. Use YYYY-MM-DD."
-        ) from error
-    if parsed_date.isoformat() != value:
-        raise InvalidEntryDateError(f"Invalid date: '{value}'. Use YYYY-MM-DD.")
-    return parsed_date
 
 
 @app.command(context_settings={"ignore_unknown_options": True})
@@ -181,7 +171,9 @@ def outflow(
     """Record money withdrawn from a portfolio."""
     try:
         amount_minor = parse_amount_minor(amount)
-        entry_date = local_date.today() if date is None else _parse_entry_date(date)
+        entry_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
         record_outflow(portfolio, amount_minor, entry_date, note)
     except FundLogError as error:
         print_error(str(error))
@@ -277,7 +269,7 @@ def edit(
 
     try:
         amount_minor = None if amount is None else parse_amount_minor(amount)
-        entry_date = None if date is None else _parse_entry_date(date)
+        entry_date = None if date is None else parse_transaction_date(date)
         edit_capital_entry(
             portfolio,
             entry_number,

@@ -121,6 +121,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 
 - `src/fundlog/cli.py`: Typer command definitions and CLI-level validation/output flow.
 - `src/fundlog/amounts.py`: Exact monetary parsing and formatting.
+- `src/fundlog/dates.py`: Strict transaction-date parsing and future-date validation.
 - `src/fundlog/config.py`: Application metadata and local database path resolution.
 - `src/fundlog/errors.py`: Expected application exception types.
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
@@ -130,6 +131,12 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.
 
 Keep persistence and business validation out of Rich output helpers. Keep command handlers thin and use the existing storage and amount helpers.
+
+All user-provided transaction dates must use `parse_transaction_date()` from
+`src/fundlog/dates.py`. Dates must be strict ISO `YYYY-MM-DD` values and cannot
+be later than the current local date. Future symbols, trades, buys, sells, and
+income features must reuse this helper instead of implementing local date
+validation.
 
 ## CLI theme
 

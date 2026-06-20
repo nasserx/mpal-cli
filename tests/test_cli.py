@@ -1,7 +1,7 @@
 """Smoke tests for the FundLog CLI scaffold."""
 
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -643,6 +643,57 @@ def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
     assert entry == ("stocks", "inflow", 100000, date.today().isoformat(), None)
 
 
+def test_inflow_accepts_past_date(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    past_date = date.today() - timedelta(days=1)
+
+    result = runner.invoke(
+        app,
+        ["inflow", "stocks", "1000", "--date", past_date.isoformat()],
+    )
+
+    assert result.exit_code == 0
+    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+        entry_date = connection.execute(
+            "SELECT entry_date FROM capital_entries"
+        ).fetchone()[0]
+    assert entry_date == past_date.isoformat()
+
+
+def test_inflow_accepts_today(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    today = date.today()
+
+    result = runner.invoke(
+        app,
+        ["inflow", "stocks", "1000", "--date", today.isoformat()],
+    )
+
+    assert result.exit_code == 0
+
+
+def test_inflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks"])
+    future_date = date.today() + timedelta(days=1)
+
+    result = runner.invoke(
+        app,
+        ["inflow", "stocks", "1000", "--date", future_date.isoformat()],
+    )
+
+    assert result.exit_code == 1
+    assert "Date cannot be in the future." in result.output
+
+
 def test_inflow_stores_decimal_amount_as_minor_units(
     tmp_path: Path,
     monkeypatch,
@@ -788,6 +839,22 @@ def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
         ).fetchone()
 
     assert entry == ("outflow", 25000, date.today().isoformat(), None)
+
+
+def test_outflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    future_date = date.today() + timedelta(days=1)
+
+    result = runner.invoke(
+        app,
+        ["outflow", "stocks", "250", "--date", future_date.isoformat()],
+    )
+
+    assert result.exit_code == 1
+    assert "Date cannot be in the future." in result.output
 
 
 def test_outflow_stores_decimal_amount_as_minor_units(
@@ -1869,7 +1936,7 @@ def test_edit_rejects_invalid_date(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 1
-    assert "Invalid date: '19-06-2026'. Use YYYY-MM-DD." in result.output
+    assert "Date must be a valid ISO date in YYYY-MM-DD format." in result.output
 
 
 def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
@@ -1885,7 +1952,23 @@ def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 1
-    assert "Invalid date: '20260619'. Use YYYY-MM-DD." in result.output
+    assert "Date must be a valid ISO date in YYYY-MM-DD format." in result.output
+
+
+def test_edit_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
+    future_date = date.today() + timedelta(days=1)
+
+    result = runner.invoke(
+        app,
+        ["edit", "stocks", "1", "--date", future_date.isoformat()],
+    )
+
+    assert result.exit_code == 1
+    assert "Date cannot be in the future." in result.output
 
 
 def test_edit_outflow_cannot_make_cash_negative(
