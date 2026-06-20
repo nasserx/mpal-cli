@@ -14,8 +14,7 @@ from fundlog.storage.database import connect_database, next_entry_no
 
 def create_portfolio(name: str, database_path: Path | None = None) -> int:
     """Create an empty active portfolio and return its ID."""
-    if not name.strip():
-        raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
+    _validate_portfolio_name(name)
 
     with connect_database(database_path) as connection:
         try:
@@ -40,8 +39,7 @@ def create_portfolio_with_initial(
     database_path: Path | None = None,
 ) -> int:
     """Atomically create a portfolio and its initial inflow entry."""
-    if not name.strip():
-        raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
+    _validate_portfolio_name(name)
 
     with connect_database(database_path) as connection:
         try:
@@ -78,6 +76,14 @@ def create_portfolio_with_initial(
         )
 
     return portfolio_id
+
+
+def _validate_portfolio_name(name: str) -> None:
+    """Validate a portfolio name against CLI and asset-reference rules."""
+    if not name.strip():
+        raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
+    if "/" in name:
+        raise InvalidPortfolioNameError("Portfolio name cannot contain '/'.")
 
 
 def delete_portfolio(

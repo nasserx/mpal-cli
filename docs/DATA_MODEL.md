@@ -3,13 +3,16 @@
 This document describes the implemented SQLite model and planned future audit
 infrastructure.
 
-Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
+Portfolio and asset summaries are derived from manual records rather than
+stored balances. The schema does not store market value, live prices, derived
+positions, or derived returns. Implemented manual asset transactions provide
+the inputs for Cost Basis, Realized PnL, Income, and Return without introducing
+market APIs.
 
 The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
-`asset_transactions` tables are implemented. Income, buy, and sell commands
-create asset transactions. Their active effects contribute to asset lists and
-asset summaries and portfolio summaries. Monetary fields use integer minor
-units.
+`asset_transactions` tables are implemented. Asset income, buy, and sell
+commands create asset transactions. Their active effects contribute to asset
+summaries and portfolio summaries. Monetary fields use integer minor units.
 User-entered quantity and price fields use normalized decimal text, never
 SQLite floating point or Python `float`.
 
@@ -38,9 +41,9 @@ applied during initialization and normal database access.
 
 - `name` is required.
 - Portfolio names are unique among active portfolios.
-- Once asset references are implemented, new portfolio names must reject `/`
-  because it is reserved for `<portfolio>/<symbol>`. Legacy names containing
-  `/`, if any, cannot be used with asset commands and are not escaped.
+- New portfolio names reject `/` because it is reserved for
+  `<portfolio>/<symbol>`. Legacy names containing `/`, if any, cannot be used
+  with asset commands and are not escaped.
 - Portfolios support soft delete and are not physically removed by `delete`.
 - Deleting a portfolio also soft-deletes its active capital entries atomically.
 - A deleted portfolio name may be reused because uniqueness applies only to active portfolios.
@@ -87,7 +90,7 @@ creation and update timestamps, and soft-delete state.
   rows without removing them.
 - Active asset queries exclude soft-deleted rows.
 - Internal asset IDs are not exposed by the CLI.
-- Active asset lists are ordered by symbol.
+- Portfolio-wide asset summaries are ordered by symbol.
 - The table contains no quantity, price, fee, trade, income, market-value, or
   unrealized-PnL fields.
 
@@ -134,14 +137,14 @@ timestamps, and soft-delete state.
 - Internal IDs are not exposed by the CLI.
 - The table contains no market value or unrealized PnL.
 
-The income command inserts `income` rows with null price and quantity, zero fee,
-positive total/cash/income fields, and zero position/realized-PnL fields.
-The buy command inserts normalized price and quantity, a nonnegative fee,
-positive total and position effect, negative cash effect, and zero realized-PnL
-and income fields. The sell command inserts normalized price and quantity, a
-nonnegative fee, positive net total and cash effect, negative relieved-cost
-position effect, calculated realized PnL, and zero income. Portfolio summaries
-read all active transaction effects.
+The asset income command inserts `income` rows with null price and quantity,
+zero fee, positive total/cash/income fields, and zero
+position/realized-PnL fields. Asset buy inserts normalized price and quantity,
+a nonnegative fee, positive total and position effect, negative cash effect,
+and zero realized-PnL and income fields. Asset sell inserts normalized price
+and quantity, a nonnegative fee, positive net total and cash effect, negative
+relieved-cost position effect, calculated Realized PnL, and zero income.
+Portfolio summaries read all active transaction effects.
 
 ## Future `schema_migrations`
 

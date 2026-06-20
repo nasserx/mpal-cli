@@ -1,5 +1,6 @@
 """Capital entry persistence operations."""
 
+import sqlite3
 from datetime import date
 from pathlib import Path
 
@@ -75,22 +76,7 @@ def record_outflow(
                 f"Active portfolio '{portfolio_name}' does not exist."
             )
 
-        cash_minor = connection.execute(
-            """
-            SELECT COALESCE(
-                SUM(
-                    CASE entry_type
-                        WHEN 'inflow' THEN amount_minor
-                        WHEN 'outflow' THEN -amount_minor
-                    END
-                ),
-                0
-            )
-            FROM capital_entries
-            WHERE portfolio_id = ? AND deleted_at IS NULL
-            """,
-            (portfolio[0],),
-        ).fetchone()[0]
+        cash_minor = _get_active_cash_minor(connection, portfolio[0])
         if cash_minor < amount_minor:
             raise InsufficientCashError(
                 f"Insufficient cash in portfolio '{portfolio_name}'."
@@ -159,24 +145,11 @@ def edit_capital_entry(
             raise CapitalEntryNotFoundError(f"Capital entry {entry_no} is not active.")
 
         if amount_minor is not None:
-            cash_without_entry = connection.execute(
-                """
-                SELECT COALESCE(
-                    SUM(
-                        CASE entry_type
-                            WHEN 'inflow' THEN amount_minor
-                            WHEN 'outflow' THEN -amount_minor
-                        END
-                    ),
-                    0
-                )
-                FROM capital_entries
-                WHERE portfolio_id = ?
-                    AND deleted_at IS NULL
-                    AND id != ?
-                """,
-                (portfolio[0], entry[0]),
-            ).fetchone()[0]
+            cash_without_entry = _get_active_cash_minor(
+                connection,
+                portfolio[0],
+                excluded_entry_id=entry[0],
+            )
             edited_effect = amount_minor if entry[1] == "inflow" else -amount_minor
             if cash_without_entry + edited_effect < 0:
                 raise InvalidLedgerEditError("Edit would make portfolio cash negative.")
@@ -233,24 +206,11 @@ def delete_capital_entry(
         if entry[1] is not None:
             raise CapitalEntryNotFoundError(f"Capital entry {entry_no} is not active.")
 
-        cash_without_entry = connection.execute(
-            """
-            SELECT COALESCE(
-                SUM(
-                    CASE entry_type
-                        WHEN 'inflow' THEN amount_minor
-                        WHEN 'outflow' THEN -amount_minor
-                    END
-                ),
-                0
-            )
-            FROM capital_entries
-            WHERE portfolio_id = ?
-                AND deleted_at IS NULL
-                AND id != ?
-            """,
-            (portfolio[0], entry[0]),
-        ).fetchone()[0]
+        cash_without_entry = _get_active_cash_minor(
+            connection,
+            portfolio[0],
+            excluded_entry_id=entry[0],
+        )
         if cash_without_entry < 0:
             raise InvalidLedgerDeleteError("Delete would make portfolio cash negative.")
 
@@ -292,3 +252,48 @@ def reset_portfolio_entries(
         )
 
     return cursor.rowcount
+
+
+def _get_active_cash_minor(
+    connection: sqlite3.Connection,
+    portfolio_id: int,
+    *,
+    excluded_entry_id: int | None = None,
+) -> int:
+    """Return current Cash from active capital and asset transaction effects."""
+    excluded_clause = "" if excluded_entry_id is None else "AND id != ?"
+    capital_parameters: tuple[int, ...] = (
+        (portfolio_id,)
+        if excluded_entry_id is None
+        else (portfolio_id, excluded_entry_id)
+    )
+    capital_minor = connection.execute(
+        f"""
+        SELECT COALESCE(
+            SUM(
+                CASE entry_type
+                    WHEN 'inflow' THEN amount_minor
+                    WHEN 'outflow' THEN -amount_minor
+                END
+            ),
+            0
+        )
+        FROM capital_entries
+        WHERE portfolio_id = ?
+            AND deleted_at IS NULL
+            {excluded_clause}
+        """,
+        capital_parameters,
+    ).fetchone()[0]
+    asset_cash_minor = connection.execute(
+        """
+        SELECT COALESCE(SUM(t.cash_effect_minor), 0)
+        FROM assets AS a
+        JOIN asset_transactions AS t ON t.asset_id = a.id
+        WHERE a.portfolio_id = ?
+            AND a.deleted_at IS NULL
+            AND t.deleted_at IS NULL
+        """,
+        (portfolio_id,),
+    ).fetchone()[0]
+    return capital_minor + asset_cash_minor

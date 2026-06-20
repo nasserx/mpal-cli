@@ -16,7 +16,7 @@ FundLog is a fully manual, local-first, terminal-based capital management and po
 - Store all user data in a local database.
 - Calculate portfolio summaries only from recorded operations.
 - Establish maintainable concepts and audit-ready behavior for future extensions.
-- Require decimal-safe financial logic when implementation begins.
+- Use decimal-safe financial logic for all implemented calculations.
 
 ## Non-goals
 
@@ -46,31 +46,39 @@ A recorded amount withdrawn from a portfolio. An outflow decreases both Capital 
 
 ### Cash
 
-The amount available inside a portfolio and not tied to open positions. In v0.1, Cash equals active inflows minus active outflows. Future manual trading operations may feed calculated buy costs, sell proceeds, and income into Cash.
+The amount available inside a portfolio and not tied to open positions. Cash is
+active external capital plus active asset cash effects: income and sell
+proceeds increase it, while buy cash outflows decrease it.
 
 ### Positions
 
-The book cost of currently open positions. Positions is not market value, live value, or unrealized value. It is `0.00` in v0.1 because symbols and manual trading operations are not implemented.
+The book cost of currently open manual positions. Buys increase Positions and
+sells reduce it by moving-average relieved Cost Basis. Positions is not market
+value, live value, or unrealized value.
 
 ### Book Value
 
-Cash plus Positions. Book Value is an accounting value derived only from manual records and must not imply market value. In v0.1, Book Value equals Cash.
+Cash plus Positions. Book Value is an accounting value derived only from manual
+records and must not imply market value.
 
 ### Realized PnL
 
-Profit or loss realized by future closed or partially closed manual positions. Capital inflows and outflows do not produce Realized PnL. It is `0.00` in v0.1.
+Profit or loss from closed or partially closed manual positions. It is sell net
+proceeds minus moving-average relieved Cost Basis. Capital inflows and outflows
+do not produce Realized PnL.
 
 ### Income
 
-Cash income from future manually recorded distributions or dividends. Income is `0.00` in v0.1.
+Cash income from manually recorded asset distributions or dividends.
 
 ### Return
 
-Return is based on realized results only. The future formula is `(Realized PnL + Income) / Capital`. It is `0.00%` in v0.1, including when Capital is zero.
+Return is based on realized results only:
+`(Realized PnL + Income) / Capital`. It displays `0.00%` when Capital is zero.
 
-## v0.1 scope
+## Implemented scope
 
-v0.1 is limited to:
+The completed capital ledger and current asset milestone include:
 
 - Initializing local storage.
 - Creating empty portfolios.
@@ -83,5 +91,13 @@ v0.1 is limited to:
 - Soft-deleting capital entries by stable portfolio-local entry number.
 - Resetting a portfolio's operations while retaining the portfolio.
 - Soft-deleting a portfolio and its active capital entries.
+- Adding and soft-deleting portfolio-owned assets.
+- Showing portfolio-wide and single-asset summaries.
+- Showing active asset transaction logs.
+- Recording manual asset income, buys, and sells.
+- Applying moving-average Cost Basis and Realized PnL.
+- Feeding active asset effects into portfolio Cash, Positions, Book Value,
+  Realized PnL, Income, and Return.
 
-v0.1 contains portfolios and capital entries only. Future manual trading operations may feed calculated results into Cash, Positions, Realized PnL, and Income. Live pricing, market APIs, market valuation, unrealized PnL, and price-based calculations are not part of FundLog.
+Live pricing, market APIs, market valuation, and unrealized PnL are not part of
+FundLog.

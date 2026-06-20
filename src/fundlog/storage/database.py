@@ -192,7 +192,7 @@ def _ensure_assets(connection: sqlite3.Connection) -> None:
 
 
 def _ensure_asset_transactions(connection: sqlite3.Connection) -> None:
-    """Create the future transaction table and stable local-number index."""
+    """Create the asset transaction table and stable local-number index."""
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS asset_transactions (

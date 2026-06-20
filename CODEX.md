@@ -23,7 +23,9 @@ Before changing behavior, read:
 
 v0.1 covers portfolio and capital-entry management only.
 
-The asset foundation implements `fundlog asset add`, `fundlog asset list`,
+The asset foundation implements `fundlog asset add`,
+`fundlog asset summary <portfolio>`,
+`fundlog asset summary <portfolio>/<symbol>`,
 `fundlog asset log <portfolio>/<symbol>`,
 `fundlog asset delete <portfolio>/<symbol> --yes`, asset-reference parsing,
 symbol normalization, and the `assets` and `asset_transactions` tables.
@@ -191,7 +193,7 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/config.py`: Application metadata and local database path resolution.
 - `src/fundlog/errors.py`: Expected application exception types.
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
-- `src/fundlog/storage/assets.py`: Asset creation and active-asset listing.
+- `src/fundlog/storage/assets.py`: Asset creation and active summary aggregation.
 - `src/fundlog/storage/asset_logs.py`: Read-only active asset transaction logs.
 - `src/fundlog/storage/asset_transactions.py`: Manual income, buy, and sell persistence.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.

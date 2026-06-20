@@ -593,8 +593,8 @@ asset.
 **Behavior:** Creates an asset-local `income` transaction with no price,
 quantity, or fee. Total, positive cash effect, and income equal `AMOUNT`.
 Position effect and realized PnL are zero. The transaction appears in
-`asset log`, contributes to the asset list Income column, and increases the
-portfolio Cash, Book Value, Income, and realized Return. It does not change
+`asset log`, contributes to asset-summary Income, and increases portfolio Cash,
+Book Value, Income, and realized Return. It does not change
 Capital, Positions, Cost Basis, or Realized PnL.
 
 **Validation:** The reference, active portfolio, active asset, amount, and date

@@ -4,18 +4,21 @@
 
 FundLog is fully manual. It derives financial results only from active recorded operations and does not use live prices, market APIs, automatic valuation, market value, or unrealized PnL.
 
-v0.1 records only portfolio capital inflows and outflows. Financial amounts use integer minor units in storage and decimal-safe logic in application code; binary floating point is not used.
+The completed v0.1 capital ledger records portfolio inflows and outflows. The
+current asset milestone also records manual asset income, buys, and sells.
+Financial amounts use integer minor units in storage and decimal-safe logic in
+application code; binary floating point is not used.
 
 Displayed monetary values use thousands separators and exactly two decimal
 places. This display rule is specific to money and does not define formatting
-for future quantities or unit prices.
+for quantities or unit prices.
 
-Future manual asset calculations must use exact decimal arithmetic for price
+Manual asset calculations use exact decimal arithmetic for price
 and quantity and integer minor units for every cash effect. Price and quantity
 accept plain decimal notation with at most 18 integer digits and 18 fractional
 digits; scientific notation and Python `float` are prohibited. A calculated
 trade cash effect must be exactly representable in minor units or the trade must
-use the planned exact-money `--total` override described in
+use the exact-money `--total` override described in
 `docs/ASSETS_SPEC.md`.
 
 The reusable `parse_quantity()`, `format_quantity()`, `parse_price()`, and
@@ -152,7 +155,7 @@ remains balanced. This is book cost allocation, not market valuation.
 ### Add an inflow
 
 ```console
-fundlog inflow stocks 1000
+fundlog capital inflow stocks 1000
 ```
 
 Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
@@ -160,7 +163,7 @@ Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and In
 ### Add an outflow
 
 ```console
-fundlog outflow stocks 250
+fundlog capital outflow stocks 250
 ```
 
 After the preceding inflow, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
@@ -168,7 +171,7 @@ After the preceding inflow, Capital, Cash, and Book Value become `750.00`. The o
 ### Attempt an outflow with insufficient Cash
 
 ```console
-fundlog outflow stocks 1000
+fundlog capital outflow stocks 1000
 ```
 
 With only `750.00` Cash available, the command fails, creates no entry, and leaves the summary unchanged.

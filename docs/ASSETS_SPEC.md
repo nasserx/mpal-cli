@@ -12,8 +12,9 @@ The initial asset foundation is implemented:
 - `fundlog asset list <portfolio>` as a hidden compatibility alias
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
-- `fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]`
-- `fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> ...`
+- `fundlog asset income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]`
+- `fundlog asset buy <portfolio>/<symbol> --price <price> --quantity <quantity> ...`
+- `fundlog asset sell <portfolio>/<symbol> --price <price> --quantity <quantity> ...`
 - Normalized symbol validation.
 - Asset-reference parsing.
 - The portfolio-owned `assets` table.
@@ -161,9 +162,9 @@ are added or none are.
 ### Manual trading and income
 
 ```console
-fundlog buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
-fundlog sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
-fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
+fundlog asset buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+fundlog asset sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+fundlog asset income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
 ```
 
 - Buy, sell, and income require an existing active asset.
@@ -605,7 +606,7 @@ fundlog asset delete <portfolio>/<symbol> --yes
 - The operation atomically soft-deletes the active asset row and all its active
   transaction rows.
 - Database rows and audit-ready metadata are preserved.
-- The deleted asset is excluded from active asset lists and lookups.
+- The deleted asset is excluded from active asset summaries and lookups.
 - Other assets and portfolios are unaffected.
 - The same symbol may be added again as a new active row because uniqueness
   applies only to active assets.

@@ -77,10 +77,10 @@ Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 
 v0.1 covers initialization, portfolio creation, optional initial capital,
 inflows, outflows, summaries, logs, capital-entry correction and deletion,
-portfolio reset, and soft deletion of portfolios. The initial asset foundation
-adds manual symbol creation, listing, and soft deletion under existing
+portfolio reset, and soft deletion of portfolios. The asset foundation adds
+manual symbol creation, summaries, and soft deletion under existing
 portfolios. The read-only asset log and its transaction storage foundation are
-also present. Manual asset income updates the asset list and portfolio summary.
+also present. Manual asset income updates asset and portfolio summaries.
 Manual buys update open quantity, Cost Basis, portfolio Cash, and Positions.
 Manual sells use moving-average book cost and update open quantity, Cost Basis,
 Cash, Positions, and Realized PnL. Asset summary reports current open quantity,
