@@ -1,10 +1,12 @@
 """Rich terminal output helpers."""
 
 from rich.console import Console
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
 from fundlog.amounts import format_money
+from fundlog.numbers import format_price, format_quantity
 from fundlog.output.theme import (
     ERROR,
     INFO,
@@ -14,6 +16,7 @@ from fundlog.output.theme import (
     TABLE_HEADER,
     WARNING,
 )
+from fundlog.storage.asset_logs import AssetTransaction
 from fundlog.storage.assets import Asset
 from fundlog.storage.logs import CapitalEntry
 from fundlog.storage.summaries import PortfolioSummary
@@ -111,6 +114,51 @@ def print_assets(assets: list[Asset]) -> None:
             "0.00%",
         )
     Console().print(table)
+
+
+def print_asset_transaction_log(
+    portfolio_name: str,
+    symbol: str,
+    transactions: list[AssetTransaction],
+) -> None:
+    """Print one asset's active transactions using the documented columns."""
+    console = Console(width=120)
+    title = Text(f"{symbol}/{portfolio_name}", style=TABLE_HEADER)
+    console.print(Rule(title, style=TABLE_BORDER))
+
+    table = Table(
+        header_style=TABLE_HEADER,
+        border_style=TABLE_BORDER,
+        style=TABLE_CELL,
+    )
+    table.add_column("#", justify="right")
+    table.add_column("Date")
+    table.add_column("Type")
+    table.add_column("Price", justify="right")
+    table.add_column("Quantity", justify="right")
+    table.add_column("Fee", justify="right")
+    table.add_column("Total", justify="right")
+    table.add_column("Note")
+    for transaction in transactions:
+        table.add_row(
+            str(transaction.entry_no),
+            transaction.transaction_date,
+            transaction.transaction_type,
+            (
+                "--"
+                if transaction.price_text is None
+                else format_price(transaction.price_text)
+            ),
+            (
+                "--"
+                if transaction.quantity_text is None
+                else format_quantity(transaction.quantity_text)
+            ),
+            format_money(transaction.fee_minor),
+            format_money(transaction.total_minor),
+            transaction.note or "",
+        )
+    console.print(table)
 
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:

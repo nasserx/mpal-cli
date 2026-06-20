@@ -12,6 +12,7 @@ from fundlog.config import APP_NAME
 from fundlog.dates import parse_transaction_date
 from fundlog.errors import FundLogError
 from fundlog.output.console import (
+    print_asset_transaction_log,
     print_assets,
     print_capital_entry_log,
     print_error,
@@ -30,6 +31,7 @@ from fundlog.storage import (
     delete_portfolio,
     edit_capital_entry,
     get_all_portfolio_summaries,
+    get_asset_transaction_log,
     get_assets,
     get_capital_entry_log,
     get_portfolio_summary,
@@ -177,6 +179,27 @@ def asset_delete(
         raise typer.Exit(code=1) from error
 
     print_success(f"Asset '{symbol}' deleted from portfolio '{portfolio}'.")
+
+
+@asset_app.command("log")
+def asset_log(
+    reference: Annotated[
+        str,
+        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+    ],
+) -> None:
+    """Show active transactions for an asset."""
+    try:
+        portfolio, symbol = parse_asset_reference(reference)
+        transactions = get_asset_transaction_log(portfolio, symbol)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not transactions:
+        print_info(f"No active transactions for asset '{symbol}/{portfolio}'.")
+        return
+    print_asset_transaction_log(portfolio, symbol, transactions)
 
 
 @app.command()

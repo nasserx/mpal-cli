@@ -54,6 +54,7 @@ fundlog delete stocks --yes
 
 fundlog asset add stocks AAPL AMZN MSFT
 fundlog asset list stocks
+fundlog asset log stocks/AAPL
 fundlog asset delete stocks/AAPL --yes
 ```
 
@@ -66,7 +67,9 @@ v0.1 covers initialization, portfolio creation, optional initial capital,
 inflows, outflows, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The initial asset foundation
 adds manual symbol creation, listing, and soft deletion under existing
-portfolios. Trading and asset accounting are not implemented.
+portfolios. The read-only asset log and its transaction storage foundation are
+also present, but no command records trades or income. Trading and asset
+accounting are not implemented.
 
 ## Planned capabilities
 

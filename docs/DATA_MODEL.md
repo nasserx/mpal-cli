@@ -5,12 +5,11 @@ infrastructure.
 
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
-The asset design is specified in `docs/ASSETS_SPEC.md`. The initial `assets`
-table is implemented; asset transactions and asset accounting storage are not.
-When implemented later, monetary fields such as fees, income, trade cash totals,
-cost basis, realized PnL, and portfolio cash effects must use integer minor
-units. User-entered quantity and price must use normalized decimal text or an
-equivalently exact representation, never SQLite floating point or Python
+The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
+`asset_transactions` tables are implemented. No public command creates
+transactions, and transaction-derived accounting is not connected to portfolio
+summaries. Monetary fields use integer minor units. User-entered quantity and
+price fields use normalized decimal text, never SQLite floating point or Python
 `float`.
 
 ## Implemented scope
@@ -20,6 +19,7 @@ The implemented database contains:
 - `portfolios`
 - `capital_entries`
 - `assets`
+- `asset_transactions`
 
 `audit_log` and `schema_migrations` remain future design concepts; they are not
 implemented v0.1 tables. Current migrations are small, idempotent schema checks
@@ -103,26 +103,38 @@ creation and update timestamps, and soft-delete state.
 - Audit records are append-oriented and must not be silently rewritten by ordinary commands.
 - A reset must be traceable as one user action even when it affects multiple records.
 
-## Future asset transaction storage constraints
+## `asset_transactions`
 
-This section records requirements for the unimplemented trade and income
-storage, not a table or migration design.
+**Purpose:** Store the future manual buy, sell, and income ledger and support
+the read-only asset log.
 
-- Normalized symbols are uppercase, at most 32 characters, and match
-  `^[A-Z0-9][A-Z0-9._-]*$`.
-- Quantity and user-entered price use normalized plain-decimal text.
-- Quantity and price allow at most 18 integer digits and 18 fractional digits.
-- Scientific notation and non-finite values are rejected.
-- Normalization removes unnecessary leading zeros and trailing fractional
-  zeros.
-- Buy and sell input quantities and prices are positive.
-- Derived open quantity may be zero.
-- Money remains integer minor units.
-- Asset-local transaction numbers are stable and are not reused after soft
+**Important fields:** Internal stable ID, asset ID, asset-local entry number,
+transaction type, effective date, nullable exact price and quantity text, fee
+and total money, signed cash and position effects, realized PnL, income, note,
+timestamps, and soft-delete state.
+
+**Relationships:** Every transaction belongs to exactly one asset.
+
+**Constraints:**
+
+- Allowed transaction types are `buy`, `sell`, and `income`.
+- Entry numbers start at 1 independently for each asset row.
+- `(asset_id, entry_no)` is fully unique, so numbers are not reused after soft
   deletion.
-- The future `--total` value is stored as exact money and remains distinguishable
-  from the calculated price-and-quantity amount for auditability.
-- No future asset storage field represents market value or unrealized PnL.
+- Price and quantity are nullable for income rows and use exact decimal text
+  when present.
+- Fee, Total, cash effect, position effect, realized PnL, and income are integer
+  minor units.
+- Cash, position, and realized-PnL effects may be signed.
+- Fee and income fields are nonnegative.
+- Rows support soft delete and active log queries exclude deleted rows.
+- Asset logs order rows by transaction date and then entry number.
+- Internal IDs are not exposed by the CLI.
+- The table contains no market value or unrealized PnL.
+
+The table is currently a storage and display foundation only. No public command
+inserts transaction rows, and no portfolio calculation reads its accounting
+effect fields.
 
 ## Future `schema_migrations`
 
@@ -145,6 +157,7 @@ storage, not a table or migration design.
 portfolios
   ├── capital_entries
   └── assets
+       └── asset_transactions
 
 future audit_log records affected records and actions
 future schema_migrations tracks database evolution

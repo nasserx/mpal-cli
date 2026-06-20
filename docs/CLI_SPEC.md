@@ -359,3 +359,36 @@ uses the normal symbol validation rules. `--yes` is mandatory.
 **Errors:** FundLog is not initialized; missing `--yes`; invalid asset
 reference; unknown or inactive portfolio; unknown or inactive asset; database
 failure. Without `--yes`, no changes occur.
+
+## `fundlog asset log PORTFOLIO/SYMBOL`
+
+Example:
+
+```console
+fundlog asset log stocks/AAPL
+```
+
+**Purpose:** Show active transactions stored for one active asset.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+
+**Options:** None in the read-only log foundation.
+
+**Behavior:** Displays the uppercase-symbol title `SYMBOL/portfolio` and the
+columns `#`, `Date`, `Type`, `Price`, `Quantity`, `Fee`, `Total`, and `Note`.
+Rows are ordered by transaction date and then asset-local entry number. Price
+and quantity use their separate precision-aware formatters; Fee and Total use
+money formatting. Internal database IDs are not displayed. An asset with no
+active transactions prints a deterministic empty-state message.
+
+No public command creates asset transactions yet, so this command normally
+shows the empty state.
+
+**Validation:** The reference must contain exactly one `/` with a nonempty
+portfolio and symbol. The portfolio and asset must both be active. The symbol
+uses the normal symbol validation rules.
+
+**Errors:** FundLog is not initialized; invalid asset reference; unknown or
+inactive portfolio; unknown or inactive asset; database failure.

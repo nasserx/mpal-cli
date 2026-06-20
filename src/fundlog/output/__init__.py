@@ -1,6 +1,7 @@
 """Terminal output helpers."""
 
 from fundlog.output.console import (
+    print_asset_transaction_log,
     print_assets,
     print_capital_entry_log,
     print_error,
@@ -14,6 +15,7 @@ from fundlog.output.console import (
 
 __all__ = [
     "print_assets",
+    "print_asset_transaction_log",
     "print_capital_entry_log",
     "print_error",
     "print_info",

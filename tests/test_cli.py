@@ -141,7 +141,12 @@ def test_init_creates_database_and_expected_tables(
             row[1] for row in connection.execute("PRAGMA table_info(capital_entries)")
         }
 
-    assert tables == {"portfolios", "capital_entries", "assets"}
+    assert tables == {
+        "portfolios",
+        "capital_entries",
+        "assets",
+        "asset_transactions",
+    }
     assert portfolio_columns == {
         "id",
         "name",
@@ -165,11 +170,34 @@ def test_init_creates_database_and_expected_tables(
         asset_columns = {
             row[1] for row in connection.execute("PRAGMA table_info(assets)")
         }
+        transaction_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(asset_transactions)")
+        }
 
     assert asset_columns == {
         "id",
         "portfolio_id",
         "symbol",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+    }
+    assert transaction_columns == {
+        "id",
+        "asset_id",
+        "entry_no",
+        "transaction_type",
+        "transaction_date",
+        "price_text",
+        "quantity_text",
+        "fee_minor",
+        "total_minor",
+        "cash_effect_minor",
+        "position_effect_minor",
+        "realized_pnl_minor",
+        "income_minor",
+        "note",
         "created_at",
         "updated_at",
         "deleted_at",

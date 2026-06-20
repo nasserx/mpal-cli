@@ -49,6 +49,42 @@ CREATE TABLE IF NOT EXISTS assets (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_asset_symbol
 ON assets (portfolio_id, symbol)
 WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS asset_transactions (
+    id INTEGER PRIMARY KEY,
+    asset_id INTEGER NOT NULL,
+    entry_no INTEGER NOT NULL CHECK (entry_no > 0),
+    transaction_type TEXT NOT NULL
+        CHECK (transaction_type IN ('buy', 'sell', 'income')),
+    transaction_date TEXT NOT NULL
+        CHECK (
+            length(transaction_date) = 10
+            AND transaction_date GLOB
+                '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+        ),
+    price_text TEXT,
+    quantity_text TEXT,
+    fee_minor INTEGER NOT NULL DEFAULT 0
+        CHECK (typeof(fee_minor) = 'integer' AND fee_minor >= 0),
+    total_minor INTEGER NOT NULL
+        CHECK (typeof(total_minor) = 'integer' AND total_minor > 0),
+    cash_effect_minor INTEGER NOT NULL
+        CHECK (typeof(cash_effect_minor) = 'integer'),
+    position_effect_minor INTEGER NOT NULL
+        CHECK (typeof(position_effect_minor) = 'integer'),
+    realized_pnl_minor INTEGER NOT NULL DEFAULT 0
+        CHECK (typeof(realized_pnl_minor) = 'integer'),
+    income_minor INTEGER NOT NULL DEFAULT 0
+        CHECK (typeof(income_minor) = 'integer' AND income_minor >= 0),
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT,
+    FOREIGN KEY (asset_id) REFERENCES assets (id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_asset_transaction_entry_no
+ON asset_transactions (asset_id, entry_no);
 """
 
 
@@ -140,6 +176,52 @@ def _ensure_assets(connection: sqlite3.Connection) -> None:
     )
 
 
+def _ensure_asset_transactions(connection: sqlite3.Connection) -> None:
+    """Create the future transaction table and stable local-number index."""
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS asset_transactions (
+            id INTEGER PRIMARY KEY,
+            asset_id INTEGER NOT NULL,
+            entry_no INTEGER NOT NULL CHECK (entry_no > 0),
+            transaction_type TEXT NOT NULL
+                CHECK (transaction_type IN ('buy', 'sell', 'income')),
+            transaction_date TEXT NOT NULL
+                CHECK (
+                    length(transaction_date) = 10
+                    AND transaction_date GLOB
+                        '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+                ),
+            price_text TEXT,
+            quantity_text TEXT,
+            fee_minor INTEGER NOT NULL DEFAULT 0
+                CHECK (typeof(fee_minor) = 'integer' AND fee_minor >= 0),
+            total_minor INTEGER NOT NULL
+                CHECK (typeof(total_minor) = 'integer' AND total_minor > 0),
+            cash_effect_minor INTEGER NOT NULL
+                CHECK (typeof(cash_effect_minor) = 'integer'),
+            position_effect_minor INTEGER NOT NULL
+                CHECK (typeof(position_effect_minor) = 'integer'),
+            realized_pnl_minor INTEGER NOT NULL DEFAULT 0
+                CHECK (typeof(realized_pnl_minor) = 'integer'),
+            income_minor INTEGER NOT NULL DEFAULT 0
+                CHECK (typeof(income_minor) = 'integer' AND income_minor >= 0),
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TEXT,
+            FOREIGN KEY (asset_id) REFERENCES assets (id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_asset_transaction_entry_no
+        ON asset_transactions (asset_id, entry_no)
+        """
+    )
+
+
 def _require_initialized_schema(connection: sqlite3.Connection) -> None:
     """Require the existing FundLog v0.1 base tables."""
     tables = {
@@ -174,6 +256,7 @@ def connect_database(
         _ensure_active_portfolio_names(connection)
         _ensure_entry_numbers(connection)
         _ensure_assets(connection)
+        _ensure_asset_transactions(connection)
         yield connection
     except sqlite3.Error as error:
         if connection is not None:
@@ -206,6 +289,7 @@ def initialize_database(database_path: Path | None = None) -> Path:
             _ensure_active_portfolio_names(connection)
             _ensure_entry_numbers(connection)
             _ensure_assets(connection)
+            _ensure_asset_transactions(connection)
     except (OSError, sqlite3.Error) as error:
         raise StorageError(
             "FundLog could not initialize the local database."

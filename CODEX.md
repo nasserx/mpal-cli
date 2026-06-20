@@ -24,9 +24,11 @@ Before changing behavior, read:
 v0.1 covers portfolio and capital-entry management only.
 
 The asset foundation implements `fundlog asset add`, `fundlog asset list`,
+`fundlog asset log <portfolio>/<symbol>`,
 `fundlog asset delete <portfolio>/<symbol> --yes`, asset-reference parsing,
-symbol normalization, and the `assets` table. All trades, fees, income commands,
-asset summary/log behavior, asset transactions, and trade accounting remain
+symbol normalization, and the `assets` and `asset_transactions` tables. The
+asset log is read-only; no public command creates transactions. All trades,
+fees, income commands, asset summary behavior, and trade accounting remain
 design-only in `docs/ASSETS_SPEC.md`. Do not implement them until a task
 explicitly requests implementation.
 
@@ -71,6 +73,7 @@ market value, and unrealized PnL remain prohibited.
 - `fundlog delete <portfolio> --yes`
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset list <portfolio>`
+- `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
@@ -127,9 +130,15 @@ Database path resolution:
 2. Windows: `%LOCALAPPDATA%\FundLog\fundlog.db`.
 3. Fallback: `~/.local/share/fundlog/fundlog.db`.
 
-Current tables are `portfolios`, `capital_entries`, and `assets`.
+Current tables are `portfolios`, `capital_entries`, `assets`, and
+`asset_transactions`.
 
 Capital entries have a stable, portfolio-local `entry_no` used by `log`, `edit`, and entry `delete`. Numbering starts at 1 for each portfolio row and never reuses numbers after soft delete or reset. Internal database IDs are not part of the CLI contract.
+
+Asset transactions have stable, asset-local `entry_no` values. Numbering starts
+at 1 for each asset row and never reuses numbers after soft delete. The current
+asset log is read-only, and internal transaction IDs are not part of the CLI
+contract.
 
 Every normal storage connection verifies the initialized schema and applies pending idempotent migrations before querying or writing data. `fundlog init` also applies migrations. Do not add command-specific migration calls.
 
@@ -155,12 +164,14 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 - `src/fundlog/errors.py`: Expected application exception types.
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
 - `src/fundlog/storage/assets.py`: Asset creation and active-asset listing.
+- `src/fundlog/storage/asset_logs.py`: Read-only active asset transaction logs.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
 - `tests/test_amounts.py`: Focused exact money display-formatting tests.
 - `tests/test_dates.py`: Focused shared transaction-date validation tests.
 - `tests/test_assets.py`: Focused asset symbol validation tests.
 - `tests/test_asset_cli.py`: Asset foundation CLI and persistence tests.
+- `tests/test_asset_log.py`: Asset transaction migration and read-only log tests.
 - `tests/test_numbers.py`: Focused quantity and unit-price helper tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.

@@ -9,14 +9,16 @@ The initial asset foundation is implemented:
 
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset list <portfolio>`
+- `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 - Normalized symbol validation.
 - Asset-reference parsing.
 - The portfolio-owned `assets` table.
+- The `asset_transactions` storage foundation.
 
-Buy, sell, income, asset summary, asset log, fees, asset transactions, and
-trade accounting remain design-only. The implemented v0.1 portfolio and
-capital behavior remains unchanged.
+Buy, sell, income, asset summary, fees, transaction creation, and trade
+accounting remain design-only. The implemented v0.1 portfolio and capital
+behavior remains unchanged.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -124,8 +126,8 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
-`asset add`, `asset list`, and `asset delete` are implemented. All other
-commands in this section remain future contracts.
+`asset add`, `asset list`, `asset log`, and `asset delete` are implemented.
+All other commands in this section remain future contracts.
 
 ### Asset management
 
@@ -133,6 +135,7 @@ commands in this section remain future contracts.
 fundlog asset add <portfolio> <symbol>
 fundlog asset add <portfolio> <symbol> <symbol> ...
 fundlog asset list <portfolio>
+fundlog asset log <portfolio>/<symbol>
 fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
@@ -143,6 +146,8 @@ Implemented foundation commands:
 - Duplicate symbols in one command are rejected.
 - An active duplicate in the portfolio is rejected.
 - `asset list` returns active assets ordered by symbol.
+- `asset log` is read-only and returns active transaction rows ordered by date
+  and asset-local entry number.
 - `asset delete` requires `--yes`, parses exactly one `/`, normalizes the
   symbol, and soft-deletes only the active asset row.
 - Until transactions exist, list calculations display deterministic zero
@@ -152,7 +157,6 @@ Future asset-management commands:
 
 ```console
 fundlog asset summary <portfolio>/<symbol>
-fundlog asset log <portfolio>/<symbol>
 ```
 
 `asset add` accepts one or more symbols. Symbols are normalized for matching and
@@ -247,6 +251,10 @@ Command:
 fundlog asset log <portfolio>/<symbol>
 ```
 
+The read-only command and its storage table are implemented. Buy, sell, and
+income commands do not yet create rows, so normal user-created assets have an
+empty log.
+
 Columns:
 
 | # | Date | Type | Price | Quantity | Fee | Total | Note |
@@ -266,6 +274,8 @@ Rules:
   income amount.
 - Ordering is deterministic by effective date and then asset-local entry
   number.
+- Only active transaction rows are displayed.
+- Internal transaction IDs are never displayed.
 - Buy and sell types and totals are normal operations and do not use
   profit/loss coloring.
 
@@ -636,10 +646,9 @@ remain implementation-planning details rather than unresolved product rules.
 The implemented foundation does not authorize later features. Future work can
 proceed in reviewable steps only when explicitly requested:
 
-1. Design asset transaction storage and migrations.
-2. Add buy, sell, and income behavior with shared date validation.
-3. Extend asset deletion for future transaction records.
-4. Add `--total` validation and moving-average accounting.
-5. Feed active asset results into the unchanged portfolio summary columns.
-6. Add themed asset summary and log output.
-7. Add focused accounting-invariant and transaction atomicity tests.
+1. Add buy, sell, and income behavior with shared date validation.
+2. Extend asset deletion for future transaction records.
+3. Add `--total` validation and moving-average accounting.
+4. Feed active asset results into the unchanged portfolio summary columns.
+5. Add themed asset summary output.
+6. Add focused accounting-invariant and transaction atomicity tests.
