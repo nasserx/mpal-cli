@@ -24,10 +24,11 @@ Before changing behavior, read:
 v0.1 covers portfolio and capital-entry management only.
 
 The asset foundation implements `fundlog asset add`, `fundlog asset list`,
+`fundlog asset delete <portfolio>/<symbol> --yes`, asset-reference parsing,
 symbol normalization, and the `assets` table. All trades, fees, income commands,
-asset summary/log/delete behavior, and trade accounting remain design-only in
-`docs/ASSETS_SPEC.md`. Do not implement them until a task explicitly requests
-implementation.
+asset summary/log behavior, asset transactions, and trade accounting remain
+design-only in `docs/ASSETS_SPEC.md`. Do not implement them until a task
+explicitly requests implementation.
 
 Do not introduce the following into v0.1:
 
@@ -69,6 +70,7 @@ prohibited.
 - `fundlog delete <portfolio> --yes`
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset list <portfolio>`
+- `fundlog asset delete <portfolio>/<symbol> --yes`
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
 
@@ -135,6 +137,7 @@ Soft delete is the default deletion model:
 - `delete <portfolio> <entry-number>` soft-deletes one capital entry.
 - `reset` soft-deletes all active entries for one portfolio while preserving the portfolio.
 - `delete <portfolio> --yes` soft-deletes a portfolio and its active entries.
+- `asset delete <portfolio>/<symbol> --yes` soft-deletes one active asset row.
 
 Do not hard-delete rows unless a future task explicitly designs and authorizes a hard-delete feature. Multi-record changes must be atomic. Queries and calculations normally operate on active rows only.
 

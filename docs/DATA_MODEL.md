@@ -82,6 +82,8 @@ creation and update timestamps, and soft-delete state.
 - The same symbol may exist in different portfolios.
 - Active-only uniqueness allows a symbol to be reused after a previous asset row
   is soft-deleted.
+- `asset delete` updates `deleted_at` and `updated_at` without removing the row.
+- Active asset queries exclude soft-deleted rows.
 - Internal asset IDs are not exposed by the CLI.
 - Active asset lists are ordered by symbol.
 - The table contains no quantity, price, fee, trade, income, market-value, or

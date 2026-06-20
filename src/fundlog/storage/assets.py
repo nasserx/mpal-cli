@@ -6,6 +6,7 @@ from pathlib import Path
 from fundlog.assets import normalize_symbol
 from fundlog.errors import (
     AssetAlreadyExistsError,
+    AssetNotFoundError,
     InvalidSymbolError,
     PortfolioNotFoundError,
 )
@@ -95,3 +96,46 @@ def get_assets(
         ).fetchall()
 
     return [Asset(symbol=row[0]) for row in rows]
+
+
+def delete_asset(
+    portfolio_name: str,
+    symbol: str,
+    database_path: Path | None = None,
+) -> None:
+    """Soft-delete one active asset from an active portfolio."""
+    with connect_database(database_path) as connection:
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        asset = connection.execute(
+            """
+            SELECT id
+            FROM assets
+            WHERE portfolio_id = ?
+                AND symbol = ?
+                AND deleted_at IS NULL
+            """,
+            (portfolio[0], symbol),
+        ).fetchone()
+        if asset is None:
+            raise AssetNotFoundError(
+                f"Active asset '{symbol}' does not exist in portfolio "
+                f"'{portfolio_name}'."
+            )
+
+        connection.execute(
+            """
+            UPDATE assets
+            SET deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND deleted_at IS NULL
+            """,
+            (asset[0],),
+        )

@@ -54,6 +54,7 @@ fundlog delete stocks --yes
 
 fundlog asset add stocks AAPL AMZN MSFT
 fundlog asset list stocks
+fundlog asset delete stocks/AAPL --yes
 ```
 
 Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
@@ -64,8 +65,8 @@ Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 v0.1 covers initialization, portfolio creation, optional initial capital,
 inflows, outflows, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The initial asset foundation
-adds manual symbol creation and listing under existing portfolios. Trading and
-asset accounting are not implemented.
+adds manual symbol creation, listing, and soft deletion under existing
+portfolios. Trading and asset accounting are not implemented.
 
 ## Planned capabilities
 

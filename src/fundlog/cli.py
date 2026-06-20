@@ -7,6 +7,7 @@ import typer
 
 from fundlog import __version__
 from fundlog.amounts import parse_amount_minor
+from fundlog.assets import parse_asset_reference
 from fundlog.config import APP_NAME
 from fundlog.dates import parse_transaction_date
 from fundlog.errors import FundLogError
@@ -24,6 +25,7 @@ from fundlog.storage import (
     create_assets,
     create_portfolio,
     create_portfolio_with_initial,
+    delete_asset,
     delete_capital_entry,
     delete_portfolio,
     edit_capital_entry,
@@ -149,6 +151,32 @@ def asset_list(
         print_info(f"No active assets for portfolio '{portfolio}'.")
         return
     print_assets(assets)
+
+
+@asset_app.command("delete")
+def asset_delete(
+    reference: Annotated[
+        str,
+        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+    ],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the asset soft delete."),
+    ] = False,
+) -> None:
+    """Soft-delete an asset from a portfolio."""
+    if not yes:
+        print_warning("Asset delete requires the --yes confirmation flag.")
+        raise typer.Exit(code=1)
+
+    try:
+        portfolio, symbol = parse_asset_reference(reference)
+        delete_asset(portfolio, symbol)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Asset '{symbol}' deleted from portfolio '{portfolio}'.")
 
 
 @app.command()

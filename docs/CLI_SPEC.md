@@ -327,3 +327,35 @@ empty-list message.
 **Validation:** The portfolio must exist and be active.
 
 **Errors:** FundLog is not initialized; unknown portfolio; database failure.
+
+## `fundlog asset delete PORTFOLIO/SYMBOL --yes`
+
+Example:
+
+```console
+fundlog asset delete stocks/AAPL --yes
+```
+
+**Purpose:** Soft-delete one active asset from an active portfolio.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+
+**Options:**
+
+- `--yes`: Required confirmation.
+
+**Behavior:** Normalizes the symbol to uppercase, sets the active asset row's
+soft-delete timestamp, and preserves the database row. The deleted asset no
+longer appears in `asset list`. The active-only uniqueness rule allows the same
+symbol to be added again later. No asset transaction behavior exists in this
+phase.
+
+**Validation:** The reference must contain exactly one `/` with a nonempty
+portfolio and symbol. The portfolio and asset must both be active. The symbol
+uses the normal symbol validation rules. `--yes` is mandatory.
+
+**Errors:** FundLog is not initialized; missing `--yes`; invalid asset
+reference; unknown or inactive portfolio; unknown or inactive asset; database
+failure. Without `--yes`, no changes occur.

@@ -22,12 +22,13 @@ def _initialize_with_portfolio(
     return data_dir / "fundlog.db"
 
 
-def test_asset_help_lists_add_and_list() -> None:
+def test_asset_help_lists_foundation_commands() -> None:
     result = runner.invoke(app, ["asset", "--help"])
 
     assert result.exit_code == 0
     assert "add" in result.output
     assert "list" in result.output
+    assert "delete" in result.output
 
 
 def test_asset_add_requires_initialized_database(
@@ -367,3 +368,211 @@ def test_normal_command_migrates_assets_table_for_legacy_database(
 
     assert asset == (1, "AAPL")
     assert "uq_active_asset_symbol" in indexes
+
+
+def test_asset_delete_requires_initialized_database(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Run 'fundlog init' first." in result.output
+    assert "Traceback" not in result.output
+
+
+def test_asset_delete_rejects_invalid_references(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_with_portfolio(tmp_path, monkeypatch)
+
+    for reference in ("stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"):
+        result = runner.invoke(app, ["asset", "delete", reference, "--yes"])
+
+        assert result.exit_code == 1
+        assert "Invalid asset reference" in result.output
+        assert "Traceback" not in result.output
+
+
+def test_asset_delete_requires_active_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "fundlog-data"
+    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_asset_delete_rejects_soft_deleted_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["delete", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_asset_delete_requires_active_asset(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_with_portfolio(tmp_path, monkeypatch)
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
+        result.output
+    )
+
+
+def test_asset_delete_requires_yes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL"])
+
+    assert result.exit_code == 1
+    assert "Asset delete requires the --yes confirmation flag." in result.output
+    with sqlite3.connect(database_path) as connection:
+        deleted_at = connection.execute(
+            "SELECT deleted_at FROM assets WHERE symbol = 'AAPL'"
+        ).fetchone()[0]
+
+    assert deleted_at is None
+
+
+def test_asset_delete_soft_deletes_asset_case_insensitively(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/aapl", "--yes"])
+
+    assert result.exit_code == 0
+    assert "Asset 'AAPL' deleted from portfolio 'stocks'." in result.output
+    with sqlite3.connect(database_path) as connection:
+        asset = connection.execute(
+            "SELECT symbol, deleted_at FROM assets WHERE symbol = 'AAPL'"
+        ).fetchone()
+
+    assert asset[0] == "AAPL"
+    assert asset[1] is not None
+
+
+def test_asset_delete_hides_asset_from_list(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    result = runner.invoke(app, ["asset", "list", "stocks"])
+
+    assert result.exit_code == 0
+    assert "No active assets for portfolio 'stocks'." in result.output
+    assert "AAPL" not in result.output
+
+
+def test_asset_delete_does_not_affect_other_asset_in_same_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL", "MSFT"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(database_path) as connection:
+        assets = connection.execute(
+            "SELECT symbol, deleted_at FROM assets ORDER BY symbol"
+        ).fetchall()
+
+    assert assets[0][0] == "AAPL"
+    assert assets[0][1] is not None
+    assert assets[1] == ("MSFT", None)
+
+
+def test_asset_delete_does_not_affect_asset_in_other_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["create", "retirement"])
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "retirement", "AAPL"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(database_path) as connection:
+        assets = connection.execute(
+            """
+            SELECT p.name, a.deleted_at
+            FROM assets AS a
+            JOIN portfolios AS p ON p.id = a.portfolio_id
+            ORDER BY p.name
+            """
+        ).fetchall()
+
+    assert assets[0] == ("retirement", None)
+    assert assets[1][0] == "stocks"
+    assert assets[1][1] is not None
+
+
+def test_asset_delete_rejects_already_deleted_asset(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    assert result.exit_code == 1
+    assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
+        result.output
+    )
+
+
+def test_deleted_asset_symbol_can_be_reused_through_cli(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
+    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+
+    result = runner.invoke(app, ["asset", "add", "stocks", "aapl"])
+
+    assert result.exit_code == 0
+    with sqlite3.connect(database_path) as connection:
+        assets = connection.execute(
+            "SELECT symbol, deleted_at FROM assets ORDER BY id"
+        ).fetchall()
+
+    assert assets[0][0] == "AAPL"
+    assert assets[0][1] is not None
+    assert assets[1] == ("AAPL", None)

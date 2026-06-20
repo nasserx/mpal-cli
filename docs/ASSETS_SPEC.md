@@ -9,12 +9,14 @@ The initial asset foundation is implemented:
 
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset list <portfolio>`
+- `fundlog asset delete <portfolio>/<symbol> --yes`
 - Normalized symbol validation.
+- Asset-reference parsing.
 - The portfolio-owned `assets` table.
 
-Buy, sell, income, asset summary, asset log, asset deletion, fees, and trade
-accounting remain design-only. The implemented v0.1 portfolio and capital
-behavior remains unchanged.
+Buy, sell, income, asset summary, asset log, fees, asset transactions, and
+trade accounting remain design-only. The implemented v0.1 portfolio and
+capital behavior remains unchanged.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -122,8 +124,8 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
-Only `asset add` and `asset list` are implemented. All other commands in this
-section remain future contracts.
+`asset add`, `asset list`, and `asset delete` are implemented. All other
+commands in this section remain future contracts.
 
 ### Asset management
 
@@ -131,6 +133,7 @@ section remain future contracts.
 fundlog asset add <portfolio> <symbol>
 fundlog asset add <portfolio> <symbol> <symbol> ...
 fundlog asset list <portfolio>
+fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
 Implemented foundation commands:
@@ -140,6 +143,8 @@ Implemented foundation commands:
 - Duplicate symbols in one command are rejected.
 - An active duplicate in the portfolio is rejected.
 - `asset list` returns active assets ordered by symbol.
+- `asset delete` requires `--yes`, parses exactly one `/`, normalizes the
+  symbol, and soft-deletes only the active asset row.
 - Until transactions exist, list calculations display deterministic zero
   values.
 
@@ -148,7 +153,6 @@ Future asset-management commands:
 ```console
 fundlog asset summary <portfolio>/<symbol>
 fundlog asset log <portfolio>/<symbol>
-fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
 `asset add` accepts one or more symbols. Symbols are normalized for matching and
@@ -581,20 +585,18 @@ fundlog asset delete <portfolio>/<symbol> --yes
 
 - `--yes` is mandatory.
 - Asset deletion is a soft delete.
-- The operation atomically soft-deletes the asset and all its active buy, sell,
-  and income transactions.
+- In the implemented asset foundation, the operation soft-deletes only the
+  active asset row because asset transactions do not exist.
 - Database rows and audit-ready metadata are preserved.
-- Soft-deleted asset transactions no longer contribute to Cash, Positions,
-  Book Value, Realized PnL, Income, Total Buy Cost, or returns.
-- The operation therefore removes all active accounting effects of the asset
-  from its portfolio summary.
-- Asset-local entry numbers from the deleted asset row are not reused.
+- The deleted asset is excluded from active asset lists and lookups.
+- Other assets and portfolios are unaffected.
+- The same symbol may be added again as a new active row because uniqueness
+  applies only to active assets.
 - Hard delete and purge remain future work.
 
-The implementation must validate the resulting portfolio state before
-committing the deletion. If removing the asset's active transaction effects
-would violate a portfolio invariant such as nonnegative Cash, the deletion must
-fail atomically and leave the asset and transactions active.
+When asset transactions are implemented later, deletion must be extended
+deliberately to apply the documented transaction and portfolio-accounting
+rules. No transaction cascade or portfolio-summary adjustment exists now.
 
 ## Validation principles
 
@@ -633,8 +635,8 @@ proceed in reviewable steps only when explicitly requested:
 
 1. Add separate exact parsers and formatters for quantity and price.
 2. Design asset transaction storage and migrations.
-3. Add asset soft-deletion behavior.
-4. Add buy, sell, and income behavior with shared date validation.
+3. Add buy, sell, and income behavior with shared date validation.
+4. Extend asset deletion for future transaction records.
 5. Add `--total` validation and moving-average accounting.
 6. Feed active asset results into the unchanged portfolio summary columns.
 7. Add themed asset summary and log output.
