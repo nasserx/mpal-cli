@@ -32,8 +32,8 @@ lists and portfolio Cash, Book Value, Income, and Return. `fundlog buy` records
 exact manual buys and feeds quantity, Cost Basis, Cash, and Positions.
 `fundlog sell` records exact manual sells, applies moving-average cost-basis
 relief, and feeds quantity, Cost Basis, Cash, Positions, and Realized PnL.
-Asset summary behavior remains design-only in `docs/ASSETS_SPEC.md`. Do not
-implement it until explicitly requested.
+`fundlog asset summary` reports active asset accounting totals, including
+price-formatted Average Cost and asset-level Realized Return.
 
 Do not introduce the following into v0.1:
 
@@ -76,6 +76,7 @@ market value, and unrealized PnL remain prohibited.
 - `fundlog delete <portfolio> --yes`
 - `fundlog asset add <portfolio> <symbol> [symbol...]`
 - `fundlog asset list <portfolio>`
+- `fundlog asset summary <portfolio>/<symbol>`
 - `fundlog asset log <portfolio>/<symbol>`
 - `fundlog asset delete <portfolio>/<symbol> --yes`
 - `fundlog income <portfolio>/<symbol> <amount>`

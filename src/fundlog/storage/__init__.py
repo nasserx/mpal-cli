@@ -8,7 +8,13 @@ from fundlog.storage.asset_transactions import (
     record_income,
     record_sell,
 )
-from fundlog.storage.assets import Asset, create_assets, delete_asset, get_assets
+from fundlog.storage.assets import (
+    Asset,
+    create_assets,
+    delete_asset,
+    get_asset_summary,
+    get_assets,
+)
 from fundlog.storage.database import initialize_database
 from fundlog.storage.entries import (
     delete_capital_entry,
@@ -45,6 +51,7 @@ __all__ = [
     "edit_capital_entry",
     "get_all_portfolio_summaries",
     "get_assets",
+    "get_asset_summary",
     "get_asset_transaction_log",
     "get_capital_entry_log",
     "get_portfolio_summary",

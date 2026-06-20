@@ -363,6 +363,35 @@ uses the normal symbol validation rules. `--yes` is mandatory.
 reference; unknown or inactive portfolio; unknown or inactive asset; database
 failure. Without `--yes`, no changes occur.
 
+## `fundlog asset summary PORTFOLIO/SYMBOL`
+
+Example:
+
+```console
+fundlog asset summary stocks/AAPL
+```
+
+**Purpose:** Show the derived accounting summary for one active asset.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+
+**Options:** None.
+
+**Behavior:** Displays the uppercase-symbol title `SYMBOL/portfolio` and one row
+with `Quantity`, `Cost Basis`, `Average Cost`, `Realized PnL`, `Income`, and
+`Realized Return`. Values are derived only from active transactions. Average
+Cost is `Cost Basis / Quantity` using price-style formatting, or `--` when
+Quantity is zero. Realized Return is `(Realized PnL + Income) / Total Buy Cost`,
+or `0.00%` when Total Buy Cost is zero. Internal database IDs are not displayed.
+
+**Validation:** The reference must be valid, and the portfolio and asset must
+both be active.
+
+**Errors:** FundLog is not initialized; invalid asset reference; unknown or
+inactive portfolio; unknown or inactive asset; database failure.
+
 ## `fundlog asset log PORTFOLIO/SYMBOL`
 
 Example:

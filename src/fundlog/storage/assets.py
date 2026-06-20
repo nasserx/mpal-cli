@@ -103,44 +103,91 @@ def get_assets(
 
         assets: list[Asset] = []
         for asset_id, symbol in asset_rows:
-            transactions = connection.execute(
-                """
-                SELECT
-                    transaction_type,
-                    quantity_text,
-                    position_effect_minor,
-                    realized_pnl_minor,
-                    income_minor,
-                    total_minor
-                FROM asset_transactions
-                WHERE asset_id = ? AND deleted_at IS NULL
-                """,
-                (asset_id,),
-            ).fetchall()
-            quantity = sum(
-                (
-                    (Decimal(row[1]) if row[0] == "buy" else -Decimal(row[1]))
-                    for row in transactions
-                    if row[0] in {"buy", "sell"} and row[1] is not None
-                ),
-                Decimal(0),
-            )
-            assets.append(
-                Asset(
-                    symbol=symbol,
-                    quantity=quantity,
-                    cost_basis_minor=sum(row[2] for row in transactions),
-                    realized_pnl_minor=sum(
-                        row[3] for row in transactions if row[0] == "sell"
-                    ),
-                    income_minor=sum(row[4] for row in transactions),
-                    total_buy_cost_minor=sum(
-                        row[5] for row in transactions if row[0] == "buy"
-                    ),
-                )
-            )
+            transactions = _get_active_transactions(connection, asset_id)
+            assets.append(_aggregate_asset(symbol, transactions))
 
     return assets
+
+
+def get_asset_summary(
+    portfolio_name: str,
+    symbol: str,
+    database_path: Path | None = None,
+) -> Asset:
+    """Return derived summary values for one active asset."""
+    with connect_database(database_path) as connection:
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        asset = connection.execute(
+            """
+            SELECT id, symbol
+            FROM assets
+            WHERE portfolio_id = ?
+                AND symbol = ?
+                AND deleted_at IS NULL
+            """,
+            (portfolio[0], symbol),
+        ).fetchone()
+        if asset is None:
+            raise AssetNotFoundError(
+                f"Active asset '{symbol}' does not exist in portfolio "
+                f"'{portfolio_name}'."
+            )
+
+        transactions = _get_active_transactions(connection, asset[0])
+
+    return _aggregate_asset(asset[1], transactions)
+
+
+def _get_active_transactions(
+    connection,
+    asset_id: int,
+) -> list[tuple[str, str | None, int, int, int, int]]:
+    """Return the active transaction fields used by asset aggregations."""
+    return connection.execute(
+        """
+        SELECT
+            transaction_type,
+            quantity_text,
+            position_effect_minor,
+            realized_pnl_minor,
+            income_minor,
+            total_minor
+        FROM asset_transactions
+        WHERE asset_id = ? AND deleted_at IS NULL
+        """,
+        (asset_id,),
+    ).fetchall()
+
+
+def _aggregate_asset(
+    symbol: str,
+    transactions: list[tuple[str, str | None, int, int, int, int]],
+) -> Asset:
+    """Aggregate active transactions into current asset accounting values."""
+    quantity = sum(
+        (
+            (Decimal(row[1]) if row[0] == "buy" else -Decimal(row[1]))
+            for row in transactions
+            if row[0] in {"buy", "sell"} and row[1] is not None
+        ),
+        Decimal(0),
+    )
+    return Asset(
+        symbol=symbol,
+        quantity=quantity,
+        cost_basis_minor=sum(row[2] for row in transactions),
+        realized_pnl_minor=sum(row[3] for row in transactions if row[0] == "sell"),
+        income_minor=sum(row[4] for row in transactions),
+        total_buy_cost_minor=sum(row[5] for row in transactions if row[0] == "buy"),
+    )
 
 
 def delete_asset(

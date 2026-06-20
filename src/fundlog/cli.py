@@ -13,6 +13,7 @@ from fundlog.dates import parse_transaction_date
 from fundlog.errors import FundLogError
 from fundlog.numbers import parse_price, parse_quantity
 from fundlog.output.console import (
+    print_asset_summary,
     print_asset_transaction_log,
     print_assets,
     print_capital_entry_log,
@@ -34,6 +35,7 @@ from fundlog.storage import (
     delete_portfolio,
     edit_capital_entry,
     get_all_portfolio_summaries,
+    get_asset_summary,
     get_asset_transaction_log,
     get_assets,
     get_capital_entry_log,
@@ -185,6 +187,24 @@ def asset_delete(
         raise typer.Exit(code=1) from error
 
     print_success(f"Asset '{symbol}' deleted from portfolio '{portfolio}'.")
+
+
+@asset_app.command("summary")
+def asset_summary(
+    reference: Annotated[
+        str,
+        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+    ],
+) -> None:
+    """Show the derived accounting summary for an asset."""
+    try:
+        portfolio, symbol = parse_asset_reference(reference)
+        summary = get_asset_summary(portfolio, symbol)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_asset_summary(portfolio, summary)
 
 
 @asset_app.command("log")

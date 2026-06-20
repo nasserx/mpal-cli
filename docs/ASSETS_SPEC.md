@@ -20,7 +20,7 @@ The initial asset foundation is implemented:
 
 Buy, sell, and income transaction creation are implemented. Sell accounting
 uses moving-average cost-basis relief and produces realized PnL. Asset summary
-remains design-only.
+is implemented from active transactions.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -128,9 +128,8 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
-`asset add`, `asset list`, `asset log`, and `asset delete` are implemented.
-Manual income, buy, and sell commands are also implemented. Asset summary
-remains a future contract.
+`asset add`, `asset list`, `asset summary`, `asset log`, and `asset delete` are
+implemented. Manual income, buy, and sell commands are also implemented.
 
 ### Asset management
 
@@ -138,6 +137,7 @@ remains a future contract.
 fundlog asset add <portfolio> <symbol>
 fundlog asset add <portfolio> <symbol> <symbol> ...
 fundlog asset list <portfolio>
+fundlog asset summary <portfolio>/<symbol>
 fundlog asset log <portfolio>/<symbol>
 fundlog asset delete <portfolio>/<symbol> --yes
 ```
@@ -149,18 +149,13 @@ Implemented foundation commands:
 - Duplicate symbols in one command are rejected.
 - An active duplicate in the portfolio is rejected.
 - `asset list` returns active assets ordered by symbol.
+- `asset summary` returns one active asset's derived accounting totals.
 - `asset log` is read-only and returns active transaction rows ordered by date
   and asset-local entry number.
 - `asset delete` requires `--yes`, parses exactly one `/`, normalizes the
   symbol, and soft-deletes the active asset row and its active transactions.
 - Quantity, Cost Basis, Realized PnL, Income, and Realized Return are derived
   from active buy, sell, and income transactions.
-
-Future asset-management commands:
-
-```console
-fundlog asset summary <portfolio>/<symbol>
-```
 
 `asset add` accepts one or more symbols. Symbols are normalized for matching and
 displayed uppercase. A multi-symbol add is atomic: either all supplied symbols
@@ -197,7 +192,7 @@ records or partially changed derived balances.
 
 ## Tables
 
-All future tables must reuse the semantic theme from
+All tables must reuse the semantic theme from
 `src/fundlog/output/theme.py`. Colors must not be hardcoded.
 
 - Headers use `TABLE_HEADER`.
@@ -305,8 +300,9 @@ Rules:
 - Cost Basis is the current open book cost.
 - `Average Cost = Cost Basis / Quantity` when Quantity is greater than zero.
 - When Quantity is zero, Average Cost displays `--`.
-- Average Cost uses future price formatting because it is a per-unit value that
-  may require more than two decimal places.
+- Average Cost uses price formatting because it is a per-unit value that may
+  require more than two decimal places. Derived repeating values are rounded
+  half-even to at most 18 fractional places for display only.
 - Realized PnL contains realized sell results only.
 - Income contains manually recorded income or distributions for this asset.
 - Realized Return uses the asset-level formula below.
@@ -653,6 +649,5 @@ remain implementation-planning details rather than unresolved product rules.
 The implemented foundation does not authorize later features. Future work can
 proceed in reviewable steps only when explicitly requested:
 
-1. Add themed asset summary output.
-2. Add transaction correction workflows only when explicitly designed.
-3. Add further reporting without market valuation or unrealized PnL.
+1. Add transaction correction workflows only when explicitly designed.
+2. Add further reporting without market valuation or unrealized PnL.

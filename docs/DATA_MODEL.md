@@ -8,7 +8,8 @@ Portfolio summaries are derived from manual records rather than stored balances.
 The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
 `asset_transactions` tables are implemented. Income, buy, and sell commands
 create asset transactions. Their active effects contribute to asset lists and
-portfolio summaries. Monetary fields use integer minor units.
+asset summaries and portfolio summaries. Monetary fields use integer minor
+units.
 User-entered quantity and price fields use normalized decimal text, never
 SQLite floating point or Python `float`.
 

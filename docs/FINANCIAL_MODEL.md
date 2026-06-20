@@ -103,6 +103,10 @@ Asset-level Realized Return uses:
 Total Buy Cost is cumulative buy cash outflow including buy fees. If Total Buy
 Cost is zero, asset Realized Return is `0.00%`.
 
+The asset summary also displays `Average Cost = Cost Basis / Quantity` when
+open Quantity is positive. It uses price-style display precision; zero Quantity
+displays `--`.
+
 Partial sells use moving average book cost. Fractional-minor-unit cost
 allocations are rounded half-even to integer minor units, and remaining book
 cost is calculated as previous book cost minus relieved book cost so the ledger

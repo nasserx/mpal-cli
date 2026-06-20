@@ -1,6 +1,6 @@
 """Rich terminal output helpers."""
 
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 
 from rich.console import Console
 from rich.rule import Rule
@@ -124,6 +124,37 @@ def print_assets(assets: list[Asset]) -> None:
     Console().print(table)
 
 
+def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
+    """Print one active asset's derived accounting summary."""
+    console = Console(width=120)
+    title = Text(f"{asset.symbol}/{portfolio_name}", style=TABLE_HEADER)
+    console.print(Rule(title, style=TABLE_BORDER))
+
+    table = Table(
+        header_style=TABLE_HEADER,
+        border_style=TABLE_BORDER,
+        style=TABLE_CELL,
+    )
+    table.add_column("Quantity", justify="right")
+    table.add_column("Cost Basis", justify="right")
+    table.add_column("Average Cost", justify="right")
+    table.add_column("Realized PnL", justify="right")
+    table.add_column("Income", justify="right")
+    table.add_column("Realized Return", justify="right")
+    table.add_row(
+        format_quantity(asset.quantity),
+        format_money(asset.cost_basis_minor),
+        _format_average_cost(asset.cost_basis_minor, asset.quantity),
+        format_money(asset.realized_pnl_minor),
+        format_money(asset.income_minor),
+        _format_return(
+            asset.realized_pnl_minor + asset.income_minor,
+            asset.total_buy_cost_minor,
+        ),
+    )
+    console.print(table)
+
+
 def print_asset_transaction_log(
     portfolio_name: str,
     symbol: str,
@@ -181,6 +212,20 @@ def _format_return(result_minor: int, capital_minor: int) -> str:
         Decimal(result_minor) * Decimal(100) / Decimal(capital_minor)
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
     return f"{percentage:.2f}%"
+
+
+def _format_average_cost(cost_basis_minor: int, quantity: Decimal) -> str:
+    """Format derived unit book cost with deterministic price precision."""
+    if quantity == 0:
+        return "--"
+    with localcontext() as context:
+        context.prec = 80
+        average_cost = Decimal(cost_basis_minor) / Decimal(100) / quantity
+        average_cost = average_cost.quantize(
+            Decimal("0.000000000000000001"),
+            rounding=ROUND_HALF_EVEN,
+        )
+    return format_price(average_cost)
 
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:

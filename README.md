@@ -54,6 +54,7 @@ fundlog delete stocks --yes
 
 fundlog asset add stocks AAPL AMZN MSFT
 fundlog asset list stocks
+fundlog asset summary stocks/AAPL
 fundlog asset log stocks/AAPL
 fundlog asset delete stocks/AAPL --yes
 
@@ -75,7 +76,9 @@ portfolios. The read-only asset log and its transaction storage foundation are
 also present. Manual asset income updates the asset list and portfolio summary.
 Manual buys update open quantity, Cost Basis, portfolio Cash, and Positions.
 Manual sells use moving-average book cost and update open quantity, Cost Basis,
-Cash, Positions, and Realized PnL.
+Cash, Positions, and Realized PnL. Asset summary reports current open quantity,
+Cost Basis, Average Cost, Realized PnL, Income, and Realized Return from active
+manual transactions.
 
 ## Planned capabilities
 
