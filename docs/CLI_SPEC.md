@@ -319,9 +319,10 @@ fundlog asset list stocks
 
 **Behavior:** Displays active assets ordered by uppercase symbol using
 `Symbol`, `Quantity`, `Cost Basis`, `Realized PnL`, `Income`, and
-`Realized Return`. Quantity, Cost Basis, and Realized PnL remain zero until
-buy/sell accounting exists. Income displays the sum of active income
-transactions. Realized Return remains `0.00%` while Total Buy Cost is zero.
+`Realized Return`. Quantity and Cost Basis reflect active buy and sell
+transactions. Realized PnL reflects active sells, and Income reflects active
+income transactions. Realized Return is `(Realized PnL + Income) / Total Buy
+Cost`, or `0.00%` when Total Buy Cost is zero.
 Internal database IDs are not displayed. An existing portfolio with no assets
 prints a deterministic empty-list message.
 
@@ -348,10 +349,11 @@ fundlog asset delete stocks/AAPL --yes
 - `--yes`: Required confirmation.
 
 **Behavior:** Normalizes the symbol to uppercase, sets the active asset row's
-soft-delete timestamp, and preserves the database row. The deleted asset no
-longer appears in `asset list`. The active-only uniqueness rule allows the same
-symbol to be added again later. No asset transaction behavior exists in this
-phase.
+soft-delete timestamp, soft-deletes all active transactions for the asset, and
+preserves every database row. The deleted asset no longer appears in `asset
+list`, its log is inactive, and its transactions no longer affect portfolio
+summaries. The active-only uniqueness rule allows the same symbol to be added
+again later.
 
 **Validation:** The reference must contain exactly one `/` with a nonempty
 portfolio and symbol. The portfolio and asset must both be active. The symbol
@@ -384,8 +386,8 @@ and quantity use their separate precision-aware formatters; Fee and Total use
 money formatting. Internal database IDs are not displayed. An asset with no
 active transactions prints a deterministic empty-state message.
 
-Income transactions appear in this log. Assets without income or future trade
-records show the empty state.
+Income, buy, and sell transactions appear in this log. Assets without active
+transactions show the empty state.
 
 **Validation:** The reference must contain exactly one `/` with a nonempty
 portfolio and symbol. The portfolio and asset must both be active. The symbol
@@ -478,3 +480,56 @@ total, and date must be valid. No failed command creates a partial transaction.
 portfolio or asset; invalid price, quantity, fee, total, or date; inexact
 calculated total without `--total`; exact calculated/provided total mismatch;
 database failure.
+
+## `fundlog sell PORTFOLIO/SYMBOL --price PRICE --quantity QUANTITY`
+
+Examples:
+
+```console
+fundlog sell stocks/AAPL --price 235.50 --quantity 3
+fundlog sell stocks/AAPL --price 235.50 --quantity 3 --fee 2.30
+fundlog sell stocks/AAPL --price 0.000533 --quantity 0.0538 --total 0.01
+```
+
+**Purpose:** Record a manual sell for an existing active asset.
+
+**Arguments:**
+
+- `PORTFOLIO/SYMBOL`: Asset reference containing exactly one `/`.
+
+**Required options:**
+
+- `--price PRICE`: Positive exact unit price.
+- `--quantity QUANTITY`: Positive exact quantity.
+
+**Optional options:**
+
+- `--fee FEE`: Nonnegative money fee; defaults to `0.00`.
+- `--total AMOUNT`: Exact net cash inflow after fees.
+- `--date DATE`: Transaction date in `YYYY-MM-DD`; defaults to the current local
+  date and cannot be in the future.
+- `--note TEXT`: Optional note.
+
+**Behavior:** Records normalized price and quantity text. Net proceeds are
+`price × quantity - fee`. Cash increases by net proceeds. Moving-average book
+cost allocates the sold quantity's relieved Cost Basis using deterministic
+round-half-even minor-unit allocation; a full close relieves all remaining
+Cost Basis. Positions decrease by relieved Cost Basis, and Realized PnL is net
+proceeds minus relieved Cost Basis.
+
+Without `--total`, net proceeds must be exactly representable in integer minor
+units. Otherwise the command fails and requests an exact broker or exchange
+total. With `--total`, that amount controls cash proceeds and Realized PnL. If
+the calculated amount is exactly representable, it must equal the provided
+total.
+
+**Validation:** The database, reference, portfolio, asset, price, quantity, fee,
+total, and date must be valid. Open quantity must be positive, and the sell
+quantity cannot exceed it. Net proceeds must be positive. No failed command
+creates a partial transaction.
+
+**Errors:** FundLog is not initialized; invalid reference; unknown or inactive
+portfolio or asset; invalid price, quantity, fee, total, or date; no open
+quantity; sell quantity exceeds open quantity; nonpositive net proceeds;
+inexact calculated total without `--total`; exact calculated/provided total
+mismatch; database failure.

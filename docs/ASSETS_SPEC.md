@@ -18,8 +18,9 @@ The initial asset foundation is implemented:
 - The portfolio-owned `assets` table.
 - The `asset_transactions` storage foundation.
 
-Buy and income transaction creation are implemented. Sell, asset summary,
-cost-basis relief, and realized PnL remain design-only.
+Buy, sell, and income transaction creation are implemented. Sell accounting
+uses moving-average cost-basis relief and produces realized PnL. Asset summary
+remains design-only.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -128,7 +129,8 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 ## Commands
 
 `asset add`, `asset list`, `asset log`, and `asset delete` are implemented.
-All other commands in this section remain future contracts.
+Manual income, buy, and sell commands are also implemented. Asset summary
+remains a future contract.
 
 ### Asset management
 
@@ -150,10 +152,9 @@ Implemented foundation commands:
 - `asset log` is read-only and returns active transaction rows ordered by date
   and asset-local entry number.
 - `asset delete` requires `--yes`, parses exactly one `/`, normalizes the
-  symbol, and soft-deletes only the active asset row.
-- Quantity, Cost Basis, and Realized PnL remain zero until buy/sell accounting
-  exists. Income sums active income transactions, and Realized Return remains
-  `0.00%` while Total Buy Cost is zero.
+  symbol, and soft-deletes the active asset row and its active transactions.
+- Quantity, Cost Basis, Realized PnL, Income, and Realized Return are derived
+  from active buy, sell, and income transactions.
 
 Future asset-management commands:
 
@@ -184,13 +185,12 @@ fundlog income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
 - Income amount uses the money parser and must be greater than zero.
 
 Buy, sell, and income records need an effective date and may include a note.
-Buy and income implement optional `--date` and `--note`; sell retains the same
-future contract. An omitted date uses the current local date. Every explicit
+All three implement optional `--date` and `--note`. An omitted date uses the
+current local date. Every explicit
 date uses the shared `parse_transaction_date()` helper, accepts strict ISO
 `YYYY-MM-DD`, and rejects a date later than the current local date.
 
-Buy implements `--total` as an exact-cash-total override. Sell retains the same
-future contract.
+Buy and sell implement `--total` as an exact-cash-total override.
 
 All state-changing commands must be atomic. Invalid input must not leave partial
 records or partially changed derived balances.
@@ -251,8 +251,8 @@ Command:
 fundlog asset log <portfolio>/<symbol>
 ```
 
-The read-only command and its storage table are implemented. Income creates log
-rows; buy and sell do not yet exist.
+The read-only command and its storage table are implemented. Income, buy, and
+sell create log rows.
 
 Columns:
 
@@ -343,8 +343,7 @@ new open cost basis = prior open cost basis + total buy cash outflow
 - Capital, Realized PnL, and Income do not change.
 - Cumulative Total Buy Cost increases by total buy cash outflow.
 
-This buy behavior is implemented. No sell operation currently reduces Quantity
-or Cost Basis.
+This buy behavior is implemented. Active sells reduce Quantity and Cost Basis.
 
 If `--total` is supplied, that money amount is the total buy
 cash outflow and the amount added to Cost Basis, Positions, and cumulative Total
@@ -401,7 +400,7 @@ previous open cost basis =
 This is a deterministic allocation of book cost, not silent rounding of a trade
 cash effect and not market valuation. A sale of the entire remaining quantity
 always relieves the entire remaining Cost Basis so no residual remains. Future
-implementation must test partial-sale and final-sale edge cases carefully.
+changes must preserve the tested partial-sale and final-sale invariants.
 
 ### Income
 
@@ -616,8 +615,8 @@ fundlog asset delete <portfolio>/<symbol> --yes
   applies only to active assets.
 - Hard delete and purge remain future work.
 
-Soft-deleted buy and income transactions stop contributing to asset lists,
-asset logs, and portfolio summaries. Database rows remain preserved.
+Soft-deleted buy, sell, and income transactions stop contributing to asset
+lists, asset logs, and portfolio summaries. Database rows remain preserved.
 
 ## Validation principles
 
@@ -654,8 +653,6 @@ remain implementation-planning details rather than unresolved product rules.
 The implemented foundation does not authorize later features. Future work can
 proceed in reviewable steps only when explicitly requested:
 
-1. Add sell behavior with shared date validation.
-2. Add moving-average cost-basis relief and realized PnL.
-3. Feed sell results into the unchanged portfolio summary columns.
-4. Add themed asset summary output.
-5. Add focused sell accounting-invariant and atomicity tests.
+1. Add themed asset summary output.
+2. Add transaction correction workflows only when explicitly designed.
+3. Add further reporting without market valuation or unrealized PnL.

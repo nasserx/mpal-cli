@@ -57,6 +57,10 @@ class InvalidTradeTotalError(FundLogError):
     """Raised when a trade cash total is inexact or inconsistent."""
 
 
+class InsufficientAssetQuantityError(FundLogError):
+    """Raised when a sell exceeds an asset's active open quantity."""
+
+
 class InvalidEntryDateError(FundLogError):
     """Raised when a capital entry date is invalid."""
 

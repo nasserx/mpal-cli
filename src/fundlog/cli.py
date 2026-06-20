@@ -25,6 +25,7 @@ from fundlog.output.console import (
 )
 from fundlog.storage import (
     calculate_buy_total_minor,
+    calculate_sell_total_minor,
     create_assets,
     create_portfolio,
     create_portfolio_with_initial,
@@ -42,6 +43,7 @@ from fundlog.storage import (
     record_income,
     record_inflow,
     record_outflow,
+    record_sell,
     reset_portfolio_entries,
 )
 
@@ -314,6 +316,73 @@ def buy(
         raise typer.Exit(code=1) from error
 
     print_success(f"Buy recorded for asset '{symbol}/{portfolio}'.")
+
+
+@app.command(context_settings={"ignore_unknown_options": True})
+def sell(
+    reference: Annotated[
+        str,
+        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
+    ],
+    price: Annotated[str, typer.Option("--price", help="Exact unit price.")],
+    quantity: Annotated[
+        str,
+        typer.Option("--quantity", help="Exact quantity to sell."),
+    ],
+    fee: Annotated[
+        str | None,
+        typer.Option("--fee", help="Trade fee; defaults to 0.00."),
+    ] = None,
+    total: Annotated[
+        str | None,
+        typer.Option("--total", help="Exact net cash inflow after fees."),
+    ] = None,
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help=(
+                "Transaction date in YYYY-MM-DD; defaults to today "
+                "and cannot be future."
+            ),
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional sell note."),
+    ] = None,
+) -> None:
+    """Record a manual sell for an existing asset."""
+    try:
+        portfolio, symbol = parse_asset_reference(reference)
+        parsed_price = parse_price(price)
+        parsed_quantity = parse_quantity(quantity)
+        fee_minor = 0 if fee is None else parse_amount_minor(fee, allow_zero=True)
+        provided_total_minor = None if total is None else parse_amount_minor(total)
+        total_minor = calculate_sell_total_minor(
+            parsed_price,
+            parsed_quantity,
+            fee_minor,
+            provided_total_minor,
+        )
+        transaction_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
+        record_sell(
+            portfolio,
+            symbol,
+            parsed_price,
+            parsed_quantity,
+            fee_minor,
+            total_minor,
+            transaction_date,
+            note,
+        )
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Sell recorded for asset '{symbol}/{portfolio}'.")
 
 
 @app.command()

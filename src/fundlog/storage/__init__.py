@@ -3,8 +3,10 @@
 from fundlog.storage.asset_logs import AssetTransaction, get_asset_transaction_log
 from fundlog.storage.asset_transactions import (
     calculate_buy_total_minor,
+    calculate_sell_total_minor,
     record_buy,
     record_income,
+    record_sell,
 )
 from fundlog.storage.assets import Asset, create_assets, delete_asset, get_assets
 from fundlog.storage.database import initialize_database
@@ -36,6 +38,7 @@ __all__ = [
     "create_portfolio",
     "create_portfolio_with_initial",
     "calculate_buy_total_minor",
+    "calculate_sell_total_minor",
     "delete_capital_entry",
     "delete_asset",
     "delete_portfolio",
@@ -49,6 +52,7 @@ __all__ = [
     "record_inflow",
     "record_buy",
     "record_income",
+    "record_sell",
     "record_outflow",
     "reset_portfolio_entries",
 ]

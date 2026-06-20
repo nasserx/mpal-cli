@@ -48,15 +48,16 @@ In v0.1:
 
 `Cash = total active inflows - total active outflows`
 
-Implemented manual asset income increases Cash. Implemented buys decrease Cash
-by exact total cash outflow. Future sells may add net proceeds.
+Implemented manual asset income increases Cash. Buys decrease Cash by exact
+total cash outflow, and sells increase Cash by exact net proceeds.
 
 ### Positions
 
 The book cost of currently open positions. Positions is not market value, live value, or unrealized value.
 
 Implemented buys increase Positions by total buy cash outflow, including buy
-fees. No sell currently reduces Positions.
+fees. Implemented sells decrease Positions by moving-average relieved book
+cost.
 
 ### Book Value
 
@@ -64,16 +65,17 @@ fees. No sell currently reduces Positions.
 
 Book Value is a book/accounting value based only on manual records. It must not imply market value.
 
-With buys implemented, Book Value remains `Cash + Positions`. A buy transfers
-book value from Cash to Positions and does not create profit or loss.
+Book Value remains `Cash + Positions`. A buy transfers book value from Cash to
+Positions. A sell transfers relieved book cost from Positions to Cash and
+changes Book Value only by its realized profit or loss.
 
 ### Realized PnL
 
-Profit or loss realized from future closed or partially closed manual trading positions.
+Profit or loss realized from closed or partially closed manual positions:
 
-In v0.1:
+`Realized PnL = sell net proceeds - moving-average relieved Cost Basis`
 
-`Realized PnL = 0.00`
+Active sell realized-PnL effects are summed for asset and portfolio output.
 
 ### Income
 
@@ -91,17 +93,17 @@ The formula is:
 
 `Return = (Realized PnL + Income) / Capital`
 
-With income implemented and Realized PnL still zero, Return reflects active
-Income divided by Capital. If Capital is zero, Return displays `0.00%`.
+Return reflects active Realized PnL plus Income divided by Capital. If Capital
+is zero, Return displays `0.00%`.
 
-Future asset-level Realized Return uses:
+Asset-level Realized Return uses:
 
 `Asset Realized Return = (Asset Realized PnL + Asset Income) / Total Buy Cost`
 
 Total Buy Cost is cumulative buy cash outflow including buy fees. If Total Buy
 Cost is zero, asset Realized Return is `0.00%`.
 
-Future partial sells use moving average book cost. Fractional-minor-unit cost
+Partial sells use moving average book cost. Fractional-minor-unit cost
 allocations are rounded half-even to integer minor units, and remaining book
 cost is calculated as previous book cost minus relieved book cost so the ledger
 remains balanced. This is book cost allocation, not market valuation.
@@ -117,6 +119,11 @@ remains balanced. This is book cost allocation, not market valuation.
 - A manual buy decreases Cash and increases Positions by the same exact total.
 - Buy fees are included in Cost Basis.
 - A buy does not affect Capital, Income, Realized PnL, or portfolio Return.
+- A manual sell increases Cash by exact net proceeds and decreases Positions by
+  moving-average relieved Cost Basis.
+- Sell fees reduce net proceeds and therefore reduce Realized PnL.
+- A full-position sell relieves all remaining Cost Basis.
+- A sell does not affect Capital or Income.
 - Active entries alone contribute to current calculations.
 - Soft-deleted entries do not contribute.
 - Portfolio reset soft-deletes portfolio entries.

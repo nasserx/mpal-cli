@@ -46,6 +46,7 @@ def get_portfolio_summary(
                     a.portfolio_id,
                     SUM(t.cash_effect_minor) AS cash_effect_minor,
                     SUM(t.position_effect_minor) AS position_effect_minor,
+                    SUM(t.realized_pnl_minor) AS realized_pnl_minor,
                     SUM(t.income_minor) AS income_minor
                 FROM assets AS a
                 JOIN asset_transactions AS t ON t.asset_id = a.id
@@ -58,6 +59,7 @@ def get_portfolio_summary(
                 COALESCE(c.capital_minor, 0),
                 COALESCE(t.cash_effect_minor, 0),
                 COALESCE(t.position_effect_minor, 0),
+                COALESCE(t.realized_pnl_minor, 0),
                 COALESCE(t.income_minor, 0)
             FROM portfolios AS p
             LEFT JOIN capital_totals AS c ON c.portfolio_id = p.id
@@ -100,6 +102,7 @@ def get_all_portfolio_summaries(
                     a.portfolio_id,
                     SUM(t.cash_effect_minor) AS cash_effect_minor,
                     SUM(t.position_effect_minor) AS position_effect_minor,
+                    SUM(t.realized_pnl_minor) AS realized_pnl_minor,
                     SUM(t.income_minor) AS income_minor
                 FROM assets AS a
                 JOIN asset_transactions AS t ON t.asset_id = a.id
@@ -112,6 +115,7 @@ def get_all_portfolio_summaries(
                 COALESCE(c.capital_minor, 0),
                 COALESCE(t.cash_effect_minor, 0),
                 COALESCE(t.position_effect_minor, 0),
+                COALESCE(t.realized_pnl_minor, 0),
                 COALESCE(t.income_minor, 0)
             FROM portfolios AS p
             LEFT JOIN capital_totals AS c ON c.portfolio_id = p.id
@@ -124,12 +128,15 @@ def get_all_portfolio_summaries(
     return [_summary_from_row(row) for row in rows]
 
 
-def _summary_from_row(row: tuple[str, int, int, int, int]) -> PortfolioSummary:
+def _summary_from_row(
+    row: tuple[str, int, int, int, int, int],
+) -> PortfolioSummary:
     """Build a summary from active capital and transaction totals."""
     capital_minor = row[1]
     cash_effect_minor = row[2]
     positions_minor = row[3]
-    income_minor = row[4]
+    realized_pnl_minor = row[4]
+    income_minor = row[5]
     cash_minor = capital_minor + cash_effect_minor
     return PortfolioSummary(
         portfolio_name=row[0],
@@ -137,6 +144,6 @@ def _summary_from_row(row: tuple[str, int, int, int, int]) -> PortfolioSummary:
         cash_minor=cash_minor,
         positions_minor=positions_minor,
         book_value_minor=cash_minor + positions_minor,
-        realized_pnl_minor=0,
+        realized_pnl_minor=realized_pnl_minor,
         income_minor=income_minor,
     )

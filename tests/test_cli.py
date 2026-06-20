@@ -24,6 +24,7 @@ COMMANDS = {
     "edit",
     "income",
     "reset",
+    "sell",
     "delete",
 }
 

@@ -2,10 +2,11 @@
 
 The roadmap is intentionally phased. Items listed for later versions are outside the v0.1 implementation contract.
 
-The next planned phase after the completed v0.1 portfolio and capital ledger is
-the design and later implementation of assets, symbols, and manual trades. Its
-current design is documented in `docs/ASSETS_SPEC.md`; it is not yet an
-implementation contract.
+Work after the completed v0.1 portfolio and capital ledger is proceeding
+incrementally through assets, symbols, and manual trades. Asset management,
+income, buys, sells, moving-average Cost Basis, and Realized PnL are now
+implemented. Asset summary output remains planned. The governing contract is
+documented in `docs/ASSETS_SPEC.md`.
 
 ## v0.1 — Capital ledger foundation
 

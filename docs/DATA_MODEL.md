@@ -6,10 +6,9 @@ infrastructure.
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
 The asset design is specified in `docs/ASSETS_SPEC.md`. The `assets` and
-`asset_transactions` tables are implemented. The income command creates income
-transactions, and the buy command creates buy transactions. Active buy and
-income effects contribute to asset lists and portfolio summaries. Sell creation
-and accounting are not implemented. Monetary fields use integer minor units.
+`asset_transactions` tables are implemented. Income, buy, and sell commands
+create asset transactions. Their active effects contribute to asset lists and
+portfolio summaries. Monetary fields use integer minor units.
 User-entered quantity and price fields use normalized decimal text, never
 SQLite floating point or Python `float`.
 
@@ -138,8 +137,10 @@ The income command inserts `income` rows with null price and quantity, zero fee,
 positive total/cash/income fields, and zero position/realized-PnL fields.
 The buy command inserts normalized price and quantity, a nonnegative fee,
 positive total and position effect, negative cash effect, and zero realized-PnL
-and income fields. Portfolio summaries read active buy and income effects. Sell
-writing and accounting remain future work.
+and income fields. The sell command inserts normalized price and quantity, a
+nonnegative fee, positive net total and cash effect, negative relieved-cost
+position effect, calculated realized PnL, and zero income. Portfolio summaries
+read all active transaction effects.
 
 ## Future `schema_migrations`
 

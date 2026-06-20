@@ -109,6 +109,7 @@ def get_assets(
                     transaction_type,
                     quantity_text,
                     position_effect_minor,
+                    realized_pnl_minor,
                     income_minor,
                     total_minor
                 FROM asset_transactions
@@ -118,9 +119,9 @@ def get_assets(
             ).fetchall()
             quantity = sum(
                 (
-                    Decimal(row[1])
+                    (Decimal(row[1]) if row[0] == "buy" else -Decimal(row[1]))
                     for row in transactions
-                    if row[0] == "buy" and row[1] is not None
+                    if row[0] in {"buy", "sell"} and row[1] is not None
                 ),
                 Decimal(0),
             )
@@ -128,13 +129,13 @@ def get_assets(
                 Asset(
                     symbol=symbol,
                     quantity=quantity,
-                    cost_basis_minor=sum(
-                        row[2] for row in transactions if row[0] == "buy"
+                    cost_basis_minor=sum(row[2] for row in transactions),
+                    realized_pnl_minor=sum(
+                        row[3] for row in transactions if row[0] == "sell"
                     ),
-                    realized_pnl_minor=0,
-                    income_minor=sum(row[3] for row in transactions),
+                    income_minor=sum(row[4] for row in transactions),
                     total_buy_cost_minor=sum(
-                        row[4] for row in transactions if row[0] == "buy"
+                        row[5] for row in transactions if row[0] == "buy"
                     ),
                 )
             )
