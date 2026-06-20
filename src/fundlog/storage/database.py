@@ -35,6 +35,20 @@ CREATE TABLE IF NOT EXISTS capital_entries (
     deleted_at TEXT,
     FOREIGN KEY (portfolio_id) REFERENCES portfolios (id)
 );
+
+CREATE TABLE IF NOT EXISTS assets (
+    id INTEGER PRIMARY KEY,
+    portfolio_id INTEGER NOT NULL,
+    symbol TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT,
+    FOREIGN KEY (portfolio_id) REFERENCES portfolios (id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_active_asset_symbol
+ON assets (portfolio_id, symbol)
+WHERE deleted_at IS NULL;
 """
 
 
@@ -102,6 +116,30 @@ def _ensure_active_portfolio_names(connection: sqlite3.Connection) -> None:
     )
 
 
+def _ensure_assets(connection: sqlite3.Connection) -> None:
+    """Create the initial asset table and active-symbol index when missing."""
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS assets (
+            id INTEGER PRIMARY KEY,
+            portfolio_id INTEGER NOT NULL,
+            symbol TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TEXT,
+            FOREIGN KEY (portfolio_id) REFERENCES portfolios (id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_active_asset_symbol
+        ON assets (portfolio_id, symbol)
+        WHERE deleted_at IS NULL
+        """
+    )
+
+
 def _require_initialized_schema(connection: sqlite3.Connection) -> None:
     """Require the existing FundLog v0.1 base tables."""
     tables = {
@@ -135,6 +173,7 @@ def connect_database(
         _require_initialized_schema(connection)
         _ensure_active_portfolio_names(connection)
         _ensure_entry_numbers(connection)
+        _ensure_assets(connection)
         yield connection
     except sqlite3.Error as error:
         if connection is not None:
@@ -166,6 +205,7 @@ def initialize_database(database_path: Path | None = None) -> Path:
             connection.execute("BEGIN IMMEDIATE")
             _ensure_active_portfolio_names(connection)
             _ensure_entry_numbers(connection)
+            _ensure_assets(connection)
     except (OSError, sqlite3.Error) as error:
         raise StorageError(
             "FundLog could not initialize the local database."

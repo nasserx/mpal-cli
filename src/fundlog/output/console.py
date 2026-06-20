@@ -14,6 +14,7 @@ from fundlog.output.theme import (
     TABLE_HEADER,
     WARNING,
 )
+from fundlog.storage.assets import Asset
 from fundlog.storage.logs import CapitalEntry
 from fundlog.storage.summaries import PortfolioSummary
 
@@ -85,6 +86,31 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
             "0.00%",
         )
     Console(width=120).print(table)
+
+
+def print_assets(assets: list[Asset]) -> None:
+    """Print active assets using the initial asset-foundation columns."""
+    table = Table(
+        header_style=TABLE_HEADER,
+        border_style=TABLE_BORDER,
+        style=TABLE_CELL,
+    )
+    table.add_column("Symbol")
+    table.add_column("Quantity", justify="right")
+    table.add_column("Cost Basis", justify="right")
+    table.add_column("Realized PnL", justify="right")
+    table.add_column("Income", justify="right")
+    table.add_column("Realized Return", justify="right")
+    for asset in assets:
+        table.add_row(
+            asset.symbol,
+            "0",
+            format_money(0),
+            format_money(0),
+            format_money(0),
+            "0.00%",
+        )
+    Console().print(table)
 
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:

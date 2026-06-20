@@ -13,6 +13,7 @@ from fundlog.cli import app
 runner = CliRunner()
 
 COMMANDS = {
+    "asset",
     "init",
     "create",
     "inflow",
@@ -140,7 +141,7 @@ def test_init_creates_database_and_expected_tables(
             row[1] for row in connection.execute("PRAGMA table_info(capital_entries)")
         }
 
-    assert tables == {"portfolios", "capital_entries"}
+    assert tables == {"portfolios", "capital_entries", "assets"}
     assert portfolio_columns == {
         "id",
         "name",
@@ -156,6 +157,19 @@ def test_init_creates_database_and_expected_tables(
         "amount_minor",
         "entry_date",
         "note",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+    }
+    with sqlite3.connect(database_path) as connection:
+        asset_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(assets)")
+        }
+
+    assert asset_columns == {
+        "id",
+        "portfolio_id",
+        "symbol",
         "created_at",
         "updated_at",
         "deleted_at",

@@ -23,10 +23,11 @@ Before changing behavior, read:
 
 v0.1 covers portfolio and capital-entry management only.
 
-Assets, symbols, and trades are currently design-only. Their proposed contract
-is documented in `docs/ASSETS_SPEC.md`. Do not implement assets, symbols,
-trades, fees, income commands, storage, migrations, or related behavior until a
-task explicitly requests implementation.
+The asset foundation implements `fundlog asset add`, `fundlog asset list`,
+symbol normalization, and the `assets` table. All trades, fees, income commands,
+asset summary/log/delete behavior, and trade accounting remain design-only in
+`docs/ASSETS_SPEC.md`. Do not implement them until a task explicitly requests
+implementation.
 
 Do not introduce the following into v0.1:
 
@@ -66,6 +67,8 @@ prohibited.
 - `fundlog delete <portfolio> <entry-number>`
 - `fundlog reset <portfolio> --yes`
 - `fundlog delete <portfolio> --yes`
+- `fundlog asset add <portfolio> <symbol> [symbol...]`
+- `fundlog asset list <portfolio>`
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
 
@@ -121,7 +124,7 @@ Database path resolution:
 2. Windows: `%LOCALAPPDATA%\FundLog\fundlog.db`.
 3. Fallback: `~/.local/share/fundlog/fundlog.db`.
 
-Current tables are `portfolios` and `capital_entries`.
+Current tables are `portfolios`, `capital_entries`, and `assets`.
 
 Capital entries have a stable, portfolio-local `entry_no` used by `log`, `edit`, and entry `delete`. Numbering starts at 1 for each portfolio row and never reuses numbers after soft delete or reset. Internal database IDs are not part of the CLI contract.
 
@@ -141,14 +144,18 @@ Portfolio names are unique among active portfolios. A name may be reused after i
 
 - `src/fundlog/cli.py`: Typer command definitions and CLI-level validation/output flow.
 - `src/fundlog/amounts.py`: Exact monetary parsing and formatting.
+- `src/fundlog/assets.py`: Asset symbol normalization and validation.
 - `src/fundlog/dates.py`: Strict transaction-date parsing and future-date validation.
 - `src/fundlog/config.py`: Application metadata and local database path resolution.
 - `src/fundlog/errors.py`: Expected application exception types.
 - `src/fundlog/storage/`: SQLite initialization and portfolio, entry, log, and summary persistence operations.
+- `src/fundlog/storage/assets.py`: Asset creation and active-asset listing.
 - `src/fundlog/output/`: Rich console, semantic theme, and table rendering.
 - `tests/test_cli.py`: CLI integration and behavior tests using Typer's test runner.
 - `tests/test_amounts.py`: Focused exact money display-formatting tests.
 - `tests/test_dates.py`: Focused shared transaction-date validation tests.
+- `tests/test_assets.py`: Focused asset symbol validation tests.
+- `tests/test_asset_cli.py`: Asset foundation CLI and persistence tests.
 - `docs/`: Product, CLI, financial, data-model, and roadmap specifications.
 - `pyproject.toml`: Packaging, dependencies, pytest, and Ruff configuration.
 

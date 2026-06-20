@@ -25,6 +25,14 @@ class PortfolioNotFoundError(FundLogError):
     """Raised when an active portfolio cannot be found."""
 
 
+class InvalidSymbolError(FundLogError):
+    """Raised when an asset symbol is invalid."""
+
+
+class AssetAlreadyExistsError(FundLogError):
+    """Raised when an active asset symbol already exists in a portfolio."""
+
+
 class InvalidAmountError(FundLogError):
     """Raised when a monetary amount is invalid."""
 

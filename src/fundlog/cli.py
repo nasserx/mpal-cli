@@ -11,6 +11,7 @@ from fundlog.config import APP_NAME
 from fundlog.dates import parse_transaction_date
 from fundlog.errors import FundLogError
 from fundlog.output.console import (
+    print_assets,
     print_capital_entry_log,
     print_error,
     print_info,
@@ -20,12 +21,14 @@ from fundlog.output.console import (
     print_warning,
 )
 from fundlog.storage import (
+    create_assets,
     create_portfolio,
     create_portfolio_with_initial,
     delete_capital_entry,
     delete_portfolio,
     edit_capital_entry,
     get_all_portfolio_summaries,
+    get_assets,
     get_capital_entry_log,
     get_portfolio_summary,
     initialize_database,
@@ -63,6 +66,12 @@ app = typer.Typer(
     epilog=HELP_EXAMPLES,
     no_args_is_help=True,
 )
+asset_app = typer.Typer(
+    name="asset",
+    help="Manage symbols inside a portfolio.",
+    no_args_is_help=True,
+)
+app.add_typer(asset_app)
 
 
 def version_callback(value: bool) -> None:
@@ -97,6 +106,49 @@ def init_command() -> None:
         raise typer.Exit(code=1) from error
 
     print_success(f"FundLog initialized at {database_path}")
+
+
+@asset_app.command("add")
+def asset_add(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    symbols: Annotated[
+        list[str],
+        typer.Argument(help="One or more asset symbols."),
+    ],
+) -> None:
+    """Add one or more symbols to an existing portfolio."""
+    try:
+        normalized_symbols = create_assets(portfolio, symbols)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if len(normalized_symbols) == 1:
+        print_success(
+            f"Asset '{normalized_symbols[0]}' added to portfolio '{portfolio}'."
+        )
+        return
+    print_success(
+        f"{len(normalized_symbols)} assets added to portfolio '{portfolio}': "
+        f"{', '.join(normalized_symbols)}."
+    )
+
+
+@asset_app.command("list")
+def asset_list(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+) -> None:
+    """List active assets in a portfolio."""
+    try:
+        assets = get_assets(portfolio)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not assets:
+        print_info(f"No active assets for portfolio '{portfolio}'.")
+        return
+    print_assets(assets)
 
 
 @app.command()

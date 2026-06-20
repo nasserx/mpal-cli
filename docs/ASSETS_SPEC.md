@@ -2,14 +2,19 @@
 
 ## Scope
 
-This document defines the future design contract for assets, symbols, manual
-trades, fees, and asset income after the completed v0.1 portfolio and capital
-ledger.
+This document defines the design contract for assets, symbols, manual trades,
+fees, and asset income after the completed v0.1 portfolio and capital ledger.
 
-This is documentation only. None of the commands, storage, calculations, or
-tables described here are implemented. The implemented v0.1 portfolio and
-capital behavior must remain unchanged until asset implementation is explicitly
-requested.
+The initial asset foundation is implemented:
+
+- `fundlog asset add <portfolio> <symbol> [symbol...]`
+- `fundlog asset list <portfolio>`
+- Normalized symbol validation.
+- The portfolio-owned `assets` table.
+
+Buy, sell, income, asset summary, asset log, asset deletion, fees, and trade
+accounting remain design-only. The implemented v0.1 portfolio and capital
+behavior remains unchanged.
 
 FundLog remains fully manual. Every future result described here must be derived
 only from records entered by the user.
@@ -117,7 +122,8 @@ used with asset-reference commands until the portfolio is renamed or recreated.
 
 ## Commands
 
-The commands in this section are future contracts only.
+Only `asset add` and `asset list` are implemented. All other commands in this
+section remain future contracts.
 
 ### Asset management
 
@@ -125,14 +131,29 @@ The commands in this section are future contracts only.
 fundlog asset add <portfolio> <symbol>
 fundlog asset add <portfolio> <symbol> <symbol> ...
 fundlog asset list <portfolio>
+```
+
+Implemented foundation commands:
+
+- `asset add` validates and normalizes every symbol before writing.
+- Multi-symbol creation is atomic.
+- Duplicate symbols in one command are rejected.
+- An active duplicate in the portfolio is rejected.
+- `asset list` returns active assets ordered by symbol.
+- Until transactions exist, list calculations display deterministic zero
+  values.
+
+Future asset-management commands:
+
+```console
 fundlog asset summary <portfolio>/<symbol>
 fundlog asset log <portfolio>/<symbol>
 fundlog asset delete <portfolio>/<symbol> --yes
 ```
 
 `asset add` accepts one or more symbols. Symbols are normalized for matching and
-displayed uppercase. A multi-symbol add must be atomic: either all supplied
-symbols are added or none are.
+displayed uppercase. A multi-symbol add is atomic: either all supplied symbols
+are added or none are.
 
 ### Manual trading and income
 
@@ -607,15 +628,14 @@ remain implementation-planning details rather than unresolved product rules.
 
 ## Future implementation sequence
 
-This document does not authorize implementation. After the remaining
-representation details are finalized and implementation is explicitly
-requested, work can proceed in reviewable steps:
+The implemented foundation does not authorize later features. Future work can
+proceed in reviewable steps only when explicitly requested:
 
-1. Design storage and migrations without changing existing v0.1 behavior.
-2. Add separate exact parsers and formatters for quantity and price.
-3. Add asset management and soft-deletion behavior.
+1. Add separate exact parsers and formatters for quantity and price.
+2. Design asset transaction storage and migrations.
+3. Add asset soft-deletion behavior.
 4. Add buy, sell, and income behavior with shared date validation.
 5. Add `--total` validation and moving-average accounting.
 6. Feed active asset results into the unchanged portfolio summary columns.
-7. Add themed asset list, summary, and log output.
-8. Add focused unit, integration, accounting-invariant, and atomicity tests.
+7. Add themed asset summary and log output.
+8. Add focused accounting-invariant and transaction atomicity tests.

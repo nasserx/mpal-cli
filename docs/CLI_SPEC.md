@@ -270,3 +270,60 @@ fundlog delete stocks --yes
 **Validation:** Portfolio must exist and be active. `--yes` is mandatory.
 
 **Errors:** FundLog is not initialized; missing `--yes`; unknown or inactive portfolio; database failure. Without `--yes`, no changes occur.
+
+## `fundlog asset add PORTFOLIO SYMBOL [SYMBOL ...]`
+
+Examples:
+
+```console
+fundlog asset add stocks AAPL
+fundlog asset add stocks AAPL AMZN MSFT
+```
+
+**Purpose:** Add one or more manually tracked symbols to an existing portfolio.
+
+**Arguments:**
+
+- `PORTFOLIO`: Existing active portfolio.
+- `SYMBOL`: One or more symbols.
+
+**Options:** None in the asset foundation.
+
+**Behavior:** Normalizes symbols to uppercase and atomically creates active
+portfolio-owned assets. A multi-symbol command creates every supplied asset or
+none. It does not create trades or change portfolio summary values.
+
+**Validation:** The portfolio must exist and be active. Each normalized symbol
+must be 1–32 characters, start with a letter or number, and contain only
+letters, numbers, `.`, `-`, or `_`. Symbols are case-insensitive. Duplicate
+symbols in one command and symbols already active in the portfolio are rejected.
+
+**Errors:** FundLog is not initialized; unknown portfolio; invalid symbol;
+duplicate symbol; active asset already exists; database failure.
+
+## `fundlog asset list PORTFOLIO`
+
+Example:
+
+```console
+fundlog asset list stocks
+```
+
+**Purpose:** List active assets in one portfolio.
+
+**Arguments:**
+
+- `PORTFOLIO`: Existing active portfolio.
+
+**Options:** None in the asset foundation.
+
+**Behavior:** Displays active assets ordered by uppercase symbol using
+`Symbol`, `Quantity`, `Cost Basis`, `Realized PnL`, `Income`, and
+`Realized Return`. Until trading and income are implemented, the derived
+columns display `0`, `0.00`, `0.00`, `0.00`, and `0.00%`. Internal database IDs
+are not displayed. An existing portfolio with no assets prints a deterministic
+empty-list message.
+
+**Validation:** The portfolio must exist and be active.
+
+**Errors:** FundLog is not initialized; unknown portfolio; database failure.

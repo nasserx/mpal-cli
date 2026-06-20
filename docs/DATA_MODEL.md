@@ -1,23 +1,25 @@
 # FundLog Data Model
 
-This document describes the implemented v0.1 SQLite model and planned future
-audit infrastructure.
+This document describes the implemented SQLite model and planned future audit
+infrastructure.
 
 Portfolio summaries are derived from manual records rather than stored balances. The v0.1 schema does not store market value, live prices, positions, realized PnL, income, or return. Future manual trading records may provide inputs for those calculations without introducing market APIs.
 
-The future asset design is specified in `docs/ASSETS_SPEC.md`. It does not
-authorize schema changes. When implemented, monetary fields such as fees,
-income, trade cash totals, cost basis, realized PnL, and portfolio cash effects
-must use integer minor units. User-entered quantity and price must use normalized
-decimal text or an equivalently exact representation, never SQLite floating
-point or Python `float`.
+The asset design is specified in `docs/ASSETS_SPEC.md`. The initial `assets`
+table is implemented; asset transactions and asset accounting storage are not.
+When implemented later, monetary fields such as fees, income, trade cash totals,
+cost basis, realized PnL, and portfolio cash effects must use integer minor
+units. User-entered quantity and price must use normalized decimal text or an
+equivalently exact representation, never SQLite floating point or Python
+`float`.
 
-## v0.1 scope
+## Implemented scope
 
-The implemented v0.1 database contains:
+The implemented database contains:
 
 - `portfolios`
 - `capital_entries`
+- `assets`
 
 `audit_log` and `schema_migrations` remain future design concepts; they are not
 implemented v0.1 tables. Current migrations are small, idempotent schema checks
@@ -64,6 +66,27 @@ applied during initialization and normal database access.
 - Entry rows and timestamps are retained for future audit tooling.
 - Ledger validation must prevent insufficient-Cash outflows.
 
+## `assets`
+
+**Purpose:** Store normalized symbols owned by portfolios.
+
+**Important fields:** Internal stable ID, portfolio ID, normalized symbol,
+creation and update timestamps, and soft-delete state.
+
+**Relationships:** Every asset belongs to exactly one portfolio.
+
+**Constraints:**
+
+- Symbols are stored uppercase.
+- One active asset per normalized symbol may exist within a portfolio.
+- The same symbol may exist in different portfolios.
+- Active-only uniqueness allows a symbol to be reused after a previous asset row
+  is soft-deleted.
+- Internal asset IDs are not exposed by the CLI.
+- Active asset lists are ordered by symbol.
+- The table contains no quantity, price, fee, trade, income, market-value, or
+  unrealized-PnL fields.
+
 ## Future `audit_log`
 
 **Purpose:** Preserve an audit-ready history of state-changing actions.
@@ -78,10 +101,10 @@ applied during initialization and normal database access.
 - Audit records are append-oriented and must not be silently rewritten by ordinary commands.
 - A reset must be traceable as one user action even when it affects multiple records.
 
-## Future asset storage constraints
+## Future asset transaction storage constraints
 
-This section records representation requirements, not a table or migration
-design.
+This section records requirements for the unimplemented trade and income
+storage, not a table or migration design.
 
 - Normalized symbols are uppercase, at most 32 characters, and match
   `^[A-Z0-9][A-Z0-9._-]*$`.
@@ -118,7 +141,8 @@ design.
 
 ```text
 portfolios
-  └── capital_entries
+  ├── capital_entries
+  └── assets
 
 future audit_log records affected records and actions
 future schema_migrations tracks database evolution
