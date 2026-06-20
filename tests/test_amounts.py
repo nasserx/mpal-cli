@@ -2,7 +2,7 @@
 
 import pytest
 
-from fundlog.amounts import format_money
+from fundlog.amounts import format_money, format_signed_money
 
 
 @pytest.mark.parametrize(
@@ -18,3 +18,15 @@ from fundlog.amounts import format_money
 )
 def test_format_money(amount_minor: int, expected: str) -> None:
     assert format_money(amount_minor) == expected
+
+
+@pytest.mark.parametrize(
+    ("amount_minor", "expected"),
+    [
+        (1_000, "+10.00"),
+        (-1_000, "-10.00"),
+        (0, "0.00"),
+    ],
+)
+def test_format_signed_money(amount_minor: int, expected: str) -> None:
+    assert format_signed_money(amount_minor) == expected

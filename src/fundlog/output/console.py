@@ -3,12 +3,16 @@
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 
 from rich.console import Console
-from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
 from fundlog.amounts import format_money
 from fundlog.numbers import format_price, format_quantity
+from fundlog.output.formatting import (
+    format_income_money,
+    format_profit_loss_money,
+    format_profit_loss_percent,
+)
 from fundlog.output.theme import (
     ERROR,
     INFO,
@@ -86,9 +90,9 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
             format_money(summary.cash_minor),
             format_money(summary.positions_minor),
             format_money(summary.book_value_minor),
-            format_money(summary.realized_pnl_minor),
-            format_money(summary.income_minor),
-            _format_return(
+            format_profit_loss_money(summary.realized_pnl_minor),
+            format_income_money(summary.income_minor),
+            format_profit_loss_percent(
                 summary.realized_pnl_minor + summary.income_minor,
                 summary.capital_minor,
             ),
@@ -114,9 +118,9 @@ def print_assets(assets: list[Asset]) -> None:
             asset.symbol,
             format_quantity(asset.quantity),
             format_money(asset.cost_basis_minor),
-            format_money(asset.realized_pnl_minor),
-            format_money(asset.income_minor),
-            _format_return(
+            format_profit_loss_money(asset.realized_pnl_minor),
+            format_income_money(asset.income_minor),
+            format_profit_loss_percent(
                 asset.realized_pnl_minor + asset.income_minor,
                 asset.total_buy_cost_minor,
             ),
@@ -127,8 +131,7 @@ def print_assets(assets: list[Asset]) -> None:
 def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
     """Print one active asset's derived accounting summary."""
     console = Console(width=120)
-    title = Text(f"{asset.symbol}/{portfolio_name}", style=TABLE_HEADER)
-    console.print(Rule(title, style=TABLE_BORDER))
+    console.print(Text(f"{asset.symbol}/{portfolio_name}", style=TABLE_HEADER))
 
     table = Table(
         header_style=TABLE_HEADER,
@@ -145,9 +148,9 @@ def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
         format_quantity(asset.quantity),
         format_money(asset.cost_basis_minor),
         _format_average_cost(asset.cost_basis_minor, asset.quantity),
-        format_money(asset.realized_pnl_minor),
-        format_money(asset.income_minor),
-        _format_return(
+        format_profit_loss_money(asset.realized_pnl_minor),
+        format_income_money(asset.income_minor),
+        format_profit_loss_percent(
             asset.realized_pnl_minor + asset.income_minor,
             asset.total_buy_cost_minor,
         ),
@@ -162,8 +165,7 @@ def print_asset_transaction_log(
 ) -> None:
     """Print one asset's active transactions using the documented columns."""
     console = Console(width=120)
-    title = Text(f"{symbol}/{portfolio_name}", style=TABLE_HEADER)
-    console.print(Rule(title, style=TABLE_BORDER))
+    console.print(Text(f"{symbol}/{portfolio_name}", style=TABLE_HEADER))
 
     table = Table(
         header_style=TABLE_HEADER,
@@ -198,20 +200,14 @@ def print_asset_transaction_log(
                 if transaction.transaction_type == "income"
                 else format_money(transaction.fee_minor)
             ),
-            format_money(transaction.total_minor),
+            (
+                format_income_money(transaction.total_minor)
+                if transaction.transaction_type == "income"
+                else format_money(transaction.total_minor)
+            ),
             transaction.note or "",
         )
     console.print(table)
-
-
-def _format_return(result_minor: int, capital_minor: int) -> str:
-    """Format realized return with deterministic zero-capital behavior."""
-    if capital_minor == 0:
-        return "0.00%"
-    percentage = (
-        Decimal(result_minor) * Decimal(100) / Decimal(capital_minor)
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
-    return f"{percentage:.2f}%"
 
 
 def _format_average_cost(cost_basis_minor: int, quantity: Decimal) -> str:

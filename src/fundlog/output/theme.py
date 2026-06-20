@@ -11,10 +11,12 @@ WARNING = "#F59E0B"
 INFO = "#93C5FD"
 PROFIT = "#22C55E"
 LOSS = "#EF4444"
+INCOME = "#60A5FA"
 
 __all__ = [
     "ERROR",
     "INFO",
+    "INCOME",
     "LOSS",
     "MUTED",
     "PROFIT",

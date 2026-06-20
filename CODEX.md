@@ -214,6 +214,11 @@ theme instead of defining local colors.
 - Use `INFO` for informational messages where appropriate.
 - Use `PROFIT` and `LOSS` only for values with clear profit, loss, or return
   semantics. Never use them for normal inflow or outflow rows.
+- Use `INCOME` for income/distribution values, including income totals in asset
+  logs. Buy and sell totals remain normal table cells.
+- Realized PnL and return output uses explicit signs for nonzero values:
+  positive values include `+`, negative values include `-`, and zero remains
+  unsigned.
 - Keep colors subtle and preserve readable text labels; color must not carry
   meaning by itself.
 - Do not assign a different color to every table column or financial field.

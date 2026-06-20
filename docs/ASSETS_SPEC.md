@@ -200,15 +200,14 @@ All tables must reuse the semantic theme from
 - Normal cells use `TABLE_CELL`.
 - Profit values use `PROFIT`.
 - Loss values use `LOSS`.
-- Income may use `INFO` when the result remains visually calm.
+- Income values use the calm `INCOME` style.
 - Buy and sell operation labels use normal cell styling, not profit/loss
   styling.
 
-Asset tables should include a small title above the table using the existing
-CLI style or the closest clean Rich equivalent:
+Asset log and summary tables use a short plain title above the table:
 
 ```text
--- AAPL/stocks --------------------------------
+AAPL/stocks
 ```
 
 Color must not be the only way meaning is communicated.
@@ -231,9 +230,11 @@ Rules:
 - Symbol is displayed uppercase.
 - Quantity is the current open quantity and uses `format_quantity()`.
 - Cost Basis is the current open book cost.
-- Cost Basis, Realized PnL, and Income use `format_money()`.
+- Cost Basis and Income use money formatting. Realized PnL uses signed money
+  formatting: positive values include `+`, negative values include `-`, and
+  zero remains unsigned.
 - Realized Return uses percent formatting and the asset-level formula defined
-  below.
+  below. Positive and negative nonzero returns include their sign.
 - Normal cells use the unified table-cell style.
 - Ordering is deterministic. Alphabetical ordering by normalized symbol is the
   initial design.
@@ -265,7 +266,7 @@ Rules:
 - Quantity uses `format_quantity()`.
 - Fee and Total use `format_money()`.
 - For income rows, Price, Quantity, and Fee may display `--`; Total displays the
-  income amount.
+  income amount using the `INCOME` style.
 - Ordering is deterministic by effective date and then asset-local entry
   number.
 - Only active transaction rows are displayed.
@@ -305,6 +306,7 @@ Rules:
   half-even to at most 18 fractional places for display only.
 - Realized PnL contains realized sell results only.
 - Income contains manually recorded income or distributions for this asset.
+- Realized PnL and Realized Return display explicit signs for nonzero values.
 - Realized Return uses the asset-level formula below.
 - The table contains no market value or unrealized PnL.
 
@@ -568,8 +570,9 @@ normalization, and upper bounds are:
 ### Percentages
 
 Asset Realized Return and portfolio Return use the existing visual percent
-convention. A zero denominator displays `0.00%` and never causes a runtime
-error.
+convention. Positive values display `+`, negative values display `-`, and zero
+remains unsigned. A zero denominator displays `0.00%` and never causes a
+runtime error.
 
 ## Portfolio integration
 

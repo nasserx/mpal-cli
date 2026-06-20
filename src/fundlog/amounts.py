@@ -34,3 +34,11 @@ def format_money(amount_minor: int) -> str:
     sign = "-" if amount_minor < 0 else ""
     whole, fraction = divmod(abs(amount_minor), MINOR_UNITS_PER_UNIT)
     return f"{sign}{whole:,}.{fraction:02d}"
+
+
+def format_signed_money(amount_minor: int) -> str:
+    """Format profit or loss money with an explicit positive sign."""
+    formatted = format_money(amount_minor)
+    if amount_minor > 0:
+        return f"+{formatted}"
+    return formatted

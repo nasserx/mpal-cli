@@ -107,6 +107,10 @@ The asset summary also displays `Average Cost = Cost Basis / Quantity` when
 open Quantity is positive. It uses price-style display precision; zero Quantity
 displays `--`.
 
+Realized PnL and return values use signed display formatting: positive values
+include `+`, negative values include `-`, and zero remains unsigned. This is
+display-only and does not change stored accounting values or formulas.
+
 Partial sells use moving average book cost. Fractional-minor-unit cost
 allocations are rounded half-even to integer minor units, and remaining book
 cost is calculated as previous book cost minus relieved book cost so the ledger
