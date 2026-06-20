@@ -5,8 +5,13 @@ The roadmap is intentionally phased. Items listed for later versions are outside
 Work after the completed v0.1 portfolio and capital ledger is proceeding
 incrementally through assets, symbols, and manual trades. Asset management,
 income, buys, sells, moving-average Cost Basis, and Realized PnL are now
-implemented. Asset summary output remains planned. The governing contract is
+implemented, including asset summary output. The governing contract is
 documented in `docs/ASSETS_SPEC.md`.
+
+The final command hierarchy is designed in `docs/CLI_SPEC.md`. Its
+implementation is a separate compatibility migration; the currently
+implemented root commands remain unchanged until that work is explicitly
+authorized.
 
 ## v0.1 — Capital ledger foundation
 
@@ -56,3 +61,13 @@ FundLog will remain fully manual. Live prices, market APIs, market value, and un
 - Add stronger audit tools.
 - Expand test coverage.
 - Add packaging and release automation.
+
+## Command hierarchy migration
+
+- Add official `portfolio`, `capital`, and organized `asset` command groups.
+- Add portfolio-wide `asset summary <portfolio>`.
+- Keep existing root commands as hidden compatibility aliases.
+- Decide whether `asset list` remains as a hidden alias for portfolio-wide
+  asset summary.
+- Show only official commands in help after implementation.
+- Review alias retention or removal before stable v1.

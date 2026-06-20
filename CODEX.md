@@ -85,6 +85,36 @@ market value, and unrealized PnL remain prohibited.
 
 Preserve existing command arguments, options, validation, output, and exit behavior unless a task explicitly changes the CLI contract.
 
+## Official command hierarchy design
+
+The final organized hierarchy is documented in `docs/CLI_SPEC.md` and is not
+implemented yet:
+
+- Root: `fundlog init`
+- Portfolio: `portfolio create`, `portfolio summary`, `portfolio reset`,
+  `portfolio delete`
+- Capital: `capital inflow`, `capital outflow`, `capital log`, `capital edit`,
+  `capital delete`
+- Asset: `asset add`, `asset summary`, `asset log`, `asset delete`,
+  `asset income`, `asset buy`, `asset sell`
+
+`asset summary <portfolio>` is planned to show every active asset summary in a
+portfolio. `asset summary <portfolio>/<symbol>` continues to show one asset.
+
+When implementation is explicitly authorized:
+
+- Official grouped commands should be visible in help and documentation.
+- Existing root commands should remain temporarily as hidden compatibility
+  aliases and delegate to the same handlers/services.
+- Do not duplicate accounting or persistence logic for aliases.
+- `asset list <portfolio>` may become a hidden alias for
+  `asset summary <portfolio>`; make that choice explicitly during
+  implementation.
+- Do not remove compatibility aliases before a separate pre-v1 decision.
+
+Until that migration is implemented, preserve the current executable command
+structure and do not update runtime help to advertise unavailable commands.
+
 ## Financial model
 
 Never use Python `float` for money.

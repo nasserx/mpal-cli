@@ -31,39 +31,43 @@ FundLog only works with the records you enter manually.
 
 Portfolio summaries use book/accounting values. Book Value is derived from manual records and is not market value.
 
-## v0.1 examples
+## Planned official command hierarchy
+
+The final organized CLI will group commands by the records they manage:
 
 ```console
 fundlog init
 
-fundlog create stocks
-fundlog create stocks --initial 5000
+fundlog portfolio create stocks
+fundlog portfolio create stocks --initial 5000
+fundlog portfolio summary stocks
+fundlog portfolio summary --all
+fundlog portfolio reset stocks --yes
+fundlog portfolio delete stocks --yes
 
-fundlog inflow stocks 1000
-fundlog outflow stocks 250 --date 2026-06-19 --note "withdrawal"
-
-fundlog summary stocks
-fundlog summary --all
-fundlog log stocks
-
-fundlog edit stocks 2 --amount 500
-fundlog delete stocks 2
-
-fundlog reset stocks --yes
-fundlog delete stocks --yes
+fundlog capital inflow stocks 1000
+fundlog capital outflow stocks 250 --date 2026-06-19 --note "withdrawal"
+fundlog capital log stocks
+fundlog capital edit stocks 2 --amount 500
+fundlog capital delete stocks 2
 
 fundlog asset add stocks AAPL AMZN MSFT
-fundlog asset list stocks
+fundlog asset summary stocks
 fundlog asset summary stocks/AAPL
 fundlog asset log stocks/AAPL
 fundlog asset delete stocks/AAPL --yes
-
-fundlog income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
-fundlog buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
-fundlog sell stocks/AAPL --price 235.50 --quantity 1 --fee 1.25
+fundlog asset income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
+fundlog asset buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
+fundlog asset sell stocks/AAPL --price 235.50 --quantity 1 --fee 1.25
 ```
 
-Entry numbers shown by `fundlog log` are stable, portfolio-local numbers. Internal database IDs are not part of the CLI contract.
+This hierarchy is currently a design target, not implemented CLI behavior.
+Existing root commands remain the executable interface until the migration is
+implemented. They are planned to remain temporarily as hidden compatibility
+aliases so existing usage does not break abruptly.
+
+Entry numbers shown by `fundlog capital log` are stable, portfolio-local
+numbers. Internal database IDs are not part of the CLI contract.
 
 Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 `--date` is omitted, FundLog uses the current local date.

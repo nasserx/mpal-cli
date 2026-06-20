@@ -1,5 +1,146 @@
 # FundLog v0.1 CLI Specification
 
+## Command hierarchy status
+
+The organized hierarchy below is the official target interface for FundLog.
+It is a documentation and migration design; the current executable still uses
+the implemented command spellings documented later in this file. A future
+implementation step will add the organized commands first, preserve existing
+root commands as hidden compatibility aliases, and then update help output.
+
+No command is removed by this design. Compatibility aliases remain available
+during the transition and may be reconsidered before a stable v1 release.
+
+## Official command hierarchy
+
+### Root
+
+```console
+fundlog init
+```
+
+`init` remains at the root because it prepares the application rather than
+operating on a portfolio-owned record.
+
+### Portfolio
+
+```console
+fundlog portfolio create <portfolio> [--initial <amount>]
+fundlog portfolio summary <portfolio>
+fundlog portfolio summary --all
+fundlog portfolio reset <portfolio> --yes
+fundlog portfolio delete <portfolio> --yes
+```
+
+Portfolio commands manage portfolio lifecycle and portfolio-wide reporting.
+
+### Capital
+
+```console
+fundlog capital inflow <portfolio> <amount> [--date <date>] [--note <text>]
+fundlog capital outflow <portfolio> <amount> [--date <date>] [--note <text>]
+fundlog capital log <portfolio>
+fundlog capital edit <portfolio> <entry-number>
+fundlog capital delete <portfolio> <entry-number>
+```
+
+Capital commands operate only on external capital entries. Inflow and outflow
+do not represent asset trades. `capital log` is the existing portfolio-local
+capital-entry log.
+
+### Asset
+
+```console
+fundlog asset add <portfolio> <symbol> [symbol...]
+fundlog asset summary <portfolio>
+fundlog asset summary <portfolio>/<symbol>
+fundlog asset log <portfolio>/<symbol>
+fundlog asset delete <portfolio>/<symbol> --yes
+fundlog asset income <portfolio>/<symbol> <amount> [--date <date>] [--note <text>]
+fundlog asset buy <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+fundlog asset sell <portfolio>/<symbol> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+```
+
+`asset summary <portfolio>` shows all active asset summaries in the portfolio.
+`asset summary <portfolio>/<symbol>` shows one active asset. Asset income, buy,
+and sell operations live under `asset` because they require and affect a
+portfolio-owned asset.
+
+## Legacy compatibility aliases
+
+When the organized hierarchy is implemented, existing commands should remain
+temporarily as hidden compatibility aliases:
+
+| Existing command | Official command |
+|---|---|
+| `fundlog create` | `fundlog portfolio create` |
+| `fundlog summary` | `fundlog portfolio summary` |
+| `fundlog reset` | `fundlog portfolio reset` |
+| `fundlog delete <portfolio> --yes` | `fundlog portfolio delete` |
+| `fundlog inflow` | `fundlog capital inflow` |
+| `fundlog outflow` | `fundlog capital outflow` |
+| `fundlog log` | `fundlog capital log` |
+| `fundlog edit` | `fundlog capital edit` |
+| `fundlog delete <portfolio> <entry-number>` | `fundlog capital delete` |
+| `fundlog income` | `fundlog asset income` |
+| `fundlog buy` | `fundlog asset buy` |
+| `fundlog sell` | `fundlog asset sell` |
+
+`fundlog asset list <portfolio>` may remain as a hidden compatibility alias for
+`fundlog asset summary <portfolio>`. The implementation should make that choice
+explicit when the portfolio-wide asset summary is added.
+
+Aliases must preserve existing arguments, validation, output, exit behavior,
+and storage effects. They should delegate to the same command/service path as
+the official command rather than duplicate business logic.
+
+## Commands to show in help
+
+Top-level help should show only:
+
+- `init`
+- `portfolio`
+- `capital`
+- `asset`
+
+Subcommand help should show the official commands:
+
+- `portfolio`: `create`, `summary`, `reset`, `delete`
+- `capital`: `inflow`, `outflow`, `log`, `edit`, `delete`
+- `asset`: `add`, `summary`, `log`, `delete`, `income`, `buy`, `sell`
+
+Examples in help and user-facing documentation should use the official
+hierarchy after it is implemented.
+
+## Commands to hide from help
+
+The compatibility spellings should remain callable but hidden:
+
+- Root `create`, `summary`, `reset`, `delete`
+- Root `inflow`, `outflow`, `log`, `edit`
+- Root `income`, `buy`, `sell`
+- `asset list`, if retained as the portfolio-wide asset-summary alias
+
+Hidden aliases are transitional compatibility behavior, not the preferred
+interface. Before a stable v1 release, the project should explicitly decide
+whether to retain, deprecate, or remove them.
+
+## Future implementation steps
+
+1. Add `portfolio` and `capital` Typer command groups without changing storage
+   or accounting services.
+2. Move asset income, buy, and sell command registration under `asset` while
+   reusing the existing handlers and validation.
+3. Extend `asset summary` to accept either `<portfolio>` or
+   `<portfolio>/<symbol>`.
+4. Register current root spellings as hidden aliases that delegate to the same
+   implementation paths.
+5. Decide whether `asset list` remains as a hidden alias for portfolio-wide
+   `asset summary`.
+6. Update help tests and user documentation only after the organized commands
+   are executable.
+7. Evaluate compatibility alias removal separately before stable v1.
+
 ## Command conventions
 
 - A command names the main action: `create`, `inflow`, `edit`, and so on.
@@ -11,6 +152,12 @@
 - Explicit dates use ISO format `YYYY-MM-DD` and cannot be in the future. An omitted date uses the current local date.
 - A failed command exits nonzero and must not leave partial changes.
 - Portfolio uniqueness must be enforced consistently, including whatever case-normalization policy implementation adopts.
+
+## Current implemented command contracts
+
+The sections below describe the command spellings implemented before the
+hierarchy migration. Their validation and behavior remain authoritative for
+the corresponding future official commands and compatibility aliases.
 
 ## `fundlog init`
 
