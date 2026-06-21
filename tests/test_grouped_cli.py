@@ -83,8 +83,10 @@ def test_official_portfolio_capital_and_asset_workflow(
 
     for transaction_type in ("buy", "income", "sell"):
         assert transaction_type in asset_log.output
-    assert "inflow" in capital_log.output
-    assert "outflow" in capital_log.output
+    assert "deposit" in capital_log.output
+    assert "withdraw" in capital_log.output
+    assert "inflow" not in capital_log.output
+    assert "outflow" not in capital_log.output
 
     list_row = next(
         line for line in portfolio_list.output.splitlines() if "stocks" in line

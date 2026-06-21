@@ -89,7 +89,7 @@ Trade cash effects must be exact in minor units or require the statement
 
 Current portfolio formulas:
 
-- Capital = active inflows - active outflows
+- Capital = active deposits - active withdrawals
 - Cash = Capital + active asset cash effects
 - Positions = active asset position effects
 - Book Value = Cash + Positions

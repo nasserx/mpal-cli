@@ -73,7 +73,7 @@ Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 `--date` is omitted, FundLog uses the current local date.
 
 v0.1 covers initialization, portfolio creation, optional initial capital,
-inflows, outflows, summaries, logs, capital-entry correction and deletion,
+deposits, withdrawals, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The asset foundation adds
 manual symbol creation, summaries, and soft deletion under existing
 portfolios. The read-only asset log and its transaction storage foundation are

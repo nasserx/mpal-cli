@@ -38,6 +38,19 @@ def format_income_money(amount_minor: int) -> Text:
     return Text(format_money(amount_minor), style=INCOME)
 
 
+def format_capital_entry_type(entry_type: str) -> Text:
+    """Format an internal capital entry type for user-facing logs."""
+    if entry_type == "outflow":
+        return Text("withdraw", style=LOSS)
+    return Text("deposit", style=TABLE_CELL)
+
+
+def format_capital_entry_amount(entry_type: str, amount_minor: int) -> Text:
+    """Format capital-entry money with withdrawal-only loss styling."""
+    style = LOSS if entry_type == "outflow" else TABLE_CELL
+    return Text(format_money(amount_minor), style=style)
+
+
 def result_style(value: int | Decimal) -> str:
     """Return the semantic style for a signed financial result."""
     if value > 0:

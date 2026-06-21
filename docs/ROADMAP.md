@@ -19,8 +19,8 @@ implemented. Official help exposes only `init`, `portfolio`, `capital`, and
 - `init`.
 - Create a portfolio.
 - Create a portfolio with initial capital.
-- Record inflows.
-- Record outflows with Cash validation.
+- Record deposits.
+- Record withdrawals with Cash validation.
 - Show a portfolio summary.
 - Show all portfolio summaries.
 - Show a portfolio capital-entry log.

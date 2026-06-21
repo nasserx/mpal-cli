@@ -8,6 +8,8 @@ from typer.testing import CliRunner
 from fundlog.cli import app
 from fundlog.output import console as console_output
 from fundlog.output.formatting import (
+    format_capital_entry_amount,
+    format_capital_entry_type,
     format_income_money,
     format_profit_loss_money,
     format_profit_loss_percent,
@@ -161,6 +163,18 @@ def test_semantic_result_helpers_use_reusable_theme_styles() -> None:
     assert format_profit_loss_percent(1, -100).style == LOSS
     assert format_profit_loss_percent(-1, -100).style == PROFIT
     assert format_income_money(1).style == INCOME
+
+
+def test_capital_log_styles_withdrawals_only() -> None:
+    assert format_capital_entry_type("outflow").plain == "withdraw"
+    assert format_capital_entry_type("outflow").style == LOSS
+    assert format_capital_entry_amount("outflow", 25_000).plain == "250.00"
+    assert format_capital_entry_amount("outflow", 25_000).style == LOSS
+
+    assert format_capital_entry_type("inflow").plain == "deposit"
+    assert format_capital_entry_type("inflow").style == TABLE_CELL
+    assert format_capital_entry_amount("inflow", 100_000).plain == "1,000.00"
+    assert format_capital_entry_amount("inflow", 100_000).style == TABLE_CELL
 
 
 def test_signed_percent_uses_exact_formula_and_neutral_zero() -> None:

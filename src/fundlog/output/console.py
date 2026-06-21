@@ -9,6 +9,8 @@ from rich.text import Text
 from fundlog.amounts import format_money
 from fundlog.numbers import format_price, format_quantity
 from fundlog.output.formatting import (
+    format_capital_entry_amount,
+    format_capital_entry_type,
     format_income_money,
     format_profit_loss_money,
     format_profit_loss_percent,
@@ -240,8 +242,8 @@ def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
         table.add_row(
             str(entry.entry_no),
             entry.entry_date,
-            entry.entry_type,
-            format_money(entry.amount_minor),
+            format_capital_entry_type(entry.entry_type),
+            format_capital_entry_amount(entry.entry_type, entry.amount_minor),
             entry.note or "",
         )
     Console().print(table)

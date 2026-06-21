@@ -4,7 +4,7 @@
 
 FundLog is fully manual. It derives financial results only from active recorded operations and does not use live prices, market APIs, automatic valuation, market value, or unrealized PnL.
 
-The completed v0.1 capital ledger records portfolio inflows and outflows. The
+The completed v0.1 capital ledger records portfolio deposits and withdrawals. The
 current asset milestone also records manual asset income, buys, and sells.
 Financial amounts use integer minor units in storage and decimal-safe logic in
 application code; binary floating point is not used.
@@ -41,7 +41,7 @@ External capital only.
 
 In v0.1:
 
-`Capital = total active inflows - total active outflows`
+`Capital = total active deposits - total active withdrawals`
 
 ### Cash
 
@@ -49,7 +49,7 @@ Available cash inside the portfolio that is not tied to open positions.
 
 In v0.1:
 
-`Cash = total active inflows - total active outflows`
+`Cash = total active deposits - total active withdrawals`
 
 Implemented manual asset income increases Cash. Buys decrease Cash by exact
 total cash outflow, and sells increase Cash by exact net proceeds.
@@ -121,10 +121,10 @@ remains balanced. This is book cost allocation, not market valuation.
 
 ## Capital entry rules
 
-- An inflow increases Capital and Cash by the same amount.
-- An outflow decreases Capital and Cash by the same amount.
-- An outflow is rejected if Cash is insufficient.
-- An outflow does not affect Realized PnL or Income.
+- A deposit increases Capital and Cash by the same amount.
+- A withdrawal decreases Capital and Cash by the same amount.
+- A withdrawal is rejected if Cash is insufficient.
+- A withdrawal does not affect Realized PnL or Income.
 - Manual asset income increases Cash and Income by the same amount.
 - Income does not affect Capital, Positions, Cost Basis, or Realized PnL.
 - A manual buy decreases Cash and increases Positions by the same exact total.
@@ -166,7 +166,7 @@ Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and In
 fundlog capital withdraw 250 -p stocks
 ```
 
-After the preceding inflow, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
+After the preceding deposit, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
 
 ### Attempt a withdrawal with insufficient Cash
 

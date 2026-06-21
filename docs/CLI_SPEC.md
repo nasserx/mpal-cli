@@ -42,7 +42,7 @@ fundlog portfolio reset <portfolio> --yes
 ```
 
 - `create` creates an active portfolio. `--initial` atomically creates its
-  first capital inflow using the current local date.
+  first capital deposit using the current local date.
 - `list` shows every active portfolio using the standard portfolio financial
   summary columns.
 - `show` shows one active portfolio using the same summary columns.

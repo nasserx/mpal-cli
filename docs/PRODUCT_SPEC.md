@@ -36,13 +36,14 @@ FundLog is not intended to:
 
 A user-managed ledger boundary, such as `stocks`, `etfs`, `crypto`, or `gold`. A portfolio owns its capital entries. Multiple portfolios may exist independently.
 
-### Capital inflow
+### Capital deposit
 
-A recorded amount added to a portfolio. An inflow increases both Capital and Cash.
+A recorded amount added to a portfolio. A deposit increases both Capital and Cash.
 
-### Capital outflow
+### Capital withdrawal
 
-A recorded amount withdrawn from a portfolio. An outflow decreases both Capital and Cash and is rejected when the portfolio has insufficient Cash.
+A recorded amount withdrawn from a portfolio. A withdrawal decreases both
+Capital and Cash and is rejected when the portfolio has insufficient Cash.
 
 ### Cash
 
@@ -64,7 +65,7 @@ records and must not imply market value.
 ### Realized PnL
 
 Profit or loss from closed or partially closed manual positions. It is sell net
-proceeds minus moving-average relieved Cost Basis. Capital inflows and outflows
+proceeds minus moving-average relieved Cost Basis. Capital deposits and withdrawals
 do not produce Realized PnL.
 
 ### Income
@@ -82,9 +83,9 @@ The completed capital ledger and current asset milestone include:
 
 - Initializing local storage.
 - Creating empty portfolios.
-- Recording an initial inflow during portfolio creation.
-- Recording inflows.
-- Recording outflows.
+- Recording an initial deposit during portfolio creation.
+- Recording deposits.
+- Recording withdrawals.
 - Showing one-portfolio or all-portfolio summaries.
 - Showing a portfolio's capital entry log.
 - Editing capital entries.

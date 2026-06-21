@@ -712,7 +712,8 @@ def test_log_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
     assert result.exit_code == 0
-    assert "inflow" in result.output
+    assert "deposit" in result.output
+    assert "inflow" not in result.output
     assert "5,000.50" in result.output
     assert date.today().isoformat() in result.output
 
@@ -1526,7 +1527,7 @@ def test_log_for_empty_portfolio(tmp_path: Path, monkeypatch) -> None:
     assert "No active capital entries for portfolio 'stocks'." in result.output
 
 
-def test_log_shows_inflow_entry_with_date_note_and_amount(
+def test_log_shows_deposit_entry_with_date_note_and_amount(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1556,12 +1557,13 @@ def test_log_shows_inflow_entry_with_date_note_and_amount(
         assert heading in result.output
     assert "│ id " not in result.output
     assert "2026-06-19" in result.output
-    assert "inflow" in result.output
+    assert "deposit" in result.output
+    assert "inflow" not in result.output
     assert "1,000.50" in result.output
     assert "initial deposit" in result.output
 
 
-def test_log_shows_outflow_entry(tmp_path: Path, monkeypatch) -> None:
+def test_log_shows_withdraw_entry(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
@@ -1585,7 +1587,8 @@ def test_log_shows_outflow_entry(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
     assert result.exit_code == 0
-    assert "outflow" in result.output
+    assert "withdraw" in result.output
+    assert "outflow" not in result.output
     assert "250.00" in result.output
     assert "2026-06-20" in result.output
     assert "withdrawal" in result.output

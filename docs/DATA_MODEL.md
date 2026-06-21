@@ -67,7 +67,7 @@ applied during initialization and normal database access.
 - Entries support soft delete and are not physically removed by entry `delete`, `reset`, or portfolio `delete`.
 - Active entries determine current balances.
 - Entry rows and timestamps are retained for future audit tooling.
-- Ledger validation must prevent insufficient-Cash outflows.
+- Ledger validation must prevent insufficient-Cash withdrawals.
 
 ## `assets`
 
