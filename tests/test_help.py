@@ -31,6 +31,7 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
     assert "fundlog " in result.output
     assert " fl " not in result.output
     assert "<portfolio>/<symbol>" not in result.output
+    assert "fundlog asset add <symbol> [symbol...] -p <portfolio>" in result.output
 
 
 def test_group_help_lists_only_current_commands_and_examples() -> None:
@@ -47,6 +48,7 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         assert f"│ {command} " in asset.output
     assert "│ list " not in asset.output
     assert "fundlog capital deposit <amount> -p <portfolio>" in capital.output
+    assert "fundlog asset add <symbol> [symbol...] -p <portfolio>" in asset.output
     assert "fundlog asset summary <symbol> -p <portfolio>" in asset.output
     assert "<portfolio>/<symbol>" not in asset.output
 

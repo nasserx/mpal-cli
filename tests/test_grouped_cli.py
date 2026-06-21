@@ -54,14 +54,49 @@ def test_official_portfolio_capital_and_asset_workflow(
         result = runner.invoke(app, arguments)
         assert result.exit_code == 0, result.output
 
-    assert "AAPL" in runner.invoke(app, ["asset", "summary", "-p", "stocks"]).output
-    assert (
-        "150.00"
-        in runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"]).output
+    asset_list = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    asset_show = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+    capital_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
+    portfolio_list = runner.invoke(app, ["portfolio", "list"])
+    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+
+    for result in (
+        asset_list,
+        asset_show,
+        asset_log,
+        capital_log,
+        portfolio_list,
+        portfolio_show,
+    ):
+        assert result.exit_code == 0
+        assert "Market Value" not in result.output
+        assert "Unrealized PnL" not in result.output
+
+    asset_row = next(line for line in asset_list.output.splitlines() if "AAPL" in line)
+    assert " 7 " in asset_row
+    assert "700.00" in asset_row
+    assert " 100 " in asset_row
+    assert "150.00" in asset_row
+    assert "20.00" in asset_row
+    assert "+17.00%" in asset_row
+
+    for transaction_type in ("buy", "income", "sell"):
+        assert transaction_type in asset_log.output
+    assert "inflow" in capital_log.output
+    assert "outflow" in capital_log.output
+
+    list_row = next(
+        line for line in portfolio_list.output.splitlines() if "stocks" in line
     )
-    assert "sell" in runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"]).output
-    assert "stocks" in runner.invoke(app, ["portfolio", "list"]).output
-    assert "stocks" in runner.invoke(app, ["portfolio", "show", "stocks"]).output
+    show_row = next(
+        line for line in portfolio_show.output.splitlines() if "stocks" in line
+    )
+    assert list_row == show_row
+    for value in ("2,050.00", "1,520.00", "700.00", "2,220.00", "150.00"):
+        assert value in show_row
+    assert "20.00" in show_row
+    assert "+8.29%" in show_row
 
 
 @pytest.mark.parametrize(
@@ -106,7 +141,7 @@ def test_portfolio_option_is_required(arguments: list[str]) -> None:
     ],
 )
 def test_legacy_root_commands_are_removed(command: str) -> None:
-    result = runner.invoke(app, [command, "--help"])
+    result = runner.invoke(app, [command])
 
     assert result.exit_code == 2
     assert f"No such command '{command}'" in result.output
@@ -116,12 +151,12 @@ def test_legacy_root_commands_are_removed(command: str) -> None:
     "arguments",
     [
         ["asset", "list", "stocks"],
-        ["asset", "summary", "stocks/AAPL"],
-        ["asset", "log", "stocks/AAPL"],
+        ["asset", "summary", "stocks/MSFT"],
+        ["asset", "log", "stocks/MSFT"],
         [
             "asset",
             "buy",
-            "stocks/AAPL",
+            "stocks/MSFT",
             "--price",
             "1",
             "--quantity",
@@ -130,14 +165,14 @@ def test_legacy_root_commands_are_removed(command: str) -> None:
         [
             "asset",
             "sell",
-            "stocks/AAPL",
+            "stocks/MSFT",
             "--price",
             "1",
             "--quantity",
             "1",
         ],
-        ["asset", "income", "stocks/AAPL", "1"],
-        ["asset", "delete", "stocks/AAPL", "--yes"],
+        ["asset", "income", "stocks/MSFT", "1"],
+        ["asset", "delete", "stocks/MSFT", "--yes"],
     ],
 )
 def test_legacy_asset_command_shapes_are_removed(arguments: list[str]) -> None:

@@ -55,7 +55,7 @@ PORTFOLIO_OPTION = typer.Option(
     help="Portfolio name.",
 )
 
-HELP_EXAMPLES = """Examples:
+HELP_EXAMPLES = r"""Examples:
 
   fundlog init
 
@@ -67,7 +67,7 @@ HELP_EXAMPLES = """Examples:
 
   fundlog capital deposit <amount> -p <portfolio>
 
-  fundlog asset add <symbol> [symbol...] -p <portfolio>
+  fundlog asset add <symbol> \[symbol...] -p <portfolio>
 
   fundlog asset summary [<symbol>] -p <portfolio>
 """
@@ -98,9 +98,9 @@ CAPITAL_HELP_EXAMPLES = """Examples:
   fundlog capital delete <entry-number> -p <portfolio>
 """
 
-ASSET_HELP_EXAMPLES = """Examples:
+ASSET_HELP_EXAMPLES = r"""Examples:
 
-  fundlog asset add <symbol> [symbol...] -p <portfolio>
+  fundlog asset add <symbol> \[symbol...] -p <portfolio>
 
   fundlog asset summary -p <portfolio>
 
