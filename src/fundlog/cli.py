@@ -7,7 +7,7 @@ import typer
 
 from fundlog import __version__
 from fundlog.amounts import parse_amount_minor
-from fundlog.assets import parse_asset_reference
+from fundlog.assets import normalize_symbol
 from fundlog.config import APP_NAME
 from fundlog.dates import parse_transaction_date
 from fundlog.errors import FundLogError
@@ -49,102 +49,73 @@ from fundlog.storage import (
     reset_portfolio_entries,
 )
 
-ASSET_ADD_SHAPE = r"fundlog asset add <portfolio> <symbol> \[symbol...]"
-ASSET_BUY_SHAPE = (
-    "fundlog asset buy <portfolio>/<symbol> --price <price> "
-    "--quantity <quantity> "
-    "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
-)
-ASSET_SELL_SHAPE = (
-    "fundlog asset sell <portfolio>/<symbol> --price <price> "
-    "--quantity <quantity> "
-    "[--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]"
+PORTFOLIO_OPTION = typer.Option(
+    "--portfolio",
+    "-p",
+    help="Portfolio name.",
 )
 
-HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
-    (
-        "fundlog init",
-        "fundlog portfolio create <portfolio> [--initial <amount>]",
-        "fundlog portfolio summary <portfolio>",
-        "fundlog portfolio summary --all",
-        ("fundlog capital inflow <portfolio> <amount> [--date <date>] [--note <text>]"),
-        (
-            "fundlog capital outflow <portfolio> <amount> "
-            "[--date <date>] [--note <text>]"
-        ),
-        "fundlog capital log <portfolio>",
-        "fundlog capital edit <portfolio> <entry-number>",
-        "fundlog capital delete <portfolio> <entry-number>",
-        ASSET_ADD_SHAPE,
-        "fundlog asset summary <portfolio>",
-        "fundlog asset log <portfolio>/<symbol>",
-        "fundlog asset summary <portfolio>/<symbol>",
-        "fundlog asset delete <portfolio>/<symbol> --yes",
-        (
-            "fundlog asset income <portfolio>/<symbol> <amount> "
-            "[--date <date>] [--note <text>]"
-        ),
-        ASSET_BUY_SHAPE,
-        ASSET_SELL_SHAPE,
-    )
-)
+HELP_EXAMPLES = """Examples:
 
-PORTFOLIO_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
-    (
-        "fundlog portfolio create <portfolio> [--initial <amount>]",
-        "fundlog portfolio summary <portfolio>",
-        "fundlog portfolio summary --all",
-        "fundlog portfolio reset <portfolio> --yes",
-        "fundlog portfolio delete <portfolio> --yes",
-    )
-)
+  fundlog init
 
-PORTFOLIO_SUMMARY_HELP_EXAMPLES = """Examples:
+  fundlog portfolio create <portfolio> [--initial <amount>]
 
-  fundlog portfolio summary <portfolio>
+  fundlog portfolio list
 
-  fundlog portfolio summary --all
+  fundlog portfolio show <portfolio>
+
+  fundlog capital deposit <amount> -p <portfolio>
+
+  fundlog asset add <symbol> [symbol...] -p <portfolio>
+
+  fundlog asset summary [<symbol>] -p <portfolio>
 """
 
-CAPITAL_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
-    (
-        ("fundlog capital inflow <portfolio> <amount> [--date <date>] [--note <text>]"),
-        (
-            "fundlog capital outflow <portfolio> <amount> "
-            "[--date <date>] [--note <text>]"
-        ),
-        "fundlog capital log <portfolio>",
-        "fundlog capital edit <portfolio> <entry-number>",
-        "fundlog capital delete <portfolio> <entry-number>",
-    )
-)
+PORTFOLIO_HELP_EXAMPLES = """Examples:
 
-ASSET_HELP_EXAMPLES = "Examples:\n\n  " + "\n\n  ".join(
-    (
-        ASSET_ADD_SHAPE,
-        "fundlog asset summary <portfolio>",
-        "fundlog asset summary <portfolio>/<symbol>",
-        "fundlog asset log <portfolio>/<symbol>",
-        "fundlog asset delete <portfolio>/<symbol> --yes",
-        (
-            "fundlog asset income <portfolio>/<symbol> <amount> "
-            "[--date <date>] [--note <text>]"
-        ),
-        ASSET_BUY_SHAPE,
-        ASSET_SELL_SHAPE,
-    )
-)
+  fundlog portfolio create <portfolio> [--initial <amount>]
 
-INCOME_HELP_EXAMPLES = """Examples:
+  fundlog portfolio list
 
-  fundlog asset income <portfolio>/<symbol> <amount>
+  fundlog portfolio show <portfolio>
 
-  fundlog asset income <portfolio>/<symbol> <amount> --date <date> --note <text>
+  fundlog portfolio reset <portfolio> --yes
+
+  fundlog portfolio delete <portfolio> --yes
 """
 
-BUY_HELP_EXAMPLES = f"Example:\n\n  {ASSET_BUY_SHAPE}"
+CAPITAL_HELP_EXAMPLES = """Examples:
 
-SELL_HELP_EXAMPLES = f"Example:\n\n  {ASSET_SELL_SHAPE}"
+  fundlog capital deposit <amount> -p <portfolio>
+
+  fundlog capital withdraw <amount> -p <portfolio>
+
+  fundlog capital log -p <portfolio>
+
+  fundlog capital edit <entry-number> -p <portfolio> --amount <amount>
+
+  fundlog capital delete <entry-number> -p <portfolio>
+"""
+
+ASSET_HELP_EXAMPLES = """Examples:
+
+  fundlog asset add <symbol> [symbol...] -p <portfolio>
+
+  fundlog asset summary -p <portfolio>
+
+  fundlog asset summary <symbol> -p <portfolio>
+
+  fundlog asset log <symbol> -p <portfolio>
+
+  fundlog asset income <symbol> <amount> -p <portfolio>
+
+  fundlog asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
+
+  fundlog asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
+
+  fundlog asset delete <symbol> -p <portfolio> --yes
+"""
 
 app = typer.Typer(
     name="fundlog",
@@ -209,13 +180,261 @@ def init_command() -> None:
     print_success(f"FundLog initialized at {database_path}")
 
 
+@portfolio_app.command("create")
+def portfolio_create(
+    portfolio: Annotated[str, typer.Argument(help="Name of the portfolio to create.")],
+    initial: Annotated[
+        str | None,
+        typer.Option("--initial", help="Initial capital deposit amount."),
+    ] = None,
+) -> None:
+    """Create a portfolio, optionally with initial capital."""
+    try:
+        if initial is None:
+            create_portfolio(portfolio)
+        else:
+            amount_minor = parse_amount_minor(initial)
+            create_portfolio_with_initial(
+                portfolio,
+                amount_minor,
+                local_date.today(),
+            )
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if initial is None:
+        print_success(f"Portfolio '{portfolio}' created.")
+    else:
+        print_success(f"Portfolio '{portfolio}' created with initial capital.")
+
+
+@portfolio_app.command("list")
+def portfolio_list() -> None:
+    """Show financial summaries for all active portfolios."""
+    try:
+        summaries = get_all_portfolio_summaries()
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not summaries:
+        print_info("No active portfolios.")
+        return
+    print_portfolio_summaries(summaries)
+
+
+@portfolio_app.command("show")
+def portfolio_show(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+) -> None:
+    """Show one active portfolio's financial summary."""
+    try:
+        summary = get_portfolio_summary(portfolio)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_portfolio_summary(summary)
+
+
+@portfolio_app.command("delete")
+def portfolio_delete(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the portfolio soft delete."),
+    ] = False,
+) -> None:
+    """Soft-delete an entire portfolio and its active related data."""
+    if not yes:
+        print_warning("Delete requires the --yes confirmation flag.")
+        raise typer.Exit(code=1)
+
+    try:
+        delete_portfolio(portfolio)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Portfolio '{portfolio}' deleted.")
+
+
+@portfolio_app.command("reset")
+def portfolio_reset(
+    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the portfolio reset."),
+    ] = False,
+) -> None:
+    """Clear active capital entries while keeping the portfolio."""
+    if not yes:
+        print_warning("Reset requires the --yes confirmation flag.")
+        raise typer.Exit(code=1)
+
+    try:
+        reset_portfolio_entries(portfolio)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Portfolio '{portfolio}' reset.")
+
+
+@capital_app.command("deposit", context_settings={"ignore_unknown_options": True})
+def capital_deposit(
+    amount: Annotated[str, typer.Argument(help="Capital deposit amount.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional entry note."),
+    ] = None,
+) -> None:
+    """Record external money added to a portfolio."""
+    try:
+        amount_minor = parse_amount_minor(amount)
+        entry_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
+        record_inflow(portfolio, amount_minor, entry_date, note)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Deposit recorded for portfolio '{portfolio}'.")
+
+
+@capital_app.command("withdraw", context_settings={"ignore_unknown_options": True})
+def capital_withdraw(
+    amount: Annotated[str, typer.Argument(help="Capital withdrawal amount.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional entry note."),
+    ] = None,
+) -> None:
+    """Record external money withdrawn from a portfolio."""
+    try:
+        amount_minor = parse_amount_minor(amount)
+        entry_date = (
+            local_date.today() if date is None else parse_transaction_date(date)
+        )
+        record_outflow(portfolio, amount_minor, entry_date, note)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Withdrawal recorded for portfolio '{portfolio}'.")
+
+
+@capital_app.command("log")
+def capital_log(
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+) -> None:
+    """Show active capital entries for a portfolio."""
+    try:
+        entries = get_capital_entry_log(portfolio)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not entries:
+        print_info(f"No active capital entries for portfolio '{portfolio}'.")
+        return
+    print_capital_entry_log(entries)
+
+
+@capital_app.command("edit")
+def capital_edit(
+    entry_number: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Entry number shown by the portfolio capital log.",
+        ),
+    ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    amount: Annotated[
+        str | None,
+        typer.Option("--amount", help="Replacement entry amount."),
+    ] = None,
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Replacement date in YYYY-MM-DD; cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Replacement entry note."),
+    ] = None,
+) -> None:
+    """Edit a capital entry by its portfolio-local number."""
+    if amount is None and date is None and note is None:
+        print_error("Provide at least one of --amount, --date, or --note.")
+        raise typer.Exit(code=1)
+
+    try:
+        amount_minor = None if amount is None else parse_amount_minor(amount)
+        entry_date = None if date is None else parse_transaction_date(date)
+        edit_capital_entry(
+            portfolio,
+            entry_number,
+            amount_minor=amount_minor,
+            entry_date=entry_date,
+            note=note,
+        )
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
+
+
+@capital_app.command("delete")
+def capital_delete(
+    entry_number: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Entry number shown by the portfolio capital log.",
+        ),
+    ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+) -> None:
+    """Soft-delete one capital entry by its portfolio-local number."""
+    try:
+        delete_capital_entry(portfolio, entry_number)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Capital entry {entry_number} deleted from portfolio '{portfolio}'.")
+
+
 @asset_app.command("add")
 def asset_add(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
     symbols: Annotated[
         list[str],
         typer.Argument(help="One or more asset symbols."),
     ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
 ) -> None:
     """Add one or more symbols to an existing portfolio."""
     try:
@@ -235,71 +454,31 @@ def asset_add(
     )
 
 
-@asset_app.command("list", hidden=True)
-def asset_list(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-) -> None:
-    """Compatibility alias for portfolio-wide asset summary."""
-    _print_portfolio_asset_summary(portfolio)
-
-
-def _print_portfolio_asset_summary(portfolio: str) -> None:
-    """Print every active asset summary for one active portfolio."""
-    try:
-        assets = get_assets(portfolio)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    if not assets:
-        print_info(f"No active assets for portfolio '{portfolio}'.")
-        return
-    print_assets(assets)
-
-
-@asset_app.command("delete")
-def asset_delete(
-    reference: Annotated[
-        str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
-    ],
-    yes: Annotated[
-        bool,
-        typer.Option("--yes", help="Confirm the asset soft delete."),
-    ] = False,
-) -> None:
-    """Soft-delete an asset from a portfolio."""
-    if not yes:
-        print_warning("Asset delete requires the --yes confirmation flag.")
-        raise typer.Exit(code=1)
-
-    try:
-        portfolio, symbol = parse_asset_reference(reference)
-        delete_asset(portfolio, symbol)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Asset '{symbol}' deleted from portfolio '{portfolio}'.")
-
-
 @asset_app.command("summary")
 def asset_summary(
-    target: Annotated[
-        str,
-        typer.Argument(
-            help="Portfolio name or asset reference in <portfolio>/<symbol> form."
-        ),
-    ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    symbol: Annotated[
+        str | None,
+        typer.Argument(help="Optional asset symbol."),
+    ] = None,
 ) -> None:
     """Show all asset summaries in a portfolio or one asset summary."""
-    if "/" not in target:
-        _print_portfolio_asset_summary(target)
+    if symbol is None:
+        try:
+            assets = get_assets(portfolio)
+        except FundLogError as error:
+            print_error(str(error))
+            raise typer.Exit(code=1) from error
+
+        if not assets:
+            print_info(f"No active assets for portfolio '{portfolio}'.")
+            return
+        print_assets(assets)
         return
 
     try:
-        portfolio, symbol = parse_asset_reference(target)
-        summary = get_asset_summary(portfolio, symbol)
+        normalized_symbol = normalize_symbol(symbol)
+        summary = get_asset_summary(portfolio, normalized_symbol)
     except FundLogError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
@@ -309,41 +488,55 @@ def asset_summary(
 
 @asset_app.command("log")
 def asset_log(
-    reference: Annotated[
-        str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
-    ],
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
 ) -> None:
     """Show active transactions for an asset."""
     try:
-        portfolio, symbol = parse_asset_reference(reference)
-        transactions = get_asset_transaction_log(portfolio, symbol)
+        normalized_symbol = normalize_symbol(symbol)
+        transactions = get_asset_transaction_log(portfolio, normalized_symbol)
     except FundLogError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
     if not transactions:
-        print_info(f"No active transactions for asset '{symbol}/{portfolio}'.")
+        print_info(
+            f"No active transactions for asset '{normalized_symbol}' "
+            f"in portfolio '{portfolio}'."
+        )
         return
-    print_asset_transaction_log(portfolio, symbol, transactions)
+    print_asset_transaction_log(portfolio, normalized_symbol, transactions)
 
 
-@app.command(
-    hidden=True,
-    context_settings={"ignore_unknown_options": True},
-    epilog=INCOME_HELP_EXAMPLES,
-)
-@asset_app.command(
-    "income",
-    context_settings={"ignore_unknown_options": True},
-    epilog=INCOME_HELP_EXAMPLES,
-)
-def income(
-    reference: Annotated[
-        str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
-    ],
+@asset_app.command("delete")
+def asset_delete(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the asset soft delete."),
+    ] = False,
+) -> None:
+    """Soft-delete an asset and its active transactions."""
+    if not yes:
+        print_warning("Asset delete requires the --yes confirmation flag.")
+        raise typer.Exit(code=1)
+
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        delete_asset(portfolio, normalized_symbol)
+    except FundLogError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(f"Asset '{normalized_symbol}' deleted from portfolio '{portfolio}'.")
+
+
+@asset_app.command("income", context_settings={"ignore_unknown_options": True})
+def asset_income(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
     amount: Annotated[str, typer.Argument(help="Asset income amount.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
     date: Annotated[
         str | None,
         typer.Option(
@@ -361,14 +554,14 @@ def income(
 ) -> None:
     """Record manual income for an existing asset."""
     try:
-        portfolio, symbol = parse_asset_reference(reference)
+        normalized_symbol = normalize_symbol(symbol)
         amount_minor = parse_amount_minor(amount)
         transaction_date = (
             local_date.today() if date is None else parse_transaction_date(date)
         )
         record_income(
             portfolio,
-            symbol,
+            normalized_symbol,
             amount_minor,
             transaction_date,
             note,
@@ -377,24 +570,15 @@ def income(
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_success(f"Income recorded for asset '{symbol}/{portfolio}'.")
+    print_success(
+        f"Income recorded for asset '{normalized_symbol}' in portfolio '{portfolio}'."
+    )
 
 
-@app.command(
-    hidden=True,
-    context_settings={"ignore_unknown_options": True},
-    epilog=BUY_HELP_EXAMPLES,
-)
-@asset_app.command(
-    "buy",
-    context_settings={"ignore_unknown_options": True},
-    epilog=BUY_HELP_EXAMPLES,
-)
-def buy(
-    reference: Annotated[
-        str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
-    ],
+@asset_app.command("buy")
+def asset_buy(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
     price: Annotated[str, typer.Option("--price", help="Exact unit price.")],
     quantity: Annotated[
         str,
@@ -425,7 +609,7 @@ def buy(
 ) -> None:
     """Record a manual buy for an existing asset."""
     try:
-        portfolio, symbol = parse_asset_reference(reference)
+        normalized_symbol = normalize_symbol(symbol)
         parsed_price = parse_price(price)
         parsed_quantity = parse_quantity(quantity)
         fee_minor = 0 if fee is None else parse_amount_minor(fee, allow_zero=True)
@@ -441,7 +625,7 @@ def buy(
         )
         record_buy(
             portfolio,
-            symbol,
+            normalized_symbol,
             parsed_price,
             parsed_quantity,
             fee_minor,
@@ -453,24 +637,15 @@ def buy(
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_success(f"Buy recorded for asset '{symbol}/{portfolio}'.")
+    print_success(
+        f"Buy recorded for asset '{normalized_symbol}' in portfolio '{portfolio}'."
+    )
 
 
-@app.command(
-    hidden=True,
-    context_settings={"ignore_unknown_options": True},
-    epilog=SELL_HELP_EXAMPLES,
-)
-@asset_app.command(
-    "sell",
-    context_settings={"ignore_unknown_options": True},
-    epilog=SELL_HELP_EXAMPLES,
-)
-def sell(
-    reference: Annotated[
-        str,
-        typer.Argument(help="Asset reference in <portfolio>/<symbol> form."),
-    ],
+@asset_app.command("sell")
+def asset_sell(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
     price: Annotated[str, typer.Option("--price", help="Exact unit price.")],
     quantity: Annotated[
         str,
@@ -501,7 +676,7 @@ def sell(
 ) -> None:
     """Record a manual sell for an existing asset."""
     try:
-        portfolio, symbol = parse_asset_reference(reference)
+        normalized_symbol = normalize_symbol(symbol)
         parsed_price = parse_price(price)
         parsed_quantity = parse_quantity(quantity)
         fee_minor = 0 if fee is None else parse_amount_minor(fee, allow_zero=True)
@@ -517,7 +692,7 @@ def sell(
         )
         record_sell(
             portfolio,
-            symbol,
+            normalized_symbol,
             parsed_price,
             parsed_quantity,
             fee_minor,
@@ -529,315 +704,6 @@ def sell(
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_success(f"Sell recorded for asset '{symbol}/{portfolio}'.")
-
-
-@app.command(hidden=True)
-@portfolio_app.command("create")
-def create(
-    name: Annotated[str, typer.Argument(help="Name of the portfolio to create.")],
-    initial: Annotated[
-        str | None,
-        typer.Option("--initial", help="Initial capital inflow amount."),
-    ] = None,
-) -> None:
-    """Create a portfolio, optionally with initial capital."""
-    try:
-        if initial is None:
-            create_portfolio(name)
-        else:
-            amount_minor = parse_amount_minor(initial)
-            create_portfolio_with_initial(
-                name,
-                amount_minor,
-                local_date.today(),
-            )
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    if initial is None:
-        print_success(f"Portfolio '{name}' created.")
-    else:
-        print_success(f"Portfolio '{name}' created with initial capital.")
-
-
-@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
-@capital_app.command("inflow", context_settings={"ignore_unknown_options": True})
-def inflow(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    amount: Annotated[str, typer.Argument(help="Capital inflow amount.")],
-    date: Annotated[
-        str | None,
-        typer.Option(
-            "--date",
-            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
-        ),
-    ] = None,
-    note: Annotated[
-        str | None,
-        typer.Option("--note", help="Optional entry note."),
-    ] = None,
-) -> None:
-    """Record money added to a portfolio."""
-    try:
-        amount_minor = parse_amount_minor(amount)
-        entry_date = (
-            local_date.today() if date is None else parse_transaction_date(date)
-        )
-        record_inflow(portfolio, amount_minor, entry_date, note)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Inflow recorded for portfolio '{portfolio}'.")
-
-
-@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
-@capital_app.command("outflow", context_settings={"ignore_unknown_options": True})
-def outflow(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    amount: Annotated[str, typer.Argument(help="Capital outflow amount.")],
-    date: Annotated[
-        str | None,
-        typer.Option(
-            "--date",
-            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
-        ),
-    ] = None,
-    note: Annotated[
-        str | None,
-        typer.Option("--note", help="Optional entry note."),
-    ] = None,
-) -> None:
-    """Record money withdrawn from a portfolio."""
-    try:
-        amount_minor = parse_amount_minor(amount)
-        entry_date = (
-            local_date.today() if date is None else parse_transaction_date(date)
-        )
-        record_outflow(portfolio, amount_minor, entry_date, note)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Outflow recorded for portfolio '{portfolio}'.")
-
-
-@app.command(hidden=True)
-@portfolio_app.command(
-    "summary",
-    epilog=PORTFOLIO_SUMMARY_HELP_EXAMPLES,
-)
-def summary(
-    portfolio: Annotated[
-        str | None,
-        typer.Argument(help="Portfolio name."),
-    ] = None,
-    all_portfolios: Annotated[
-        bool,
-        typer.Option("--all", help="Show all portfolio summaries."),
-    ] = False,
-) -> None:
-    """Show one portfolio summary or all portfolio summaries."""
-    if all_portfolios and portfolio is not None:
-        print_error("A portfolio name cannot be combined with --all.")
-        raise typer.Exit(code=1)
-    if all_portfolios:
-        try:
-            portfolio_summaries = get_all_portfolio_summaries()
-        except FundLogError as error:
-            print_error(str(error))
-            raise typer.Exit(code=1) from error
-
-        if not portfolio_summaries:
-            print_info("No active portfolios.")
-            return
-        print_portfolio_summaries(portfolio_summaries)
-        return
-    if portfolio is None:
-        print_error("A portfolio name is required.")
-        raise typer.Exit(code=1)
-
-    try:
-        portfolio_summary = get_portfolio_summary(portfolio)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_portfolio_summary(portfolio_summary)
-
-
-@app.command(hidden=True)
-@capital_app.command("log")
-def log(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-) -> None:
-    """Show capital entries for a portfolio."""
-    try:
-        entries = get_capital_entry_log(portfolio)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    if not entries:
-        print_info(f"No active capital entries for portfolio '{portfolio}'.")
-        return
-    print_capital_entry_log(entries)
-
-
-@app.command(hidden=True, context_settings={"ignore_unknown_options": True})
-@capital_app.command("edit", context_settings={"ignore_unknown_options": True})
-def edit(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_number: Annotated[
-        int,
-        typer.Argument(
-            metavar="ENTRY_NUMBER",
-            help="Entry number shown by the portfolio capital log.",
-        ),
-    ],
-    amount: Annotated[
-        str | None,
-        typer.Option("--amount", help="Replacement entry amount."),
-    ] = None,
-    date: Annotated[
-        str | None,
-        typer.Option(
-            "--date",
-            help="Replacement date in YYYY-MM-DD; cannot be future.",
-        ),
-    ] = None,
-    note: Annotated[
-        str | None,
-        typer.Option("--note", help="Replacement entry note."),
-    ] = None,
-) -> None:
-    """Edit a capital entry by its number in the portfolio log."""
-    if amount is None and date is None and note is None:
-        print_error("Provide at least one of --amount, --date, or --note.")
-        raise typer.Exit(code=1)
-
-    try:
-        amount_minor = None if amount is None else parse_amount_minor(amount)
-        entry_date = None if date is None else parse_transaction_date(date)
-        edit_capital_entry(
-            portfolio,
-            entry_number,
-            amount_minor=amount_minor,
-            entry_date=entry_date,
-            note=note,
-        )
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
-
-
-@app.command(hidden=True)
-@portfolio_app.command("reset")
-def reset(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    yes: Annotated[
-        bool,
-        typer.Option("--yes", help="Confirm the portfolio reset."),
-    ] = False,
-) -> None:
-    """Clear all entries from a portfolio while keeping the portfolio."""
-    if not yes:
-        print_warning("Reset requires the --yes confirmation flag.")
-        raise typer.Exit(code=1)
-
-    try:
-        reset_portfolio_entries(portfolio)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Portfolio '{portfolio}' reset.")
-
-
-@portfolio_app.command("delete")
-def portfolio_delete(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    yes: Annotated[
-        bool,
-        typer.Option(
-            "--yes",
-            help="Soft-delete the entire portfolio and its entries.",
-        ),
-    ] = False,
-) -> None:
-    """Soft-delete an entire portfolio and its entries."""
-    _delete_portfolio_command(portfolio, yes)
-
-
-@capital_app.command("delete")
-def capital_delete(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_number: Annotated[
-        int,
-        typer.Argument(
-            metavar="ENTRY_NUMBER",
-            help="Entry number shown by the portfolio capital log.",
-        ),
-    ],
-) -> None:
-    """Soft-delete one capital entry by its portfolio-local number."""
-    _delete_capital_entry_command(portfolio, entry_number)
-
-
-@app.command(hidden=True)
-def delete(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-    entry_number: Annotated[
-        int | None,
-        typer.Argument(
-            metavar="ENTRY_NUMBER",
-            help="Entry number shown by the portfolio capital log.",
-        ),
-    ] = None,
-    yes: Annotated[
-        bool,
-        typer.Option(
-            "--yes",
-            help="Soft-delete the entire portfolio and its entries.",
-        ),
-    ] = False,
-) -> None:
-    """Delete an entry, or delete a portfolio with --yes."""
-    if entry_number is not None:
-        if yes:
-            print_warning("Do not combine an entry number with --yes.")
-            raise typer.Exit(code=1)
-        _delete_capital_entry_command(portfolio, entry_number)
-        return
-
-    _delete_portfolio_command(portfolio, yes)
-
-
-def _delete_capital_entry_command(portfolio: str, entry_number: int) -> None:
-    """Run capital-entry deletion for grouped and compatibility commands."""
-    try:
-        delete_capital_entry(portfolio, entry_number)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Capital entry {entry_number} deleted from portfolio '{portfolio}'.")
-
-
-def _delete_portfolio_command(portfolio: str, yes: bool) -> None:
-    """Run portfolio deletion for grouped and compatibility commands."""
-    if not yes:
-        print_warning("Delete requires the --yes confirmation flag.")
-        raise typer.Exit(code=1)
-
-    try:
-        delete_portfolio(portfolio)
-    except FundLogError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_success(f"Portfolio '{portfolio}' deleted.")
+    print_success(
+        f"Sell recorded for asset '{normalized_symbol}' in portfolio '{portfolio}'."
+    )

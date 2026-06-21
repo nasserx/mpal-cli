@@ -32,11 +32,11 @@ def _invoke(*arguments: str):
 
 
 def _create_portfolio(name: str, initial: str) -> None:
-    _invoke("create", name, "--initial", initial)
+    _invoke("portfolio", "create", name, "--initial", initial)
 
 
 def _add_asset(portfolio: str, symbol: str) -> None:
-    _invoke("asset", "add", portfolio, symbol)
+    _invoke("asset", "add", symbol, "-p", portfolio)
 
 
 def _buy(
@@ -46,9 +46,13 @@ def _buy(
     quantity: str,
     total: str,
 ) -> None:
+    portfolio, symbol = reference.split("/")
     _invoke(
+        "asset",
         "buy",
-        reference,
+        symbol,
+        "-p",
+        portfolio,
         "--price",
         price,
         "--quantity",
@@ -65,9 +69,13 @@ def _sell(
     quantity: str,
     total: str,
 ) -> None:
+    portfolio, symbol = reference.split("/")
     _invoke(
+        "asset",
         "sell",
-        reference,
+        symbol,
+        "-p",
+        portfolio,
         "--price",
         price,
         "--quantity",
@@ -78,7 +86,8 @@ def _sell(
 
 
 def _income(reference: str, amount: str) -> None:
-    _invoke("income", reference, amount)
+    portfolio, symbol = reference.split("/")
+    _invoke("asset", "income", symbol, amount, "-p", portfolio)
 
 
 def test_scenarios_a_through_d_preserve_complete_accounting(
@@ -103,7 +112,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 100_000
     assert portfolio.realized_pnl_minor == 0
     assert portfolio.income_minor == 0
-    summary = _invoke("asset", "summary", "stocks/AAPL")
+    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
     assert " 10 " in summary.output
     assert "1,000.00" in summary.output
     assert " 100 " in summary.output
@@ -122,13 +131,13 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 115_000
     assert portfolio.realized_pnl_minor == 15_000
     assert portfolio.income_minor == 0
-    summary = _invoke("asset", "summary", "stocks/AAPL")
+    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
     assert " 7 " in summary.output
     assert "700.00" in summary.output
     assert " 100 " in summary.output
     assert "150.00" in summary.output
     assert "15.00%" in summary.output
-    portfolio_output = _invoke("summary", "stocks")
+    portfolio_output = _invoke("portfolio", "show", "stocks")
     assert "15.00%" in portfolio_output.output
 
     _income("stocks/AAPL", "20.00")
@@ -144,8 +153,8 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 117_000
     assert portfolio.realized_pnl_minor == 15_000
     assert portfolio.income_minor == 2_000
-    assert "17.00%" in _invoke("asset", "summary", "stocks/AAPL").output
-    assert "17.00%" in _invoke("summary", "stocks").output
+    assert "17.00%" in _invoke("asset", "summary", "AAPL", "-p", "stocks").output
+    assert "17.00%" in _invoke("portfolio", "show", "stocks").output
 
     _sell("stocks/AAPL", price="100", quantity="7", total="700.00")
 
@@ -158,7 +167,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.cash_minor == 117_000
     assert portfolio.positions_minor == 0
     assert portfolio.book_value_minor == 117_000
-    summary = _invoke("asset", "summary", "stocks/AAPL")
+    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
     row = next(line for line in summary.output.splitlines() if "150.00" in line)
     assert " 0 " in row
     assert "--" in row
@@ -188,7 +197,7 @@ def test_multiple_assets_are_isolated_and_portfolio_totals_are_additive(
 ) -> None:
     database_path = _initialize(tmp_path, monkeypatch)
     _create_portfolio("stocks", "2000.00")
-    _invoke("asset", "add", "stocks", "AAPL", "MSFT")
+    _invoke("asset", "add", "AAPL", "MSFT", "-p", "stocks")
     _buy("stocks/AAPL", price="100", quantity="10", total="1000.00")
     _sell("stocks/AAPL", price="150", quantity="3", total="450.00")
     _income("stocks/AAPL", "20.00")
@@ -225,9 +234,9 @@ def test_multiple_assets_are_isolated_and_portfolio_totals_are_additive(
         portfolio.realized_pnl_minor,
         portfolio.income_minor,
     ) == (200_000, 136_000, 85_000, 221_000, 18_000, 3_000)
-    assert "10.50%" in _invoke("summary", "stocks").output
-    assert "17.00%" in _invoke("asset", "summary", "stocks/AAPL").output
-    assert "20.00%" in _invoke("asset", "summary", "stocks/MSFT").output
+    assert "10.50%" in _invoke("portfolio", "show", "stocks").output
+    assert "17.00%" in _invoke("asset", "summary", "AAPL", "-p", "stocks").output
+    assert "20.00%" in _invoke("asset", "summary", "MSFT", "-p", "stocks").output
 
 
 def test_same_symbol_is_isolated_by_portfolio(
@@ -283,7 +292,7 @@ def test_asset_delete_removes_only_its_effects_and_preserves_rows(
 ) -> None:
     database_path = _initialize(tmp_path, monkeypatch)
     _create_portfolio("stocks", "2000.00")
-    _invoke("asset", "add", "stocks", "AAPL", "MSFT")
+    _invoke("asset", "add", "AAPL", "MSFT", "-p", "stocks")
     _buy("stocks/AAPL", price="100", quantity="10", total="1000.00")
     _sell("stocks/AAPL", price="150", quantity="3", total="450.00")
     _income("stocks/AAPL", "20.00")
@@ -291,7 +300,7 @@ def test_asset_delete_removes_only_its_effects_and_preserves_rows(
     _sell("stocks/MSFT", price="80", quantity="1", total="80.00")
     _income("stocks/MSFT", "10.00")
 
-    _invoke("asset", "delete", "stocks/AAPL", "--yes")
+    _invoke("asset", "delete", "AAPL", "-p", "stocks", "--yes")
 
     assert [asset.symbol for asset in get_assets("stocks", database_path)] == ["MSFT"]
     msft = get_asset_summary("stocks", "MSFT", database_path)
@@ -309,15 +318,15 @@ def test_asset_delete_removes_only_its_effects_and_preserves_rows(
         portfolio.realized_pnl_minor,
         portfolio.income_minor,
     ) == (189_000, 15_000, 204_000, 3_000, 1_000)
-    list_output = _invoke("asset", "list", "stocks").output
-    all_output = _invoke("summary", "--all").output
+    list_output = _invoke("asset", "summary", "-p", "stocks").output
+    all_output = _invoke("portfolio", "list").output
     assert "AAPL" not in list_output
     assert "MSFT" in list_output
     assert "1,890.00" in all_output
     assert "150.00" in all_output
 
-    deleted_summary = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
-    deleted_log = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    deleted_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    deleted_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
     assert deleted_summary.exit_code == 1
     assert deleted_log.exit_code == 1
 
@@ -370,7 +379,7 @@ def test_soft_deleted_transaction_is_excluded_from_every_read_model(
     assert portfolio.book_value_minor == 100_000
     assert portfolio.income_minor == 0
     assert all_summaries == [portfolio]
-    log_output = _invoke("asset", "log", "stocks/AAPL").output
+    log_output = _invoke("asset", "log", "AAPL", "-p", "stocks").output
     assert "No active transactions" in log_output
 
 

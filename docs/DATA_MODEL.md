@@ -41,9 +41,8 @@ applied during initialization and normal database access.
 
 - `name` is required.
 - Portfolio names are unique among active portfolios.
-- New portfolio names reject `/` because it is reserved for
-  `<portfolio>/<symbol>`. Legacy names containing `/`, if any, cannot be used
-  with asset commands and are not escaped.
+- New portfolio names continue to reject `/` under the existing validation
+  contract. The CLI no longer combines portfolio and symbol into one argument.
 - Portfolios support soft delete and are not physically removed by `delete`.
 - Deleting a portfolio also soft-deletes its active capital entries atomically.
 - A deleted portfolio name may be reused because uniqueness applies only to active portfolios.

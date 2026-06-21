@@ -19,8 +19,8 @@ def _initialize_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
-    assert runner.invoke(app, ["create", portfolio]).exit_code == 0
-    assert runner.invoke(app, ["asset", "add", portfolio, symbol]).exit_code == 0
+    assert runner.invoke(app, ["portfolio", "create", portfolio]).exit_code == 0
+    assert runner.invoke(app, ["asset", "add", symbol, "-p", portfolio]).exit_code == 0
     return data_dir / "fundlog.db"
 
 
@@ -202,10 +202,13 @@ def test_normal_command_migrates_asset_transactions_for_legacy_database(
             """
         )
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
-    assert "No active transactions for asset 'AAPL/stocks'." in result.output
+    assert (
+        "No active transactions for asset 'AAPL' in portfolio 'stocks'."
+        in result.output
+    )
     with sqlite3.connect(database_path) as connection:
         table = connection.execute(
             """
@@ -224,7 +227,7 @@ def test_asset_log_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -237,10 +240,10 @@ def test_asset_log_rejects_invalid_reference(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    for reference in ("stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"):
-        result = runner.invoke(app, ["asset", "log", reference])
+    for symbol in ("/AAPL", "AAPL/", "AAPL/extra"):
+        result = runner.invoke(app, ["asset", "log", symbol, "-p", "stocks"])
         assert result.exit_code == 1
-        assert "Invalid asset reference" in result.output
+        assert "Invalid symbol" in result.output
 
 
 def test_asset_log_requires_active_portfolio(
@@ -251,7 +254,7 @@ def test_asset_log_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -264,9 +267,9 @@ def test_asset_log_requires_active_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -280,10 +283,13 @@ def test_asset_log_shows_deterministic_empty_message(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "log", "stocks/aapl"])
+    result = runner.invoke(app, ["asset", "log", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
-    assert "No active transactions for asset 'AAPL/stocks'." in result.output
+    assert (
+        "No active transactions for asset 'AAPL' in portfolio 'stocks'."
+        in result.output
+    )
 
 
 def test_asset_log_displays_title_columns_and_formatted_values(
@@ -304,7 +310,7 @@ def test_asset_log_displays_title_columns_and_formatted_values(
         note="manual fixture",
     )
 
-    result = runner.invoke(app, ["asset", "log", "stocks/aapl"])
+    result = runner.invoke(app, ["asset", "log", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "AAPL/stocks" not in result.output
@@ -336,7 +342,7 @@ def test_asset_log_income_row_uses_placeholders(
         total_minor=5_000,
     )
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("--") >= 2
@@ -380,7 +386,7 @@ def test_asset_log_orders_by_date_then_entry_number_and_hides_deleted_rows(
         deleted=True,
     )
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.index("first") < result.output.index("second")

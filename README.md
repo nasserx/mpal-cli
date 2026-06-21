@@ -40,34 +40,31 @@ fundlog init
 
 fundlog portfolio create stocks
 fundlog portfolio create stocks --initial 5000
-fundlog portfolio summary stocks
-fundlog portfolio summary --all
+fundlog portfolio list
+fundlog portfolio show stocks
 fundlog portfolio reset stocks --yes
 fundlog portfolio delete stocks --yes
 
-fundlog capital inflow stocks 1000
-fundlog capital outflow stocks 250 --date 2026-06-19 --note "withdrawal"
-fundlog capital log stocks
-fundlog capital edit stocks 2 --amount 500
-fundlog capital delete stocks 2
+fundlog capital deposit 1000 -p stocks
+fundlog capital withdraw 250 --portfolio stocks --date 2026-06-19 --note "withdrawal"
+fundlog capital log -p stocks
+fundlog capital edit 2 -p stocks --amount 500
+fundlog capital delete 2 -p stocks
 
-fundlog asset add stocks AAPL AMZN MSFT
-fundlog asset summary stocks
-fundlog asset summary stocks/AAPL
-fundlog asset log stocks/AAPL
-fundlog asset delete stocks/AAPL --yes
-fundlog asset income stocks/AAPL 32 --date 2026-06-20 --note "Dividend"
-fundlog asset buy stocks/AAPL --price 234.43 --quantity 3 --fee 2.30
-fundlog asset sell stocks/AAPL --price 235.50 --quantity 1 --fee 1.25
+fundlog asset add AAPL AMZN MSFT -p stocks
+fundlog asset summary -p stocks
+fundlog asset summary AAPL -p stocks
+fundlog asset log AAPL -p stocks
+fundlog asset delete AAPL -p stocks --yes
+fundlog asset income AAPL 32 -p stocks --date 2026-06-20 --note "Distribution"
+fundlog asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
+fundlog asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
-The earlier root commands remain callable as hidden compatibility aliases so
-existing scripts do not break abruptly. Official help and examples use the
-grouped commands. `fundlog asset summary stocks`
-shows all active asset summaries in the portfolio, while
-`fundlog asset summary stocks/AAPL` shows one asset. The older
-`fundlog asset list stocks` spelling remains callable as a hidden compatibility
-alias for the portfolio-wide summary.
+Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
+The previous root commands, `asset list`, and the old combined
+portfolio/symbol argument form have been removed. No compatibility aliases are
+kept in this CLI redesign.
 
 Entry numbers shown by `fundlog capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.

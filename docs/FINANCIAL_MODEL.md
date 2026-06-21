@@ -152,26 +152,26 @@ remains balanced. This is book cost allocation, not market valuation.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | stocks | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00% |
 
-### Add an inflow
+### Add a deposit
 
 ```console
-fundlog capital inflow stocks 1000
+fundlog capital deposit 1000 -p stocks
 ```
 
 Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
 
-### Add an outflow
+### Add a withdrawal
 
 ```console
-fundlog capital outflow stocks 250
+fundlog capital withdraw 250 -p stocks
 ```
 
 After the preceding inflow, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
 
-### Attempt an outflow with insufficient Cash
+### Attempt a withdrawal with insufficient Cash
 
 ```console
-fundlog capital outflow stocks 1000
+fundlog capital withdraw 1000 -p stocks
 ```
 
 With only `750.00` Cash available, the command fails, creates no entry, and leaves the summary unchanged.

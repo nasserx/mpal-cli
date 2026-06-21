@@ -21,8 +21,10 @@ def _initialize_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
-    assert runner.invoke(app, ["create", portfolio]).exit_code == 0
-    assert runner.invoke(app, ["asset", "add", portfolio, *symbols]).exit_code == 0
+    assert runner.invoke(app, ["portfolio", "create", portfolio]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "add", *symbols, "-p", portfolio]).exit_code == 0
+    )
     return data_dir / "fundlog.db"
 
 
@@ -33,9 +35,13 @@ def _buy(
     quantity: str,
     total: str | None = None,
 ) -> None:
+    portfolio, symbol = reference.split("/", maxsplit=1)
     arguments = [
+        "asset",
         "buy",
-        reference,
+        symbol,
+        "-p",
+        portfolio,
         "--price",
         price,
         "--quantity",
@@ -47,9 +53,20 @@ def _buy(
 
 
 def _sell(reference: str, *, price: str, quantity: str) -> None:
+    portfolio, symbol = reference.split("/", maxsplit=1)
     result = runner.invoke(
         app,
-        ["sell", reference, "--price", price, "--quantity", quantity],
+        [
+            "asset",
+            "sell",
+            symbol,
+            "-p",
+            portfolio,
+            "--price",
+            price,
+            "--quantity",
+            quantity,
+        ],
     )
     assert result.exit_code == 0
 
@@ -61,7 +78,7 @@ def test_asset_summary_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -69,20 +86,20 @@ def test_asset_summary_requires_initialized_database(
 
 
 @pytest.mark.parametrize(
-    "reference",
-    ["/AAPL", "stocks/", "stocks/AAPL/extra"],
+    "symbol",
+    ["/AAPL", "AAPL/", "AAPL/extra"],
 )
-def test_asset_summary_rejects_invalid_asset_reference(
+def test_asset_summary_rejects_invalid_symbol(
     tmp_path: Path,
     monkeypatch,
-    reference: str,
+    symbol: str,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "summary", reference])
+    result = runner.invoke(app, ["asset", "summary", symbol, "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Invalid asset reference" in result.output
+    assert "Invalid symbol" in result.output
     assert "Traceback" not in result.output
 
 
@@ -93,7 +110,7 @@ def test_portfolio_asset_summary_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "summary", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -108,7 +125,7 @@ def test_portfolio_asset_summary_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -121,9 +138,9 @@ def test_portfolio_asset_summary_shows_empty_message(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "No active assets for portfolio 'stocks'." in result.output
@@ -136,12 +153,12 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
     _initialize_asset(tmp_path, monkeypatch, symbols=("MSFT", "AAPL"))
     _buy("stocks/AAPL", price="100", quantity="10")
     _sell("stocks/AAPL", price="150", quantity="3")
-    runner.invoke(app, ["income", "stocks/AAPL", "20"])
+    runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"])
     _buy("stocks/MSFT", price="50", quantity="4")
     _sell("stocks/MSFT", price="80", quantity="1")
-    runner.invoke(app, ["income", "stocks/MSFT", "10"])
+    runner.invoke(app, ["asset", "income", "MSFT", "10", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     for column in (
@@ -179,29 +196,29 @@ def test_portfolio_asset_summary_excludes_deleted_assets(
     _initialize_asset(tmp_path, monkeypatch, symbols=("AAPL", "MSFT"))
     _buy("stocks/AAPL", price="100", quantity="1")
     _buy("stocks/MSFT", price="50", quantity="1")
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "AAPL" not in result.output
     assert "MSFT" in result.output
 
 
-def test_asset_list_is_hidden_compatibility_alias(
+def test_asset_list_is_removed(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, symbols=("AAPL", "MSFT"))
     _buy("stocks/AAPL", price="100", quantity="1")
 
-    official = runner.invoke(app, ["asset", "summary", "stocks"])
-    alias = runner.invoke(app, ["asset", "list", "stocks"])
+    official = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    removed = runner.invoke(app, ["asset", "list", "stocks"])
     help_result = runner.invoke(app, ["asset", "--help"])
 
     assert official.exit_code == 0
-    assert alias.exit_code == 0
-    assert alias.output == official.output
+    assert removed.exit_code == 2
+    assert "No such command 'list'" in removed.output
     assert "list" not in help_result.output
 
 
@@ -213,7 +230,7 @@ def test_asset_summary_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -223,9 +240,9 @@ def test_asset_summary_requires_active_asset(tmp_path: Path, monkeypatch) -> Non
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -235,9 +252,9 @@ def test_asset_summary_requires_active_asset(tmp_path: Path, monkeypatch) -> Non
 
 def test_asset_summary_fails_for_deleted_asset(tmp_path: Path, monkeypatch) -> None:
     _initialize_asset(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -251,7 +268,7 @@ def test_empty_asset_summary_has_documented_columns_and_values(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/aapl"])
+    result = runner.invoke(app, ["asset", "summary", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
     columns = (
@@ -278,7 +295,7 @@ def test_asset_summary_after_buy_shows_open_accounting_values(
     _initialize_asset(tmp_path, monkeypatch)
     _buy("stocks/AAPL", price="100", quantity="10")
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "1,000.00" in line)
@@ -293,9 +310,12 @@ def test_income_without_buy_cost_keeps_zero_realized_return(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
-    assert runner.invoke(app, ["income", "stocks/AAPL", "25"]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "income", "AAPL", "25", "-p", "stocks"]).exit_code
+        == 0
+    )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "25.00" in result.output
@@ -308,9 +328,12 @@ def test_buy_plus_income_uses_total_buy_cost_for_realized_return(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
     _buy("stocks/AAPL", price="100", quantity="10")
-    assert runner.invoke(app, ["income", "stocks/AAPL", "50"]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "income", "AAPL", "50", "-p", "stocks"]).exit_code
+        == 0
+    )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "50.00" in result.output
@@ -325,7 +348,7 @@ def test_partial_sell_reduces_quantity_and_cost_basis_and_shows_pnl(
     _buy("stocks/AAPL", price="100", quantity="10")
     _sell("stocks/AAPL", price="150", quantity="3")
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "700.00" in line)
@@ -342,9 +365,12 @@ def test_partial_sell_return_includes_income(
     _initialize_asset(tmp_path, monkeypatch)
     _buy("stocks/AAPL", price="100", quantity="10")
     _sell("stocks/AAPL", price="150", quantity="3")
-    assert runner.invoke(app, ["income", "stocks/AAPL", "50"]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "income", "AAPL", "50", "-p", "stocks"]).exit_code
+        == 0
+    )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "150.00" in result.output
@@ -360,7 +386,7 @@ def test_full_sell_keeps_realized_results_with_no_average_cost(
     _buy("stocks/AAPL", price="100", quantity="10")
     _sell("stocks/AAPL", price="120", quantity="10")
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "200.00" in line)
@@ -382,7 +408,7 @@ def test_average_cost_uses_price_style_precision(
         total="10.00",
     )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "3.333333333333333333" in result.output
@@ -401,7 +427,7 @@ def test_quantity_and_money_columns_use_distinct_formatting(
         total="1000.00",
     )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "123,456.0543" in result.output
@@ -424,7 +450,7 @@ def test_soft_deleted_transactions_are_excluded(
             """
         )
 
-    result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "1,000.00" not in result.output
@@ -439,16 +465,16 @@ def test_deleting_one_asset_does_not_change_another_asset_summary(
     _initialize_asset(tmp_path, monkeypatch, symbols=("AAPL", "MSFT"))
     _buy("stocks/AAPL", price="100", quantity="10")
     _buy("stocks/MSFT", price="50", quantity="4")
-    before = runner.invoke(app, ["asset", "summary", "stocks/MSFT"])
+    before = runner.invoke(app, ["asset", "summary", "MSFT", "-p", "stocks"])
 
     assert (
         runner.invoke(
             app,
-            ["asset", "delete", "stocks/AAPL", "--yes"],
+            ["asset", "delete", "AAPL", "-p", "stocks", "--yes"],
         ).exit_code
         == 0
     )
-    after = runner.invoke(app, ["asset", "summary", "stocks/MSFT"])
+    after = runner.invoke(app, ["asset", "summary", "MSFT", "-p", "stocks"])
 
     assert before.exit_code == 0
     assert after.exit_code == 0

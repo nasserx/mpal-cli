@@ -33,10 +33,6 @@ class AssetAlreadyExistsError(FundLogError):
     """Raised when an active asset symbol already exists in a portfolio."""
 
 
-class InvalidAssetReferenceError(FundLogError):
-    """Raised when a portfolio/symbol asset reference is invalid."""
-
-
 class AssetNotFoundError(FundLogError):
     """Raised when an active asset cannot be found in an active portfolio."""
 

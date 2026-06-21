@@ -31,19 +31,22 @@ def _initialize_asset(
     assert (
         runner.invoke(
             app,
-            ["create", "stocks", "--initial", initial],
+            ["portfolio", "create", "stocks", "--initial", initial],
         ).exit_code
         == 0
     )
-    assert runner.invoke(app, ["asset", "add", "stocks", "AAPL"]).exit_code == 0
+    assert runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"]).exit_code == 0
 
 
 def _buy(*, price: str, quantity: str) -> None:
     result = runner.invoke(
         app,
         [
+            "asset",
             "buy",
-            "stocks/AAPL",
+            "AAPL",
+            "-p",
+            "stocks",
             "--price",
             price,
             "--quantity",
@@ -57,8 +60,11 @@ def _sell(*, price: str, quantity: str) -> None:
     result = runner.invoke(
         app,
         [
+            "asset",
             "sell",
-            "stocks/AAPL",
+            "AAPL",
+            "-p",
+            "stocks",
             "--price",
             price,
             "--quantity",
@@ -75,8 +81,8 @@ def test_asset_outputs_omit_standalone_title_and_keep_tables(
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="1")
 
-    log_result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
-    summary_result = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
+    log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+    summary_result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     for result in (log_result, summary_result):
         assert result.exit_code == 0
@@ -98,9 +104,9 @@ def test_positive_profit_and_returns_show_explicit_plus_sign(
     _buy(price="100", quantity="1")
     _sell(price="150", quantity="1")
 
-    asset_list = runner.invoke(app, ["asset", "list", "stocks"])
-    asset_summary = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
-    portfolio = runner.invoke(app, ["summary", "stocks"])
+    asset_list = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+50.00" in asset_list.output
     assert "+50.00%" in asset_list.output
@@ -118,8 +124,8 @@ def test_negative_profit_and_returns_keep_minus_sign(
     _buy(price="100", quantity="1")
     _sell(price="80", quantity="1")
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
-    portfolio = runner.invoke(app, ["summary", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "-20.00" in asset_summary.output
     assert "-20.00%" in asset_summary.output
@@ -134,8 +140,8 @@ def test_zero_profit_and_returns_remain_unsigned(
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="1")
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
-    portfolio = runner.invoke(app, ["summary", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+0.00" not in asset_summary.output
     assert "+0.00%" not in asset_summary.output
@@ -198,10 +204,13 @@ def test_buy_sell_income_formulas_remain_correct_with_signed_display(
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="10")
     _sell(price="150", quantity="3")
-    assert runner.invoke(app, ["income", "stocks/AAPL", "20"]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"]).exit_code
+        == 0
+    )
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "stocks/AAPL"])
-    portfolio = runner.invoke(app, ["summary", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+150.00" in asset_summary.output
     assert "20.00" in asset_summary.output

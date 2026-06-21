@@ -79,7 +79,7 @@ def create_portfolio_with_initial(
 
 
 def _validate_portfolio_name(name: str) -> None:
-    """Validate a portfolio name against CLI and asset-reference rules."""
+    """Validate a portfolio name against the current naming rules."""
     if not name.strip():
         raise InvalidPortfolioNameError("Portfolio name cannot be empty.")
     if "/" in name:

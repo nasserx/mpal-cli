@@ -8,9 +8,9 @@ income, buys, sells, moving-average Cost Basis, and Realized PnL are now
 implemented, including asset summary output. The governing contract is
 documented in `docs/ASSETS_SPEC.md`.
 
-The final command hierarchy documented in `docs/CLI_SPEC.md` is implemented.
-Official help shows the grouped commands, while earlier root commands remain
-as hidden compatibility aliases.
+The breaking command hierarchy documented in `docs/CLI_SPEC.md` is
+implemented. Official help exposes only `init`, `portfolio`, `capital`, and
+`asset` at the root.
 
 ## v0.1 — Capital ledger foundation
 
@@ -65,8 +65,11 @@ FundLog will remain fully manual. Live prices, market APIs, market value, and un
 
 - Official `portfolio`, `capital`, and organized `asset` command groups are
   implemented.
-- Portfolio-wide `asset summary <portfolio>` is implemented.
-- Existing root commands remain as hidden compatibility aliases.
-- `asset list` remains as a hidden alias for portfolio-wide asset summary.
+- Portfolio-scoped capital and asset operations use required `--portfolio` /
+  `-p`.
+- Portfolio-wide `asset summary -p <portfolio>` is implemented.
+- The previous root commands are removed.
+- The old combined portfolio/symbol argument form is removed.
+- `asset list` is removed.
+- No compatibility aliases are retained.
 - Official commands are shown in help.
-- Review alias retention or removal before stable v1.

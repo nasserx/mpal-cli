@@ -23,11 +23,11 @@ def _initialize_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
-    create_args = ["create", portfolio]
+    create_args = ["portfolio", "create", portfolio]
     if initial is not None:
         create_args.extend(["--initial", initial])
     assert runner.invoke(app, create_args).exit_code == 0
-    assert runner.invoke(app, ["asset", "add", portfolio, symbol]).exit_code == 0
+    assert runner.invoke(app, ["asset", "add", symbol, "-p", portfolio]).exit_code == 0
     return data_dir / "fundlog.db"
 
 
@@ -37,11 +37,15 @@ def _buy(
     quantity: str = "3",
     *extra: str,
 ) -> None:
+    portfolio, symbol = reference.split("/", maxsplit=1)
     result = runner.invoke(
         app,
         [
+            "asset",
             "buy",
-            reference,
+            symbol,
+            "-p",
+            portfolio,
             "--price",
             price,
             "--quantity",
@@ -57,9 +61,13 @@ def _sell_args(
     price: str = "110",
     quantity: str = "1",
 ) -> list[str]:
+    portfolio, symbol = reference.split("/", maxsplit=1)
     return [
+        "asset",
         "sell",
-        reference,
+        symbol,
+        "-p",
+        portfolio,
         "--price",
         price,
         "--quantity",
@@ -78,20 +86,33 @@ def test_sell_requires_initialized_database(tmp_path: Path, monkeypatch) -> None
 
 
 @pytest.mark.parametrize(
-    "reference",
-    ["stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"],
+    "symbol",
+    ["/AAPL", "AAPL/", "AAPL/extra"],
 )
-def test_sell_rejects_invalid_asset_reference(
+def test_sell_rejects_invalid_symbol(
     tmp_path: Path,
     monkeypatch,
-    reference: str,
+    symbol: str,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, _sell_args(reference=reference))
+    result = runner.invoke(
+        app,
+        [
+            "asset",
+            "sell",
+            symbol,
+            "-p",
+            "stocks",
+            "--price",
+            "100",
+            "--quantity",
+            "1",
+        ],
+    )
 
     assert result.exit_code == 1
-    assert "Invalid asset reference" in result.output
+    assert "Invalid symbol" in result.output
 
 
 def test_sell_requires_active_portfolio(tmp_path: Path, monkeypatch) -> None:
@@ -107,7 +128,7 @@ def test_sell_requires_active_portfolio(tmp_path: Path, monkeypatch) -> None:
 def test_sell_requires_active_asset(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(tmp_path / "fundlog-data"))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
 
     result = runner.invoke(app, _sell_args())
 
@@ -265,7 +286,7 @@ def test_sell_creates_expected_transaction_fields(
     )
 
     assert result.exit_code == 0
-    assert "Sell recorded for asset 'AAPL/stocks'." in result.output
+    assert "Sell recorded for asset 'AAPL' in portfolio 'stocks'." in result.output
     with sqlite3.connect(database_path) as connection:
         transaction = connection.execute(
             """
@@ -329,7 +350,7 @@ def test_sell_uses_shared_asset_local_number_sequence(
     monkeypatch,
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch)
-    runner.invoke(app, ["income", "stocks/AAPL", "10"])
+    runner.invoke(app, ["asset", "income", "AAPL", "10", "-p", "stocks"])
     _buy()
 
     result = runner.invoke(app, _sell_args())
@@ -555,7 +576,7 @@ def test_sell_appears_in_asset_log_with_formatted_values(
     )
     assert result.exit_code == 0
 
-    log_result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     row = next(line for line in log_result.output.splitlines() if "Large sell" in line)
     assert "sell" in row
@@ -571,10 +592,10 @@ def test_asset_list_aggregates_sell_results_and_income(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="2")
-    runner.invoke(app, ["income", "stocks/AAPL", "10"])
+    runner.invoke(app, ["asset", "income", "AAPL", "10", "-p", "stocks"])
     runner.invoke(app, _sell_args(price="150", quantity="1"))
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
     assert " 1 " in row
@@ -590,11 +611,11 @@ def test_portfolio_summary_applies_sell_accounting(
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
     _buy(price="100", quantity="3")
-    runner.invoke(app, ["income", "stocks/AAPL", "20"])
+    runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"])
 
     result = runner.invoke(app, _sell_args(price="150", quantity="1"))
     assert result.exit_code == 0
-    summary = runner.invoke(app, ["summary", "stocks"])
+    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert "870.00" in row
@@ -610,8 +631,8 @@ def test_summary_all_includes_sell_effects_per_portfolio(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["create", "crypto", "--initial", "500"])
-    runner.invoke(app, ["asset", "add", "crypto", "BTC"])
+    runner.invoke(app, ["portfolio", "create", "crypto", "--initial", "500"])
+    runner.invoke(app, ["asset", "add", "BTC", "-p", "crypto"])
     _buy(price="100", quantity="2")
     _buy(reference="crypto/BTC", price="50", quantity="2")
     runner.invoke(app, _sell_args(price="150", quantity="1"))
@@ -620,7 +641,7 @@ def test_summary_all_includes_sell_effects_per_portfolio(
         _sell_args(reference="crypto/BTC", price="75", quantity="1"),
     )
 
-    result = runner.invoke(app, ["summary", "--all"])
+    result = runner.invoke(app, ["portfolio", "list"])
 
     crypto_row = next(line for line in result.output.splitlines() if "crypto" in line)
     stocks_row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -640,8 +661,8 @@ def test_asset_delete_removes_sell_effects_from_summary(
     _buy(price="100", quantity="2")
     runner.invoke(app, _sell_args(price="150", quantity="1"))
 
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
-    summary = runner.invoke(app, ["summary", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
+    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert row.count("1,000.00") == 3
@@ -662,7 +683,7 @@ def test_deleting_one_asset_preserves_other_asset_sell_effects(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["asset", "add", "stocks", "MSFT"])
+    runner.invoke(app, ["asset", "add", "MSFT", "-p", "stocks"])
     _buy(price="100", quantity="2")
     _buy(reference="stocks/MSFT", price="50", quantity="2")
     runner.invoke(app, _sell_args(price="150", quantity="1"))
@@ -671,9 +692,9 @@ def test_deleting_one_asset_preserves_other_asset_sell_effects(
         _sell_args(reference="stocks/MSFT", price="75", quantity="1"),
     )
 
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
-    summary = runner.invoke(app, ["summary", "stocks"])
-    assets = runner.invoke(app, ["asset", "list", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
+    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
+    assets = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert "975.00" in row

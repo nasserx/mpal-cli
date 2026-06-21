@@ -22,7 +22,7 @@ def _initialize_asset(tmp_path: Path, monkeypatch) -> Path:
         ).exit_code
         == 0
     )
-    assert runner.invoke(app, ["asset", "add", "stocks", "AAPL"]).exit_code == 0
+    assert runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"]).exit_code == 0
     return data_dir / "fundlog.db"
 
 
@@ -32,7 +32,9 @@ def _buy(quantity: str = "8") -> None:
         [
             "asset",
             "buy",
-            "stocks/AAPL",
+            "AAPL",
+            "-p",
+            "stocks",
             "--price",
             "100",
             "--quantity",
@@ -42,22 +44,14 @@ def _buy(quantity: str = "8") -> None:
     assert result.exit_code == 0
 
 
-@pytest.mark.parametrize(
-    "arguments",
-    [
-        ["capital", "outflow", "stocks", "300"],
-        ["outflow", "stocks", "300"],
-    ],
-)
 def test_outflow_validation_includes_active_asset_cash_effects(
     tmp_path: Path,
     monkeypatch,
-    arguments: list[str],
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch)
     _buy()
 
-    result = runner.invoke(app, arguments)
+    result = runner.invoke(app, ["capital", "withdraw", "300", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
@@ -80,7 +74,9 @@ def test_outflow_validation_includes_asset_income_and_sell_proceeds(
             [
                 "asset",
                 "sell",
-                "stocks/AAPL",
+                "AAPL",
+                "-p",
+                "stocks",
                 "--price",
                 "150",
                 "--quantity",
@@ -89,9 +85,12 @@ def test_outflow_validation_includes_asset_income_and_sell_proceeds(
         ).exit_code
         == 0
     )
-    assert runner.invoke(app, ["asset", "income", "stocks/AAPL", "20"]).exit_code == 0
+    assert (
+        runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"]).exit_code
+        == 0
+    )
 
-    result = runner.invoke(app, ["capital", "outflow", "stocks", "170"])
+    result = runner.invoke(app, ["capital", "withdraw", "170", "-p", "stocks"])
 
     assert result.exit_code == 0
 
@@ -105,12 +104,12 @@ def test_outflow_validation_excludes_deleted_asset_cash_effects(
     assert (
         runner.invoke(
             app,
-            ["asset", "delete", "stocks/AAPL", "--yes"],
+            ["asset", "delete", "AAPL", "-p", "stocks", "--yes"],
         ).exit_code
         == 0
     )
 
-    result = runner.invoke(app, ["capital", "outflow", "stocks", "1000"])
+    result = runner.invoke(app, ["capital", "withdraw", "1000", "-p", "stocks"])
 
     assert result.exit_code == 0
 
@@ -124,7 +123,7 @@ def test_edit_validation_includes_active_asset_cash_effects(
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "stocks", "1", "--amount", "700"],
+        ["capital", "edit", "1", "-p", "stocks", "--amount", "700"],
     )
 
     assert result.exit_code == 1
@@ -143,7 +142,7 @@ def test_delete_validation_includes_active_asset_cash_effects(
     database_path = _initialize_asset(tmp_path, monkeypatch)
     _buy()
 
-    result = runner.invoke(app, ["capital", "delete", "stocks", "1"])
+    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Delete would make portfolio cash negative." in result.output
@@ -159,8 +158,8 @@ def test_delete_validation_includes_active_asset_cash_effects(
     [
         ["portfolio", "create", "stocks/growth"],
         ["portfolio", "create", "stocks/growth", "--initial", "1000"],
-        ["create", "stocks/growth"],
-        ["create", "stocks/growth", "--initial", "1000"],
+        ["portfolio", "create", "stocks/growth"],
+        ["portfolio", "create", "stocks/growth", "--initial", "1000"],
     ],
 )
 def test_portfolio_creation_rejects_asset_reference_separator(

@@ -2,7 +2,7 @@
 
 import re
 
-from fundlog.errors import InvalidAssetReferenceError, InvalidSymbolError
+from fundlog.errors import InvalidSymbolError
 
 MAX_SYMBOL_LENGTH = 32
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]*$")
@@ -23,21 +23,3 @@ def normalize_symbol(symbol: str) -> str:
             "start with a letter or number."
         )
     return normalized
-
-
-def parse_asset_reference(reference: str) -> tuple[str, str]:
-    """Return the portfolio name and normalized symbol from an asset reference."""
-    if reference.count("/") != 1:
-        raise InvalidAssetReferenceError(
-            f"Invalid asset reference '{reference}'. "
-            "Use <portfolio>/<symbol> with exactly one '/'."
-        )
-
-    portfolio_name, symbol = reference.split("/")
-    if not portfolio_name or not symbol:
-        raise InvalidAssetReferenceError(
-            f"Invalid asset reference '{reference}'. "
-            "Portfolio and symbol are both required."
-        )
-
-    return portfolio_name, normalize_symbol(symbol)

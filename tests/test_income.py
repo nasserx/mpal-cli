@@ -23,11 +23,11 @@ def _initialize_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
-    create_args = ["create", portfolio]
+    create_args = ["portfolio", "create", portfolio]
     if initial is not None:
         create_args.extend(["--initial", initial])
     assert runner.invoke(app, create_args).exit_code == 0
-    assert runner.invoke(app, ["asset", "add", portfolio, symbol]).exit_code == 0
+    assert runner.invoke(app, ["asset", "add", symbol, "-p", portfolio]).exit_code == 0
     return data_dir / "fundlog.db"
 
 
@@ -38,7 +38,7 @@ def test_income_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    result = runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -46,20 +46,20 @@ def test_income_requires_initialized_database(
 
 
 @pytest.mark.parametrize(
-    "reference",
-    ["stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"],
+    "symbol",
+    ["/AAPL", "AAPL/", "AAPL/extra"],
 )
-def test_income_rejects_invalid_asset_reference(
+def test_income_rejects_invalid_symbol(
     tmp_path: Path,
     monkeypatch,
-    reference: str,
+    symbol: str,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["income", reference, "32"])
+    result = runner.invoke(app, ["asset", "income", symbol, "32", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Invalid asset reference" in result.output
+    assert "Invalid symbol" in result.output
     assert "Traceback" not in result.output
 
 
@@ -71,7 +71,7 @@ def test_income_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    result = runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -84,9 +84,9 @@ def test_income_requires_active_asset(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    result = runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -111,7 +111,7 @@ def test_income_rejects_invalid_amount(
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["income", "stocks/AAPL", amount])
+    result = runner.invoke(app, ["asset", "income", "AAPL", amount, "-p", "stocks"])
 
     assert result.exit_code == 1
     assert message in result.output
@@ -131,7 +131,7 @@ def test_income_rejects_future_date(
 
     result = runner.invoke(
         app,
-        ["income", "stocks/AAPL", "32", "--date", future_date],
+        ["asset", "income", "AAPL", "32", "--date", future_date, "-p", "stocks"],
     )
 
     assert result.exit_code == 1
@@ -152,9 +152,12 @@ def test_income_creates_expected_transaction_fields(
     result = runner.invoke(
         app,
         [
+            "asset",
             "income",
-            "stocks/aapl",
+            "aapl",
             "32.50",
+            "-p",
+            "stocks",
             "--date",
             "2026-06-20",
             "--note",
@@ -163,7 +166,7 @@ def test_income_creates_expected_transaction_fields(
     )
 
     assert result.exit_code == 0
-    assert "Income recorded for asset 'AAPL/stocks'." in result.output
+    assert "Income recorded for asset 'AAPL' in portfolio 'stocks'." in result.output
     with sqlite3.connect(database_path) as connection:
         transaction = connection.execute(
             """
@@ -208,8 +211,8 @@ def test_income_defaults_to_today_and_uses_next_asset_local_number(
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch)
 
-    first = runner.invoke(app, ["income", "stocks/AAPL", "10"])
-    second = runner.invoke(app, ["income", "stocks/AAPL", "20"])
+    first = runner.invoke(app, ["asset", "income", "AAPL", "10", "-p", "stocks"])
+    second = runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"])
 
     assert first.exit_code == 0
     assert second.exit_code == 0
@@ -233,10 +236,10 @@ def test_income_entry_numbers_are_local_to_each_asset(
     monkeypatch,
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "MSFT"])
+    runner.invoke(app, ["asset", "add", "MSFT", "-p", "stocks"])
 
-    runner.invoke(app, ["income", "stocks/AAPL", "10"])
-    runner.invoke(app, ["income", "stocks/MSFT", "20"])
+    runner.invoke(app, ["asset", "income", "AAPL", "10", "-p", "stocks"])
+    runner.invoke(app, ["asset", "income", "MSFT", "20", "-p", "stocks"])
 
     with sqlite3.connect(database_path) as connection:
         rows = connection.execute(
@@ -258,9 +261,12 @@ def test_income_appears_in_asset_log_with_placeholders_and_total(
     runner.invoke(
         app,
         [
+            "asset",
             "income",
-            "stocks/AAPL",
+            "AAPL",
             "1234.50",
+            "-p",
+            "stocks",
             "--date",
             "2026-06-20",
             "--note",
@@ -268,7 +274,7 @@ def test_income_appears_in_asset_log_with_placeholders_and_total(
         ],
     )
 
-    result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "Dividend" in line)
@@ -282,10 +288,10 @@ def test_asset_list_sums_income_and_keeps_zero_realized_return(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
-    runner.invoke(app, ["income", "stocks/AAPL", "32"])
-    runner.invoke(app, ["income", "stocks/AAPL", "8.50"])
+    runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
+    runner.invoke(app, ["asset", "income", "AAPL", "8.50", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
@@ -298,9 +304,9 @@ def test_portfolio_summary_includes_income_in_cash_book_value_and_return(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
-    result = runner.invoke(app, ["summary", "stocks"])
+    result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -315,9 +321,9 @@ def test_portfolio_return_is_zero_when_capital_is_zero(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch)
-    runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
-    result = runner.invoke(app, ["summary", "stocks"])
+    result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -330,12 +336,12 @@ def test_summary_all_includes_income_per_portfolio(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["create", "crypto", "--initial", "500"])
-    runner.invoke(app, ["asset", "add", "crypto", "BTC"])
-    runner.invoke(app, ["income", "stocks/AAPL", "20"])
-    runner.invoke(app, ["income", "crypto/BTC", "25"])
+    runner.invoke(app, ["portfolio", "create", "crypto", "--initial", "500"])
+    runner.invoke(app, ["asset", "add", "BTC", "-p", "crypto"])
+    runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"])
+    runner.invoke(app, ["asset", "income", "BTC", "25", "-p", "crypto"])
 
-    result = runner.invoke(app, ["summary", "--all"])
+    result = runner.invoke(app, ["portfolio", "list"])
 
     assert result.exit_code == 0
     crypto_row = next(line for line in result.output.splitlines() if "crypto" in line)
@@ -353,14 +359,14 @@ def test_asset_delete_soft_deletes_income_transactions_and_removes_summary_effec
     monkeypatch,
 ) -> None:
     database_path = _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["income", "stocks/AAPL", "32"])
+    runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
     delete_result = runner.invoke(
         app,
-        ["asset", "delete", "stocks/AAPL", "--yes"],
+        ["asset", "delete", "AAPL", "-p", "stocks", "--yes"],
     )
-    summary_result = runner.invoke(app, ["summary", "stocks"])
-    log_result = runner.invoke(app, ["asset", "log", "stocks/AAPL"])
+    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert delete_result.exit_code == 0
     assert summary_result.exit_code == 0
@@ -381,13 +387,13 @@ def test_deleting_one_asset_preserves_other_asset_income(
     monkeypatch,
 ) -> None:
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
-    runner.invoke(app, ["asset", "add", "stocks", "MSFT"])
-    runner.invoke(app, ["income", "stocks/AAPL", "32"])
-    runner.invoke(app, ["income", "stocks/MSFT", "18"])
+    runner.invoke(app, ["asset", "add", "MSFT", "-p", "stocks"])
+    runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
+    runner.invoke(app, ["asset", "income", "MSFT", "18", "-p", "stocks"])
 
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
-    summary_result = runner.invoke(app, ["summary", "stocks"])
-    list_result = runner.invoke(app, ["asset", "list", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
+    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    list_result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     summary_row = next(
         line for line in summary_result.output.splitlines() if "stocks" in line

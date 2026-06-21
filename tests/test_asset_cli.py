@@ -18,7 +18,7 @@ def _initialize_with_portfolio(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
-    assert runner.invoke(app, ["create", portfolio]).exit_code == 0
+    assert runner.invoke(app, ["portfolio", "create", portfolio]).exit_code == 0
     return data_dir / "fundlog.db"
 
 
@@ -39,7 +39,7 @@ def test_asset_add_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    result = runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -54,7 +54,7 @@ def test_asset_add_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    result = runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -66,7 +66,7 @@ def test_asset_add_creates_normalized_asset(
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "aapl"])
+    result = runner.invoke(app, ["asset", "add", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "Asset 'AAPL' added to portfolio 'stocks'." in result.output
@@ -84,7 +84,7 @@ def test_asset_add_creates_multiple_assets_atomically(
 
     result = runner.invoke(
         app,
-        ["asset", "add", "stocks", "aapl", "AMZN", "msft"],
+        ["asset", "add", "aapl", "AMZN", "msft", "-p", "stocks"],
     )
 
     assert result.exit_code == 0
@@ -101,9 +101,9 @@ def test_asset_add_rejects_duplicate_active_asset(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "aapl"])
+    result = runner.invoke(app, ["asset", "add", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' already exists" in result.output
@@ -121,7 +121,7 @@ def test_asset_add_rejects_duplicate_symbols_in_same_command(
 
     result = runner.invoke(
         app,
-        ["asset", "add", "stocks", "AAPL", "aapl"],
+        ["asset", "add", "AAPL", "aapl", "-p", "stocks"],
     )
 
     assert result.exit_code == 1
@@ -140,7 +140,7 @@ def test_failed_multi_asset_add_creates_no_assets(
 
     result = runner.invoke(
         app,
-        ["asset", "add", "stocks", "AAPL", "INVALID/SYMBOL", "MSFT"],
+        ["asset", "add", "AAPL", "INVALID/SYMBOL", "MSFT", "-p", "stocks"],
     )
 
     assert result.exit_code == 1
@@ -156,11 +156,11 @@ def test_multi_asset_add_with_existing_duplicate_creates_none(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
     result = runner.invoke(
         app,
-        ["asset", "add", "stocks", "MSFT", "aapl"],
+        ["asset", "add", "MSFT", "aapl", "-p", "stocks"],
     )
 
     assert result.exit_code == 1
@@ -177,13 +177,13 @@ def test_soft_deleted_symbol_can_be_added_again(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
     with sqlite3.connect(database_path) as connection:
         connection.execute(
             "UPDATE assets SET deleted_at = CURRENT_TIMESTAMP WHERE symbol = 'AAPL'"
         )
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "aapl"])
+    result = runner.invoke(app, ["asset", "add", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
     with sqlite3.connect(database_path) as connection:
@@ -215,7 +215,7 @@ def test_multi_asset_add_rolls_back_if_insert_fails(
 
     result = runner.invoke(
         app,
-        ["asset", "add", "stocks", "AAPL", "MSFT"],
+        ["asset", "add", "AAPL", "MSFT", "-p", "stocks"],
     )
 
     assert result.exit_code == 1
@@ -232,7 +232,7 @@ def test_asset_list_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -246,7 +246,7 @@ def test_asset_list_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -258,7 +258,7 @@ def test_asset_list_prints_empty_message(
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "No active assets for portfolio 'stocks'." in result.output
@@ -271,10 +271,10 @@ def test_asset_list_shows_uppercase_symbols_in_order(
     _initialize_with_portfolio(tmp_path, monkeypatch)
     runner.invoke(
         app,
-        ["asset", "add", "stocks", "msft", "aapl", "BRK.B"],
+        ["asset", "add", "msft", "aapl", "BRK.B", "-p", "stocks"],
     )
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.index("AAPL") < result.output.index("BRK.B")
@@ -286,9 +286,9 @@ def test_asset_list_uses_summary_columns_and_zero_values(
     monkeypatch,
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     for column in (
@@ -316,11 +316,11 @@ def test_adding_assets_does_not_change_portfolio_summary(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    runner.invoke(app, ["create", "stocks", "--initial", "1000"])
-    before = runner.invoke(app, ["summary", "stocks"])
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+    before = runner.invoke(app, ["portfolio", "show", "stocks"])
 
-    add_result = runner.invoke(app, ["asset", "add", "stocks", "AAPL", "MSFT"])
-    after = runner.invoke(app, ["summary", "stocks"])
+    add_result = runner.invoke(app, ["asset", "add", "AAPL", "MSFT", "-p", "stocks"])
+    after = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert add_result.exit_code == 0
     assert before.exit_code == 0
@@ -362,7 +362,7 @@ def test_normal_command_migrates_assets_table_for_legacy_database(
             """
         )
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    result = runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     with sqlite3.connect(database_path) as connection:
@@ -380,7 +380,7 @@ def test_asset_delete_requires_initialized_database(
     data_dir = tmp_path / "fundlog-data"
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 1
     assert "Run 'fundlog init' first." in result.output
@@ -393,11 +393,13 @@ def test_asset_delete_rejects_invalid_references(
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
 
-    for reference in ("stocks", "/AAPL", "stocks/", "stocks/AAPL/extra"):
-        result = runner.invoke(app, ["asset", "delete", reference, "--yes"])
+    for symbol in ("/AAPL", "AAPL/", "AAPL/extra"):
+        result = runner.invoke(
+            app, ["asset", "delete", symbol, "-p", "stocks", "--yes"]
+        )
 
         assert result.exit_code == 1
-        assert "Invalid asset reference" in result.output
+        assert "Invalid symbol" in result.output
         assert "Traceback" not in result.output
 
 
@@ -409,7 +411,7 @@ def test_asset_delete_requires_active_portfolio(
     monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -420,10 +422,10 @@ def test_asset_delete_rejects_soft_deleted_portfolio(
     monkeypatch,
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
-    runner.invoke(app, ["delete", "stocks", "--yes"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -435,7 +437,7 @@ def test_asset_delete_requires_active_asset(
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -448,9 +450,9 @@ def test_asset_delete_requires_yes(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Asset delete requires the --yes confirmation flag." in result.output
@@ -467,9 +469,9 @@ def test_asset_delete_soft_deletes_asset_case_insensitively(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/aapl", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "aapl", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 0
     assert "Asset 'AAPL' deleted from portfolio 'stocks'." in result.output
@@ -487,10 +489,10 @@ def test_asset_delete_hides_asset_from_list(
     monkeypatch,
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "list", "stocks"])
+    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "No active assets for portfolio 'stocks'." in result.output
@@ -502,9 +504,9 @@ def test_asset_delete_does_not_affect_other_asset_in_same_portfolio(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL", "MSFT"])
+    runner.invoke(app, ["asset", "add", "AAPL", "MSFT", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 0
     with sqlite3.connect(database_path) as connection:
@@ -522,11 +524,11 @@ def test_asset_delete_does_not_affect_asset_in_other_portfolio(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["create", "retirement"])
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
-    runner.invoke(app, ["asset", "add", "retirement", "AAPL"])
+    runner.invoke(app, ["portfolio", "create", "retirement"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "retirement"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 0
     with sqlite3.connect(database_path) as connection:
@@ -549,10 +551,10 @@ def test_asset_delete_rejects_already_deleted_asset(
     monkeypatch,
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    result = runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
     assert result.exit_code == 1
     assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
@@ -565,10 +567,10 @@ def test_deleted_asset_symbol_can_be_reused_through_cli(
     monkeypatch,
 ) -> None:
     database_path = _initialize_with_portfolio(tmp_path, monkeypatch)
-    runner.invoke(app, ["asset", "add", "stocks", "AAPL"])
-    runner.invoke(app, ["asset", "delete", "stocks/AAPL", "--yes"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "add", "stocks", "aapl"])
+    result = runner.invoke(app, ["asset", "add", "aapl", "-p", "stocks"])
 
     assert result.exit_code == 0
     with sqlite3.connect(database_path) as connection:
