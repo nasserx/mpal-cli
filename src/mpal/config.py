@@ -3,19 +3,19 @@
 import os
 from pathlib import Path
 
-APP_NAME = "FundLog"
-CLI_NAME = "fundlog"
-DISTRIBUTION_NAME = "fundlog-cli"
-DATABASE_FILENAME = "fundlog.db"
+APP_NAME = "mpal"
+CLI_NAME = "mpal"
+DISTRIBUTION_NAME = "mpal-cli"
+DATABASE_FILENAME = "mpal.db"
 
 
 def get_data_dir() -> Path:
-    """Return FundLog's local data directory.
+    """Return mpal's local data directory.
 
-    ``FUNDLOG_DATA_DIR`` is supported as a small explicit override, primarily
+    ``MPAL_DATA_DIR`` is supported as a small explicit override, primarily
     for isolated environments and tests.
     """
-    override = os.environ.get("FUNDLOG_DATA_DIR")
+    override = os.environ.get("MPAL_DATA_DIR")
     if override:
         return Path(override).expanduser()
 

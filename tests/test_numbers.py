@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from fundlog.errors import InvalidPriceError, InvalidQuantityError
-from fundlog.numbers import (
+from mpal.errors import InvalidPriceError, InvalidQuantityError
+from mpal.numbers import (
     format_price,
     format_quantity,
     parse_price,

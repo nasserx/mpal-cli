@@ -2,8 +2,8 @@
 
 import pytest
 
-from fundlog.assets import normalize_symbol
-from fundlog.errors import InvalidSymbolError
+from mpal.assets import normalize_symbol
+from mpal.errors import InvalidSymbolError
 
 
 @pytest.mark.parametrize(

@@ -4,13 +4,13 @@ from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 from pathlib import Path
 
-from fundlog.errors import (
+from mpal.errors import (
     AssetNotFoundError,
     InsufficientAssetQuantityError,
     InvalidTradeTotalError,
     PortfolioNotFoundError,
 )
-from fundlog.storage.database import connect_database, next_asset_transaction_no
+from mpal.storage.database import connect_database, next_asset_transaction_no
 
 
 def record_income(

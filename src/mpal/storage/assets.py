@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from fundlog.assets import normalize_symbol
-from fundlog.errors import (
+from mpal.assets import normalize_symbol
+from mpal.errors import (
     AssetAlreadyExistsError,
     AssetNotFoundError,
     InvalidSymbolError,
     PortfolioNotFoundError,
 )
-from fundlog.storage.database import connect_database
+from mpal.storage.database import connect_database
 
 
 @dataclass(frozen=True)

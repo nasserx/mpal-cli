@@ -1,17 +1,17 @@
-"""Integration tests for the official FundLog command hierarchy."""
+"""Integration tests for the official mpal command hierarchy."""
 
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from fundlog.cli import app
+from mpal.cli import app
 
 runner = CliRunner()
 
 
 def _initialize(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(tmp_path / "fundlog-data"))
+    monkeypatch.setenv("MPAL_DATA_DIR", str(tmp_path / "mpal-data"))
     assert runner.invoke(app, ["init"]).exit_code == 0
 
 

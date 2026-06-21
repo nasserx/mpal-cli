@@ -4,12 +4,12 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from fundlog.errors import (
+from mpal.errors import (
     InvalidPortfolioNameError,
     PortfolioAlreadyExistsError,
     PortfolioNotFoundError,
 )
-from fundlog.storage.database import connect_database, next_entry_no
+from mpal.storage.database import connect_database, next_entry_no
 
 
 def create_portfolio(name: str, database_path: Path | None = None) -> int:

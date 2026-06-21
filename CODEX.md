@@ -1,14 +1,14 @@
-# FundLog Contributor and Agent Guide
+# mpal Contributor and Agent Guide
 
 ## Project identity
 
-- Project: FundLog
-- Official CLI command: `fundlog`
-- Distribution: `fundlog-cli`
-- Python package: `fundlog`
+- Project: Multi-Portfolio Asset Ledger (`mpal`)
+- Official CLI command: `mpal`
+- Distribution: `mpal-cli`
+- Python package: `mpal`
 - Supported Python: 3.11+
 
-FundLog is a local-first, fully manual portfolio ledger. It derives results
+mpal is a local-first, fully manual portfolio ledger. It derives results
 only from user-entered records.
 
 Before changing behavior, read `README.md`, `docs/PRODUCT_SPEC.md`,
@@ -19,37 +19,37 @@ Before changing behavior, read `README.md`, `docs/PRODUCT_SPEC.md`,
 
 Root help exposes only:
 
-- `fundlog init`
-- `fundlog portfolio`
-- `fundlog capital`
-- `fundlog asset`
+- `mpal init`
+- `mpal portfolio`
+- `mpal capital`
+- `mpal asset`
 
 Implemented portfolio commands:
 
-- `fundlog portfolio create <portfolio> [--initial <amount>]`
-- `fundlog portfolio list`
-- `fundlog portfolio show <portfolio>`
-- `fundlog portfolio reset <portfolio> --yes`
-- `fundlog portfolio delete <portfolio> --yes`
+- `mpal portfolio create <portfolio> [--initial <amount>]`
+- `mpal portfolio list`
+- `mpal portfolio show <portfolio>`
+- `mpal portfolio reset <portfolio> --yes`
+- `mpal portfolio delete <portfolio> --yes`
 
 Implemented capital commands:
 
-- `fundlog capital deposit <amount> -p <portfolio>`
-- `fundlog capital withdraw <amount> -p <portfolio>`
-- `fundlog capital log -p <portfolio>`
-- `fundlog capital edit <entry-number> -p <portfolio>`
-- `fundlog capital delete <entry-number> -p <portfolio>`
+- `mpal capital deposit <amount> -p <portfolio>`
+- `mpal capital withdraw <amount> -p <portfolio>`
+- `mpal capital log -p <portfolio>`
+- `mpal capital edit <entry-number> -p <portfolio>`
+- `mpal capital delete <entry-number> -p <portfolio>`
 
 Implemented asset commands:
 
-- `fundlog asset add <symbol> [symbol...] -p <portfolio>`
-- `fundlog asset summary -p <portfolio>`
-- `fundlog asset summary <symbol> -p <portfolio>`
-- `fundlog asset log <symbol> -p <portfolio>`
-- `fundlog asset delete <symbol> -p <portfolio> --yes`
-- `fundlog asset income <symbol> <amount> -p <portfolio>`
-- `fundlog asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
-- `fundlog asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
+- `mpal asset add <symbol> [symbol...] -p <portfolio>`
+- `mpal asset summary -p <portfolio>`
+- `mpal asset summary <symbol> -p <portfolio>`
+- `mpal asset log <symbol> -p <portfolio>`
+- `mpal asset delete <symbol> -p <portfolio> --yes`
+- `mpal asset income <symbol> <amount> -p <portfolio>`
+- `mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
+- `mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 
 The long `--portfolio` option is equivalent to `-p` and is required for every
 capital and asset operation. There is no default portfolio.
@@ -59,7 +59,7 @@ the old combined `<portfolio>/<symbol>` argument. There are no hidden or
 compatibility aliases. Do not reintroduce them without a new explicit product
 decision.
 
-Use `fundlog` in help, docs, tests, and examples. User shell shortcuts are not
+Use `mpal` in help, docs, tests, and examples. User shell shortcuts are not
 part of the product interface.
 
 ## Product boundaries
@@ -83,7 +83,7 @@ Money is stored as integer minor units. Use `parse_amount_minor()` for money
 input and `format_money()` for display.
 
 Price and quantity use exact `Decimal` helpers from
-`src/fundlog/numbers.py`. Do not use the money formatter for price or quantity.
+`src/mpal/numbers.py`. Do not use the money formatter for price or quantity.
 Trade cash effects must be exact in minor units or require the statement
 `--total`; never silently round.
 
@@ -109,13 +109,13 @@ columns.
 
 ## Data and deletion
 
-FundLog uses local SQLite storage in `fundlog.db`.
+mpal uses local SQLite storage in `mpal.db`.
 
 Database path order:
 
-1. `FUNDLOG_DATA_DIR`
-2. Windows `%LOCALAPPDATA%\FundLog\fundlog.db`
-3. `~/.local/share/fundlog/fundlog.db`
+1. `MPAL_DATA_DIR`
+2. Windows `%LOCALAPPDATA%\mpal\mpal.db`
+3. `~/.local/share/mpal/mpal.db`
 
 Current tables:
 
@@ -149,20 +149,20 @@ and validation normally use active rows only.
 - Symbols use `normalize_symbol()` and are stored uppercase.
 - Expected user errors are concise and omit tracebacks.
 - Keep storage and accounting logic out of Rich rendering helpers.
-- Reuse the semantic palette in `src/fundlog/output/theme.py`.
+- Reuse the semantic palette in `src/mpal/output/theme.py`.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.
 
 ## Project structure
 
-- `src/fundlog/cli.py`: Typer command tree and CLI routing
-- `src/fundlog/amounts.py`: exact money parsing/formatting
-- `src/fundlog/assets.py`: symbol validation
-- `src/fundlog/numbers.py`: exact price/quantity parsing/formatting
-- `src/fundlog/dates.py`: transaction date validation
-- `src/fundlog/storage/`: database, portfolio, capital, asset, log, and summary
+- `src/mpal/cli.py`: Typer command tree and CLI routing
+- `src/mpal/amounts.py`: exact money parsing/formatting
+- `src/mpal/assets.py`: symbol validation
+- `src/mpal/numbers.py`: exact price/quantity parsing/formatting
+- `src/mpal/dates.py`: transaction date validation
+- `src/mpal/storage/`: database, portfolio, capital, asset, log, and summary
   operations
-- `src/fundlog/output/`: Rich rendering and theme
+- `src/mpal/output/`: Rich rendering and theme
 - `tests/`: CLI, persistence, accounting, precision, and output regressions
 - `docs/`: product and technical specifications
 
@@ -181,5 +181,5 @@ git diff --check
 python -m build
 ```
 
-Use isolated `FUNDLOG_DATA_DIR` values in tests. Never run tests against the
-user's real FundLog database.
+Use isolated `MPAL_DATA_DIR` values in tests. Never run tests against the
+user's real mpal database.

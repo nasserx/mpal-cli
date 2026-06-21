@@ -1,8 +1,8 @@
-# FundLog v0.1 Financial Model
+# mpal v0.1 Financial Model
 
 ## Principles
 
-FundLog is fully manual. It derives financial results only from active recorded operations and does not use live prices, market APIs, automatic valuation, market value, or unrealized PnL.
+mpal is fully manual. It derives financial results only from active recorded operations and does not use live prices, market APIs, automatic valuation, market value, or unrealized PnL.
 
 The completed v0.1 capital ledger records portfolio deposits and withdrawals. The
 current asset milestone also records manual asset income, buys, and sells.
@@ -141,7 +141,7 @@ remains balanced. This is book cost allocation, not market valuation.
 - Entry deletions, portfolio deletions, and resets retain rows and timestamps.
   Edits update the existing row timestamp; full before-and-after audit history is
   future work.
-- FundLog must not invent market value or use price-based valuation.
+- mpal must not invent market value or use price-based valuation.
 - Fees are not a portfolio-level summary field. If supported later, they belong within manual symbol trading calculations.
 
 ## Example scenarios
@@ -155,7 +155,7 @@ remains balanced. This is book cost allocation, not market valuation.
 ### Add a deposit
 
 ```console
-fundlog capital deposit 1000 -p stocks
+mpal capital deposit 1000 -p stocks
 ```
 
 Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
@@ -163,7 +163,7 @@ Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and In
 ### Add a withdrawal
 
 ```console
-fundlog capital withdraw 250 -p stocks
+mpal capital withdraw 250 -p stocks
 ```
 
 After the preceding deposit, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
@@ -171,7 +171,7 @@ After the preceding deposit, Capital, Cash, and Book Value become `750.00`. The 
 ### Attempt a withdrawal with insufficient Cash
 
 ```console
-fundlog capital withdraw 1000 -p stocks
+mpal capital withdraw 1000 -p stocks
 ```
 
 With only `750.00` Cash available, the command fails, creates no entry, and leaves the summary unchanged.

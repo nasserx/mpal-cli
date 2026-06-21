@@ -14,4 +14,4 @@ dist/
 *.egg-info/
 
 .tmp-manual-test/
-fundlog.db
+mpal.db

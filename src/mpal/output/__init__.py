@@ -1,6 +1,6 @@
 """Terminal output helpers."""
 
-from fundlog.output.console import (
+from mpal.output.console import (
     print_asset_transaction_log,
     print_assets,
     print_capital_entry_log,

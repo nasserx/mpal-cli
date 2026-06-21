@@ -1,35 +1,35 @@
 """Local persistence primitives."""
 
-from fundlog.storage.asset_logs import AssetTransaction, get_asset_transaction_log
-from fundlog.storage.asset_transactions import (
+from mpal.storage.asset_logs import AssetTransaction, get_asset_transaction_log
+from mpal.storage.asset_transactions import (
     calculate_buy_total_minor,
     calculate_sell_total_minor,
     record_buy,
     record_income,
     record_sell,
 )
-from fundlog.storage.assets import (
+from mpal.storage.assets import (
     Asset,
     create_assets,
     delete_asset,
     get_asset_summary,
     get_assets,
 )
-from fundlog.storage.database import initialize_database
-from fundlog.storage.entries import (
+from mpal.storage.database import initialize_database
+from mpal.storage.entries import (
     delete_capital_entry,
     edit_capital_entry,
     record_inflow,
     record_outflow,
     reset_portfolio_entries,
 )
-from fundlog.storage.logs import CapitalEntry, get_capital_entry_log
-from fundlog.storage.portfolios import (
+from mpal.storage.logs import CapitalEntry, get_capital_entry_log
+from mpal.storage.portfolios import (
     create_portfolio,
     create_portfolio_with_initial,
     delete_portfolio,
 )
-from fundlog.storage.summaries import (
+from mpal.storage.summaries import (
     PortfolioSummary,
     get_all_portfolio_summaries,
     get_portfolio_summary,

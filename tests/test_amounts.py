@@ -2,7 +2,7 @@
 
 import pytest
 
-from fundlog.amounts import format_money, format_signed_money
+from mpal.amounts import format_money, format_signed_money
 
 
 @pytest.mark.parametrize(

@@ -1,77 +1,77 @@
-"""FundLog exception types."""
+"""mpal exception types."""
 
 
-class FundLogError(Exception):
-    """Base exception for expected FundLog errors."""
+class MpalError(Exception):
+    """Base exception for expected mpal errors."""
 
 
-class DatabaseNotInitializedError(FundLogError):
+class DatabaseNotInitializedError(MpalError):
     """Raised when a command requires an initialized database."""
 
 
-class StorageError(FundLogError):
+class StorageError(MpalError):
     """Raised when SQLite cannot complete a storage operation safely."""
 
 
-class PortfolioAlreadyExistsError(FundLogError):
+class PortfolioAlreadyExistsError(MpalError):
     """Raised when an active portfolio name is already in use."""
 
 
-class InvalidPortfolioNameError(FundLogError):
+class InvalidPortfolioNameError(MpalError):
     """Raised when a portfolio name is empty."""
 
 
-class PortfolioNotFoundError(FundLogError):
+class PortfolioNotFoundError(MpalError):
     """Raised when an active portfolio cannot be found."""
 
 
-class InvalidSymbolError(FundLogError):
+class InvalidSymbolError(MpalError):
     """Raised when an asset symbol is invalid."""
 
 
-class AssetAlreadyExistsError(FundLogError):
+class AssetAlreadyExistsError(MpalError):
     """Raised when an active asset symbol already exists in a portfolio."""
 
 
-class AssetNotFoundError(FundLogError):
+class AssetNotFoundError(MpalError):
     """Raised when an active asset cannot be found in an active portfolio."""
 
 
-class InvalidAmountError(FundLogError):
+class InvalidAmountError(MpalError):
     """Raised when a monetary amount is invalid."""
 
 
-class InvalidQuantityError(FundLogError):
+class InvalidQuantityError(MpalError):
     """Raised when an asset quantity is invalid."""
 
 
-class InvalidPriceError(FundLogError):
+class InvalidPriceError(MpalError):
     """Raised when an asset unit price is invalid."""
 
 
-class InvalidTradeTotalError(FundLogError):
+class InvalidTradeTotalError(MpalError):
     """Raised when a trade cash total is inexact or inconsistent."""
 
 
-class InsufficientAssetQuantityError(FundLogError):
+class InsufficientAssetQuantityError(MpalError):
     """Raised when a sell exceeds an asset's active open quantity."""
 
 
-class InvalidEntryDateError(FundLogError):
+class InvalidEntryDateError(MpalError):
     """Raised when a capital entry date is invalid."""
 
 
-class InsufficientCashError(FundLogError):
+class InsufficientCashError(MpalError):
     """Raised when an outflow exceeds available portfolio cash."""
 
 
-class CapitalEntryNotFoundError(FundLogError):
+class CapitalEntryNotFoundError(MpalError):
     """Raised when a capital entry does not exist or is inactive."""
 
 
-class InvalidLedgerEditError(FundLogError):
+class InvalidLedgerEditError(MpalError):
     """Raised when an edit would make the active ledger invalid."""
 
 
-class InvalidLedgerDeleteError(FundLogError):
+class InvalidLedgerDeleteError(MpalError):
     """Raised when entry deletion would make the active ledger invalid."""

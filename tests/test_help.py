@@ -1,9 +1,9 @@
-"""Help-output tests for the official FundLog CLI."""
+"""Help-output tests for the official mpal CLI."""
 
 import pytest
 from typer.testing import CliRunner
 
-from fundlog.cli import app
+from mpal.cli import app
 
 runner = CliRunner()
 
@@ -12,6 +12,7 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
+    assert "Multi-Portfolio Asset Ledger" in result.output
     for command in ("init", "portfolio", "capital", "asset"):
         assert f"│ {command} " in result.output
     for command in (
@@ -28,10 +29,43 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
         "sell",
     ):
         assert f"│ {command} " not in result.output
-    assert "fundlog " in result.output
+    assert "mpal " in result.output
     assert " fl " not in result.output
     assert "<portfolio>/<symbol>" not in result.output
-    assert "fundlog asset add <symbol> [symbol...] -p <portfolio>" in result.output
+    assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in result.output
+
+
+def test_all_help_output_excludes_the_previous_product_name() -> None:
+    old_name = "fund" + "log"
+    help_commands = [
+        [],
+        ["portfolio"],
+        ["capital"],
+        ["asset"],
+        ["init"],
+        ["portfolio", "create"],
+        ["portfolio", "list"],
+        ["portfolio", "show"],
+        ["portfolio", "reset"],
+        ["portfolio", "delete"],
+        ["capital", "deposit"],
+        ["capital", "withdraw"],
+        ["capital", "log"],
+        ["capital", "edit"],
+        ["capital", "delete"],
+        ["asset", "add"],
+        ["asset", "summary"],
+        ["asset", "log"],
+        ["asset", "delete"],
+        ["asset", "income"],
+        ["asset", "buy"],
+        ["asset", "sell"],
+    ]
+
+    for arguments in help_commands:
+        result = runner.invoke(app, [*arguments, "--help"])
+        assert result.exit_code == 0
+        assert old_name not in result.output.lower()
 
 
 def test_group_help_lists_only_current_commands_and_examples() -> None:
@@ -47,9 +81,9 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     for command in ("add", "summary", "log", "delete", "income", "buy", "sell"):
         assert f"│ {command} " in asset.output
     assert "│ list " not in asset.output
-    assert "fundlog capital deposit <amount> -p <portfolio>" in capital.output
-    assert "fundlog asset add <symbol> [symbol...] -p <portfolio>" in asset.output
-    assert "fundlog asset summary <symbol> -p <portfolio>" in asset.output
+    assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
+    assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in asset.output
+    assert "mpal asset summary <symbol> -p <portfolio>" in asset.output
     assert "<portfolio>/<symbol>" not in asset.output
 
 

@@ -4,14 +4,14 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from fundlog.errors import (
+from mpal.errors import (
     CapitalEntryNotFoundError,
     InsufficientCashError,
     InvalidLedgerDeleteError,
     InvalidLedgerEditError,
     PortfolioNotFoundError,
 )
-from fundlog.storage.database import connect_database, next_entry_no
+from mpal.storage.database import connect_database, next_entry_no
 
 
 def record_inflow(

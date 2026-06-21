@@ -5,9 +5,9 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from fundlog.cli import app
-from fundlog.output import console as console_output
-from fundlog.output.formatting import (
+from mpal.cli import app
+from mpal.output import console as console_output
+from mpal.output.formatting import (
     format_capital_entry_amount,
     format_capital_entry_type,
     format_income_money,
@@ -15,8 +15,8 @@ from fundlog.output.formatting import (
     format_profit_loss_percent,
     format_signed_percent,
 )
-from fundlog.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
-from fundlog.storage.asset_logs import AssetTransaction
+from mpal.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
+from mpal.storage.asset_logs import AssetTransaction
 
 runner = CliRunner()
 
@@ -27,8 +27,8 @@ def _initialize_asset(
     *,
     initial: str = "1000",
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
     assert (
         runner.invoke(

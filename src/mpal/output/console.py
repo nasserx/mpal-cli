@@ -6,16 +6,16 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from fundlog.amounts import format_money
-from fundlog.numbers import format_price, format_quantity
-from fundlog.output.formatting import (
+from mpal.amounts import format_money
+from mpal.numbers import format_price, format_quantity
+from mpal.output.formatting import (
     format_capital_entry_amount,
     format_capital_entry_type,
     format_income_money,
     format_profit_loss_money,
     format_profit_loss_percent,
 )
-from fundlog.output.theme import (
+from mpal.output.theme import (
     ERROR,
     INFO,
     SUCCESS,
@@ -24,10 +24,10 @@ from fundlog.output.theme import (
     TABLE_HEADER,
     WARNING,
 )
-from fundlog.storage.asset_logs import AssetTransaction
-from fundlog.storage.assets import Asset
-from fundlog.storage.logs import CapitalEntry
-from fundlog.storage.summaries import PortfolioSummary
+from mpal.storage.asset_logs import AssetTransaction
+from mpal.storage.assets import Asset
+from mpal.storage.logs import CapitalEntry
+from mpal.storage.summaries import PortfolioSummary
 
 
 def print_message(message: str) -> None:

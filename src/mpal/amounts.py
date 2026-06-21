@@ -2,7 +2,7 @@
 
 from decimal import Decimal, InvalidOperation
 
-from fundlog.errors import InvalidAmountError
+from mpal.errors import InvalidAmountError
 
 MINOR_UNITS_PER_UNIT = 100
 

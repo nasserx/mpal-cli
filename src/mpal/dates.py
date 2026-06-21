@@ -3,7 +3,7 @@
 from datetime import date
 from re import fullmatch
 
-from fundlog.errors import InvalidEntryDateError
+from mpal.errors import InvalidEntryDateError
 
 INVALID_DATE_MESSAGE = "Date must be a valid ISO date in YYYY-MM-DD format."
 FUTURE_DATE_MESSAGE = "Date cannot be in the future."

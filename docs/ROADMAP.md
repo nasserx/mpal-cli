@@ -1,4 +1,4 @@
-# FundLog Roadmap
+# mpal Roadmap
 
 The roadmap is intentionally phased. Items listed for later versions are outside the v0.1 implementation contract.
 
@@ -51,7 +51,7 @@ implemented. Official help exposes only `init`, `portfolio`, `capital`, and
 - Reject inexact minor-unit trade cash effects unless an explicit exact cash
   total is supplied.
 
-FundLog will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
+mpal will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
 
 ## v0.4 — Reporting and delivery
 

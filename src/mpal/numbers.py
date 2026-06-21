@@ -3,7 +3,7 @@
 import re
 from decimal import Decimal
 
-from fundlog.errors import InvalidPriceError, InvalidQuantityError
+from mpal.errors import InvalidPriceError, InvalidQuantityError
 
 MAX_INTEGER_DIGITS = 18
 MAX_FRACTIONAL_DIGITS = 18

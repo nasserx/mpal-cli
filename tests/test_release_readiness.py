@@ -6,14 +6,14 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from fundlog.cli import app
+from mpal.cli import app
 
 runner = CliRunner()
 
 
 def _initialize_asset(tmp_path: Path, monkeypatch) -> Path:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
     assert (
         runner.invoke(
@@ -23,7 +23,7 @@ def _initialize_asset(tmp_path: Path, monkeypatch) -> Path:
         == 0
     )
     assert runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"]).exit_code == 0
-    return data_dir / "fundlog.db"
+    return data_dir / "mpal.db"
 
 
 def _buy(quantity: str = "8") -> None:
@@ -167,8 +167,8 @@ def test_portfolio_creation_rejects_asset_reference_separator(
     monkeypatch,
     arguments: list[str],
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
 
     result = runner.invoke(app, arguments)

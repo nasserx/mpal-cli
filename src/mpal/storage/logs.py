@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from fundlog.errors import PortfolioNotFoundError
-from fundlog.storage.database import connect_database
+from mpal.errors import PortfolioNotFoundError
+from mpal.storage.database import connect_database
 
 
 @dataclass(frozen=True)

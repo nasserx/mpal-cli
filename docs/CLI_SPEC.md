@@ -1,16 +1,16 @@
-# FundLog CLI Specification
+# Multi-Portfolio Asset Ledger CLI Specification
 
 ## Command identity
 
-The official executable name is `fundlog`. Documentation, help, tests, and
-examples must use `fundlog`; shell shortcuts are not part of the interface.
+The official executable name is `mpal`. Documentation, help, tests, and
+examples must use `mpal`; shell shortcuts are not part of the interface.
 
-FundLog is local-first and fully manual. Commands do not fetch prices, call
+mpal is local-first and fully manual. Commands do not fetch prices, call
 market APIs, calculate market value, or calculate unrealized PnL.
 
 ## Root hierarchy
 
-`fundlog --help` exposes only:
+`mpal --help` exposes only:
 
 - `init`
 - `portfolio`
@@ -25,7 +25,7 @@ aliases are removed, and no compatibility aliases are retained.
 ### Initialization
 
 ```console
-fundlog init
+mpal init
 ```
 
 Creates or upgrades the local SQLite database using the existing idempotent
@@ -34,11 +34,11 @@ schema checks.
 ### Portfolio
 
 ```console
-fundlog portfolio create <portfolio> [--initial <amount>]
-fundlog portfolio list
-fundlog portfolio show <portfolio>
-fundlog portfolio delete <portfolio> --yes
-fundlog portfolio reset <portfolio> --yes
+mpal portfolio create <portfolio> [--initial <amount>]
+mpal portfolio list
+mpal portfolio show <portfolio>
+mpal portfolio delete <portfolio> --yes
+mpal portfolio reset <portfolio> --yes
 ```
 
 - `create` creates an active portfolio. `--initial` atomically creates its
@@ -59,20 +59,20 @@ Internal database IDs are never displayed.
 ### Capital
 
 ```console
-fundlog capital deposit <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
-fundlog capital deposit <amount> -p <portfolio> [--date <date>] [--note <text>]
+mpal capital deposit <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
+mpal capital deposit <amount> -p <portfolio> [--date <date>] [--note <text>]
 
-fundlog capital withdraw <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
-fundlog capital withdraw <amount> -p <portfolio> [--date <date>] [--note <text>]
+mpal capital withdraw <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
+mpal capital withdraw <amount> -p <portfolio> [--date <date>] [--note <text>]
 
-fundlog capital log --portfolio <portfolio>
-fundlog capital log -p <portfolio>
+mpal capital log --portfolio <portfolio>
+mpal capital log -p <portfolio>
 
-fundlog capital edit <entry-number> --portfolio <portfolio> [--amount <amount>] [--date <date>] [--note <text>]
-fundlog capital edit <entry-number> -p <portfolio> [--amount <amount>] [--date <date>] [--note <text>]
+mpal capital edit <entry-number> --portfolio <portfolio> [--amount <amount>] [--date <date>] [--note <text>]
+mpal capital edit <entry-number> -p <portfolio> [--amount <amount>] [--date <date>] [--note <text>]
 
-fundlog capital delete <entry-number> --portfolio <portfolio>
-fundlog capital delete <entry-number> -p <portfolio>
+mpal capital delete <entry-number> --portfolio <portfolio>
+mpal capital delete <entry-number> -p <portfolio>
 ```
 
 `--portfolio` / `-p` is required. There is no default portfolio.
@@ -93,29 +93,29 @@ IDs.
 ### Assets
 
 ```console
-fundlog asset add <symbol> [symbol...] --portfolio <portfolio>
-fundlog asset add <symbol> [symbol...] -p <portfolio>
+mpal asset add <symbol> [symbol...] --portfolio <portfolio>
+mpal asset add <symbol> [symbol...] -p <portfolio>
 
-fundlog asset summary --portfolio <portfolio>
-fundlog asset summary -p <portfolio>
+mpal asset summary --portfolio <portfolio>
+mpal asset summary -p <portfolio>
 
-fundlog asset summary <symbol> --portfolio <portfolio>
-fundlog asset summary <symbol> -p <portfolio>
+mpal asset summary <symbol> --portfolio <portfolio>
+mpal asset summary <symbol> -p <portfolio>
 
-fundlog asset log <symbol> --portfolio <portfolio>
-fundlog asset log <symbol> -p <portfolio>
+mpal asset log <symbol> --portfolio <portfolio>
+mpal asset log <symbol> -p <portfolio>
 
-fundlog asset delete <symbol> --portfolio <portfolio> --yes
-fundlog asset delete <symbol> -p <portfolio> --yes
+mpal asset delete <symbol> --portfolio <portfolio> --yes
+mpal asset delete <symbol> -p <portfolio> --yes
 
-fundlog asset income <symbol> <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
-fundlog asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
+mpal asset income <symbol> <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
+mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
 
-fundlog asset buy <symbol> --portfolio <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
-fundlog asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset buy <symbol> --portfolio <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
 
-fundlog asset sell <symbol> --portfolio <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
-fundlog asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset sell <symbol> --portfolio <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
 ```
 
 `--portfolio` / `-p` is required for every asset command. Symbols normalize to
@@ -166,18 +166,18 @@ Trade totals retain the existing behavior:
 The following commands and shapes must fail rather than delegate:
 
 ```text
-fundlog create
-fundlog summary
-fundlog reset
-fundlog delete
-fundlog inflow
-fundlog outflow
-fundlog log
-fundlog edit
-fundlog income
-fundlog buy
-fundlog sell
-fundlog asset list
+mpal create
+mpal summary
+mpal reset
+mpal delete
+mpal inflow
+mpal outflow
+mpal log
+mpal edit
+mpal income
+mpal buy
+mpal sell
+mpal asset list
 ```
 
 The previous combined portfolio/symbol positional argument is also removed
@@ -190,7 +190,7 @@ No hidden alias plan exists in this branch.
 ## Help contract
 
 - Root help lists only the four root commands.
-- Help examples use `fundlog`.
+- Help examples use `mpal`.
 - Help examples use `--portfolio` / `-p`.
 - Help does not advertise removed commands or compatibility aliases.
 - Portfolio-scoped command help shows both `--portfolio` and `-p`.

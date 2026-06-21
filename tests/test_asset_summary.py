@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from fundlog.cli import app
+from mpal.cli import app
 
 runner = CliRunner()
 
@@ -18,14 +18,14 @@ def _initialize_asset(
     portfolio: str = "stocks",
     symbols: tuple[str, ...] = ("AAPL",),
 ) -> Path:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
     assert runner.invoke(app, ["portfolio", "create", portfolio]).exit_code == 0
     assert (
         runner.invoke(app, ["asset", "add", *symbols, "-p", portfolio]).exit_code == 0
     )
-    return data_dir / "fundlog.db"
+    return data_dir / "mpal.db"
 
 
 def _buy(
@@ -75,13 +75,13 @@ def test_asset_summary_requires_initialized_database(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
+    assert "Run 'mpal init' first." in result.output
     assert "Traceback" not in result.output
 
 
@@ -107,22 +107,22 @@ def test_portfolio_asset_summary_requires_initialized_database(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_portfolio_asset_summary_requires_active_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
@@ -135,8 +135,8 @@ def test_portfolio_asset_summary_shows_empty_message(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -226,8 +226,8 @@ def test_asset_summary_requires_active_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
@@ -237,8 +237,8 @@ def test_asset_summary_requires_active_portfolio(
 
 
 def test_asset_summary_requires_active_asset(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 

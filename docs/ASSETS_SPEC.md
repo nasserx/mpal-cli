@@ -1,8 +1,8 @@
-# FundLog Assets Specification
+# mpal Assets Specification
 
 ## Scope
 
-FundLog assets are portfolio-owned, manually managed symbols. The implemented
+mpal assets are portfolio-owned, manually managed symbols. The implemented
 asset model supports:
 
 - symbol creation and soft deletion
@@ -15,7 +15,7 @@ asset model supports:
 - Realized PnL
 - portfolio Cash, Positions, Book Value, Income, and Return integration
 
-FundLog does not use live prices, market APIs, market value, automatic
+mpal does not use live prices, market APIs, market value, automatic
 valuation, or unrealized PnL.
 
 ## CLI contract
@@ -24,14 +24,14 @@ Every asset command requires `--portfolio` / `-p`; there is no default
 portfolio.
 
 ```console
-fundlog asset add <symbol> [symbol...] -p <portfolio>
-fundlog asset summary -p <portfolio>
-fundlog asset summary <symbol> -p <portfolio>
-fundlog asset log <symbol> -p <portfolio>
-fundlog asset delete <symbol> -p <portfolio> --yes
-fundlog asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
-fundlog asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
-fundlog asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset add <symbol> [symbol...] -p <portfolio>
+mpal asset summary -p <portfolio>
+mpal asset summary <symbol> -p <portfolio>
+mpal asset log <symbol> -p <portfolio>
+mpal asset delete <symbol> -p <portfolio> --yes
+mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
+mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
+mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
 ```
 
 The long `--portfolio` spelling is equivalent to `-p`.
@@ -92,10 +92,10 @@ soft deletion. Internal row IDs are not part of the CLI.
 
 `buy total = price × quantity + fee`
 
-If the calculated value is exactly representable in minor units, FundLog uses
+If the calculated value is exactly representable in minor units, mpal uses
 it and requires a supplied `--total` to match. If it is not exactly
 representable, the command requires an exact statement value through
-`--total`. FundLog does not silently round.
+`--total`. mpal does not silently round.
 
 ### Sell total
 
@@ -154,7 +154,7 @@ sell relieves all remaining Cost Basis so no residual remains.
 Portfolio-wide summary:
 
 ```console
-fundlog asset summary -p stocks
+mpal asset summary -p stocks
 ```
 
 Columns:
@@ -164,7 +164,7 @@ Columns:
 Single-asset summary:
 
 ```console
-fundlog asset summary AAPL -p stocks
+mpal asset summary AAPL -p stocks
 ```
 
 Columns:
@@ -187,7 +187,7 @@ Portfolio-wide rows are ordered by normalized symbol.
 ## Asset log
 
 ```console
-fundlog asset log AAPL -p stocks
+mpal asset log AAPL -p stocks
 ```
 
 Columns:
@@ -200,7 +200,7 @@ display placeholders for Price, Quantity, and Fee.
 ## Deletion
 
 ```console
-fundlog asset delete AAPL -p stocks --yes
+mpal asset delete AAPL -p stocks --yes
 ```
 
 Deletion is soft and atomic:

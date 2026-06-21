@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from fundlog.dates import parse_transaction_date
-from fundlog.errors import InvalidEntryDateError
+from mpal.dates import parse_transaction_date
+from mpal.errors import InvalidEntryDateError
 
 
 def test_parse_transaction_date_accepts_past_date() -> None:

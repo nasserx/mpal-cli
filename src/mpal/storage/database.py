@@ -1,12 +1,12 @@
-"""SQLite database initialization for FundLog."""
+"""SQLite database initialization for mpal."""
 
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from fundlog.config import get_database_path
-from fundlog.errors import DatabaseNotInitializedError, StorageError
+from mpal.config import get_database_path
+from mpal.errors import DatabaseNotInitializedError, StorageError
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS portfolios (
@@ -238,7 +238,7 @@ def _ensure_asset_transactions(connection: sqlite3.Connection) -> None:
 
 
 def _require_initialized_schema(connection: sqlite3.Connection) -> None:
-    """Require the existing FundLog v0.1 base tables."""
+    """Require the existing mpal v0.1 base tables."""
     tables = {
         row[0]
         for row in connection.execute(
@@ -247,7 +247,7 @@ def _require_initialized_schema(connection: sqlite3.Connection) -> None:
     }
     if not {"portfolios", "capital_entries"}.issubset(tables):
         raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
+            "mpal is not initialized. Run 'mpal init' first."
         )
 
 
@@ -259,7 +259,7 @@ def connect_database(
     path = database_path if database_path is not None else get_database_path()
     if not path.is_file():
         raise DatabaseNotInitializedError(
-            "FundLog is not initialized. Run 'fundlog init' first."
+            "mpal is not initialized. Run 'mpal init' first."
         )
 
     connection: sqlite3.Connection | None = None
@@ -277,8 +277,8 @@ def connect_database(
         if connection is not None:
             connection.rollback()
         raise StorageError(
-            "FundLog could not access the local database safely. "
-            "Run 'fundlog init' and try again."
+            "mpal could not access the local database safely. "
+            "Run 'mpal init' and try again."
         ) from error
     except Exception:
         if connection is not None:
@@ -306,8 +306,6 @@ def initialize_database(database_path: Path | None = None) -> Path:
             _ensure_assets(connection)
             _ensure_asset_transactions(connection)
     except (OSError, sqlite3.Error) as error:
-        raise StorageError(
-            "FundLog could not initialize the local database."
-        ) from error
+        raise StorageError("mpal could not initialize the local database.") from error
 
     return path

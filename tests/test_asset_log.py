@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from fundlog.cli import app
+from mpal.cli import app
 
 runner = CliRunner()
 
@@ -16,12 +16,12 @@ def _initialize_asset(
     portfolio: str = "stocks",
     symbol: str = "AAPL",
 ) -> Path:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     assert runner.invoke(app, ["init"]).exit_code == 0
     assert runner.invoke(app, ["portfolio", "create", portfolio]).exit_code == 0
     assert runner.invoke(app, ["asset", "add", symbol, "-p", portfolio]).exit_code == 0
-    return data_dir / "fundlog.db"
+    return data_dir / "mpal.db"
 
 
 def _asset_id(database_path: Path, portfolio: str, symbol: str) -> int:
@@ -95,13 +95,13 @@ def test_init_creates_asset_transactions_schema(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["init"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         columns = {
             row[1]
             for row in connection.execute("PRAGMA table_info(asset_transactions)")
@@ -162,10 +162,10 @@ def test_normal_command_migrates_asset_transactions_for_legacy_database(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
+    data_dir = tmp_path / "mpal-data"
     data_dir.mkdir()
-    database_path = data_dir / "fundlog.db"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    database_path = data_dir / "mpal.db"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     with sqlite3.connect(database_path) as connection:
         connection.executescript(
             """
@@ -224,13 +224,13 @@ def test_asset_log_requires_initialized_database(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
+    assert "Run 'mpal init' first." in result.output
     assert "Traceback" not in result.output
 
 
@@ -250,8 +250,8 @@ def test_asset_log_requires_active_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
@@ -264,8 +264,8 @@ def test_asset_log_requires_active_asset(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 

@@ -4,8 +4,8 @@ from decimal import ROUND_HALF_EVEN, Decimal
 
 from rich.text import Text
 
-from fundlog.amounts import format_money, format_signed_money
-from fundlog.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
+from mpal.amounts import format_money, format_signed_money
+from mpal.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
 
 
 def format_signed_percent(result_minor: int, denominator_minor: int) -> str:

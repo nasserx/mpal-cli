@@ -1,18 +1,18 @@
-"""FundLog command-line interface."""
+"""mpal command-line interface."""
 
 from datetime import date as local_date
 from typing import Annotated
 
 import typer
 
-from fundlog import __version__
-from fundlog.amounts import parse_amount_minor
-from fundlog.assets import normalize_symbol
-from fundlog.config import APP_NAME
-from fundlog.dates import parse_transaction_date
-from fundlog.errors import FundLogError
-from fundlog.numbers import parse_price, parse_quantity
-from fundlog.output.console import (
+from mpal import __version__
+from mpal.amounts import parse_amount_minor
+from mpal.assets import normalize_symbol
+from mpal.config import APP_NAME
+from mpal.dates import parse_transaction_date
+from mpal.errors import MpalError
+from mpal.numbers import parse_price, parse_quantity
+from mpal.output.console import (
     print_asset_summary,
     print_asset_transaction_log,
     print_assets,
@@ -24,7 +24,7 @@ from fundlog.output.console import (
     print_success,
     print_warning,
 )
-from fundlog.storage import (
+from mpal.storage import (
     calculate_buy_total_minor,
     calculate_sell_total_minor,
     create_assets,
@@ -57,69 +57,69 @@ PORTFOLIO_OPTION = typer.Option(
 
 HELP_EXAMPLES = r"""Examples:
 
-  fundlog init
+  mpal init
 
-  fundlog portfolio create <portfolio> [--initial <amount>]
+  mpal portfolio create <portfolio> [--initial <amount>]
 
-  fundlog portfolio list
+  mpal portfolio list
 
-  fundlog portfolio show <portfolio>
+  mpal portfolio show <portfolio>
 
-  fundlog capital deposit <amount> -p <portfolio>
+  mpal capital deposit <amount> -p <portfolio>
 
-  fundlog asset add <symbol> \[symbol...] -p <portfolio>
+  mpal asset add <symbol> \[symbol...] -p <portfolio>
 
-  fundlog asset summary [<symbol>] -p <portfolio>
+  mpal asset summary [<symbol>] -p <portfolio>
 """
 
 PORTFOLIO_HELP_EXAMPLES = """Examples:
 
-  fundlog portfolio create <portfolio> [--initial <amount>]
+  mpal portfolio create <portfolio> [--initial <amount>]
 
-  fundlog portfolio list
+  mpal portfolio list
 
-  fundlog portfolio show <portfolio>
+  mpal portfolio show <portfolio>
 
-  fundlog portfolio reset <portfolio> --yes
+  mpal portfolio reset <portfolio> --yes
 
-  fundlog portfolio delete <portfolio> --yes
+  mpal portfolio delete <portfolio> --yes
 """
 
 CAPITAL_HELP_EXAMPLES = """Examples:
 
-  fundlog capital deposit <amount> -p <portfolio>
+  mpal capital deposit <amount> -p <portfolio>
 
-  fundlog capital withdraw <amount> -p <portfolio>
+  mpal capital withdraw <amount> -p <portfolio>
 
-  fundlog capital log -p <portfolio>
+  mpal capital log -p <portfolio>
 
-  fundlog capital edit <entry-number> -p <portfolio> --amount <amount>
+  mpal capital edit <entry-number> -p <portfolio> --amount <amount>
 
-  fundlog capital delete <entry-number> -p <portfolio>
+  mpal capital delete <entry-number> -p <portfolio>
 """
 
 ASSET_HELP_EXAMPLES = r"""Examples:
 
-  fundlog asset add <symbol> \[symbol...] -p <portfolio>
+  mpal asset add <symbol> \[symbol...] -p <portfolio>
 
-  fundlog asset summary -p <portfolio>
+  mpal asset summary -p <portfolio>
 
-  fundlog asset summary <symbol> -p <portfolio>
+  mpal asset summary <symbol> -p <portfolio>
 
-  fundlog asset log <symbol> -p <portfolio>
+  mpal asset log <symbol> -p <portfolio>
 
-  fundlog asset income <symbol> <amount> -p <portfolio>
+  mpal asset income <symbol> <amount> -p <portfolio>
 
-  fundlog asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
+  mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
-  fundlog asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
+  mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
-  fundlog asset delete <symbol> -p <portfolio> --yes
+  mpal asset delete <symbol> -p <portfolio> --yes
 """
 
 app = typer.Typer(
-    name="fundlog",
-    help="Manually track portfolio capital from the terminal.",
+    name="mpal",
+    help="Multi-Portfolio Asset Ledger for manual asset and capital tracking.",
     epilog=HELP_EXAMPLES,
     no_args_is_help=True,
 )
@@ -147,7 +147,7 @@ app.add_typer(asset_app)
 
 
 def version_callback(value: bool) -> None:
-    """Print the installed FundLog version and exit."""
+    """Print the installed mpal version and exit."""
     if value:
         typer.echo(f"{APP_NAME} {__version__}")
         raise typer.Exit()
@@ -161,23 +161,23 @@ def main(
             "--version",
             callback=version_callback,
             is_eager=True,
-            help="Show the FundLog version and exit.",
+            help="Show the mpal version and exit.",
         ),
     ] = None,
 ) -> None:
-    """FundLog manages manually recorded portfolio capital."""
+    """Multi-Portfolio Asset Ledger for manual asset and capital tracking."""
 
 
 @app.command("init")
 def init_command() -> None:
-    """Initialize FundLog's local database."""
+    """Initialize mpal's local database."""
     try:
         database_path = initialize_database()
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_success(f"FundLog initialized at {database_path}")
+    print_success(f"mpal initialized at {database_path}")
 
 
 @portfolio_app.command("create")
@@ -199,7 +199,7 @@ def portfolio_create(
                 amount_minor,
                 local_date.today(),
             )
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -214,7 +214,7 @@ def portfolio_list() -> None:
     """Show financial summaries for all active portfolios."""
     try:
         summaries = get_all_portfolio_summaries()
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -231,7 +231,7 @@ def portfolio_show(
     """Show one active portfolio's financial summary."""
     try:
         summary = get_portfolio_summary(portfolio)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -253,7 +253,7 @@ def portfolio_delete(
 
     try:
         delete_portfolio(portfolio)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -275,7 +275,7 @@ def portfolio_reset(
 
     try:
         reset_portfolio_entries(portfolio)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -305,7 +305,7 @@ def capital_deposit(
             local_date.today() if date is None else parse_transaction_date(date)
         )
         record_inflow(portfolio, amount_minor, entry_date, note)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -335,7 +335,7 @@ def capital_withdraw(
             local_date.today() if date is None else parse_transaction_date(date)
         )
         record_outflow(portfolio, amount_minor, entry_date, note)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -349,7 +349,7 @@ def capital_log(
     """Show active capital entries for a portfolio."""
     try:
         entries = get_capital_entry_log(portfolio)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -400,7 +400,7 @@ def capital_edit(
             entry_date=entry_date,
             note=note,
         )
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -421,7 +421,7 @@ def capital_delete(
     """Soft-delete one capital entry by its portfolio-local number."""
     try:
         delete_capital_entry(portfolio, entry_number)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -439,7 +439,7 @@ def asset_add(
     """Add one or more symbols to an existing portfolio."""
     try:
         normalized_symbols = create_assets(portfolio, symbols)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -466,7 +466,7 @@ def asset_summary(
     if symbol is None:
         try:
             assets = get_assets(portfolio)
-        except FundLogError as error:
+        except MpalError as error:
             print_error(str(error))
             raise typer.Exit(code=1) from error
 
@@ -479,7 +479,7 @@ def asset_summary(
     try:
         normalized_symbol = normalize_symbol(symbol)
         summary = get_asset_summary(portfolio, normalized_symbol)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -495,7 +495,7 @@ def asset_log(
     try:
         normalized_symbol = normalize_symbol(symbol)
         transactions = get_asset_transaction_log(portfolio, normalized_symbol)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -525,7 +525,7 @@ def asset_delete(
     try:
         normalized_symbol = normalize_symbol(symbol)
         delete_asset(portfolio, normalized_symbol)
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -566,7 +566,7 @@ def asset_income(
             transaction_date,
             note,
         )
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -633,7 +633,7 @@ def asset_buy(
             transaction_date,
             note,
         )
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
@@ -700,7 +700,7 @@ def asset_sell(
             transaction_date,
             note,
         )
-    except FundLogError as error:
+    except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 

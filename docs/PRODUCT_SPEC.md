@@ -1,13 +1,13 @@
-# FundLog Product Specification
+# Multi-Portfolio Asset Ledger Product Specification
 
 ## Product identity
 
-- Project name: FundLog
-- CLI command: `fundlog`
-- Package/distribution name: `fundlog-cli`
-- Repository/folder name: `fundlog`
+- Project name: Multi-Portfolio Asset Ledger (`mpal`)
+- CLI command: `mpal`
+- Package/distribution name: `mpal-cli`
+- Repository/folder name: `mpal-cli`
 
-FundLog is a fully manual, local-first, terminal-based capital management and portfolio tracking tool. It stores manual portfolio records locally and derives calculations deterministically from those records. It does not use live prices or market APIs.
+mpal is a fully manual, local-first, terminal-based capital management and portfolio tracking tool. It stores manual portfolio records locally and derives calculations deterministically from those records. It does not use live prices or market APIs.
 
 ## Goals
 
@@ -20,7 +20,7 @@ FundLog is a fully manual, local-first, terminal-based capital management and po
 
 ## Non-goals
 
-FundLog is not intended to:
+mpal is not intended to:
 
 - Execute trades or integrate with brokers.
 - Retrieve market data, live prices, or real-time prices.
@@ -101,4 +101,4 @@ The completed capital ledger and current asset milestone include:
   Realized PnL, Income, and Return.
 
 Live pricing, market APIs, market valuation, and unrealized PnL are not part of
-FundLog.
+mpal.

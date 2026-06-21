@@ -1,4 +1,4 @@
-"""Smoke tests for the FundLog CLI scaffold."""
+"""Smoke tests for the mpal CLI scaffold."""
 
 import sqlite3
 from datetime import date, timedelta
@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from fundlog import __version__
-from fundlog.cli import app
+from mpal import __version__
+from mpal.cli import app
 
 runner = CliRunner()
 
@@ -41,18 +41,18 @@ def test_help_exits_successfully() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    assert "Manually track portfolio capital" in result.output
+    assert "Multi-Portfolio Asset Ledger" in result.output
     assert "Examples:" in result.output
-    assert "fundlog portfolio create <portfolio> [--initial <amount>]" in result.output
-    assert "fundlog capital delete <entry-number> -p <portfolio>" not in result.output
-    assert "fundlog capital deposit <amount> -p <portfolio>" in result.output
+    assert "mpal portfolio create <portfolio> [--initial <amount>]" in result.output
+    assert "mpal capital delete <entry-number> -p <portfolio>" not in result.output
+    assert "mpal capital deposit <amount> -p <portfolio>" in result.output
 
 
 def test_version_exits_successfully() -> None:
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert f"FundLog {__version__}" in result.output
+    assert f"mpal {__version__}" in result.output
 
 
 def test_commands_are_registered() -> None:
@@ -93,8 +93,8 @@ def test_delete_rejects_entry_number_with_yes(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
 
@@ -108,7 +108,7 @@ def test_init_help_exits_successfully() -> None:
     result = runner.invoke(app, ["init", "--help"])
 
     assert result.exit_code == 0
-    assert "Initialize FundLog's local database" in result.output
+    assert "Initialize mpal's local database" in result.output
 
 
 def test_edit_help_references_portfolio_log_entry_number() -> None:
@@ -134,15 +134,15 @@ def test_init_creates_database_and_expected_tables(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["init"])
-    database_path = data_dir / "fundlog.db"
+    database_path = data_dir / "mpal.db"
 
     assert result.exit_code == 0
     assert database_path.exists()
-    assert "FundLog initialized at" in result.output
+    assert "mpal initialized at" in result.output
 
     with sqlite3.connect(database_path) as connection:
         tables = {
@@ -223,11 +223,11 @@ def test_init_creates_database_and_expected_tables(
 
 
 def test_init_is_idempotent(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     first_result = runner.invoke(app, ["init"])
-    database_path = data_dir / "fundlog.db"
+    database_path = data_dir / "mpal.db"
     with sqlite3.connect(database_path) as connection:
         connection.execute("INSERT INTO portfolios (name) VALUES (?)", ("stocks",))
 
@@ -249,12 +249,12 @@ def test_init_reports_unusable_data_directory_without_traceback(
 ) -> None:
     data_path = tmp_path / "not-a-directory"
     data_path.write_text("occupied", encoding="utf-8")
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_path))
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_path))
 
     result = runner.invoke(app, ["init"])
 
     assert result.exit_code == 1
-    assert "FundLog could not initialize the local database." in result.output
+    assert "mpal could not initialize the local database." in result.output
     assert "Traceback" not in result.output
 
 
@@ -262,10 +262,10 @@ def test_init_migrates_and_backfills_portfolio_entry_numbers(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
+    data_dir = tmp_path / "mpal-data"
     data_dir.mkdir()
-    database_path = data_dir / "fundlog.db"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    database_path = data_dir / "mpal.db"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     with sqlite3.connect(database_path) as connection:
         connection.executescript(
             """
@@ -333,10 +333,10 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
+    data_dir = tmp_path / "mpal-data"
     data_dir.mkdir()
-    database_path = data_dir / "fundlog.db"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    database_path = data_dir / "mpal.db"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     with sqlite3.connect(database_path) as connection:
         connection.executescript(
             """
@@ -428,10 +428,10 @@ def test_schema_errors_are_concise_without_traceback(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
+    data_dir = tmp_path / "mpal-data"
     data_dir.mkdir()
-    database_path = data_dir / "fundlog.db"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    database_path = data_dir / "mpal.db"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     with sqlite3.connect(database_path) as connection:
         connection.executescript(
             """
@@ -451,14 +451,14 @@ def test_schema_errors_are_concise_without_traceback(
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "FundLog could not access the local database safely." in result.output
+    assert "mpal could not access the local database safely." in result.output
     assert "Traceback" not in result.output
     assert "sqlite3." not in result.output
 
 
 def test_create_portfolio_after_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "create", "stocks"])
@@ -466,7 +466,7 @@ def test_create_portfolio_after_init(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0
     assert "Portfolio 'stocks' created." in result.output
 
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolios = connection.execute(
             "SELECT name, deleted_at FROM portfolios"
         ).fetchall()
@@ -475,8 +475,8 @@ def test_create_portfolio_after_init(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_duplicate_active_portfolio_fails(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -487,25 +487,25 @@ def test_duplicate_active_portfolio_fails(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_create_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "create", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_create_does_not_create_capital_entries(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "create", "stocks"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry_count = connection.execute(
             "SELECT COUNT(*) FROM capital_entries"
         ).fetchone()[0]
@@ -514,8 +514,8 @@ def test_create_does_not_create_capital_entries(tmp_path: Path, monkeypatch) -> 
 
 
 def test_create_rejects_empty_name(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "create", ""])
@@ -528,15 +528,15 @@ def test_create_with_initial_creates_portfolio_and_inflow(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000"])
 
     assert result.exit_code == 0
     assert "Portfolio 'stocks' created with initial capital." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio = connection.execute(
             "SELECT id, name, deleted_at FROM portfolios"
         ).fetchone()
@@ -563,8 +563,8 @@ def test_create_with_initial_supports_decimal_amount(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(
@@ -572,7 +572,7 @@ def test_create_with_initial_supports_decimal_amount(
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         amount_minor = connection.execute(
             "SELECT amount_minor FROM capital_entries"
         ).fetchone()[0]
@@ -597,15 +597,15 @@ def test_create_with_initial_rejects_invalid_amount(
     amount: str,
     message: str,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "create", "stocks", "--initial", amount])
 
     assert result.exit_code == 1
     assert message in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_count = connection.execute(
             "SELECT COUNT(*) FROM portfolios"
         ).fetchone()[0]
@@ -621,22 +621,22 @@ def test_create_with_initial_fails_before_init(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_duplicate_create_with_initial_creates_no_extra_entry(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000"])
 
@@ -644,7 +644,7 @@ def test_duplicate_create_with_initial_creates_no_extra_entry(
 
     assert result.exit_code == 1
     assert "An active portfolio named 'stocks' already exists." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_count = connection.execute(
             "SELECT COUNT(*) FROM portfolios"
         ).fetchone()[0]
@@ -660,10 +660,10 @@ def test_create_with_initial_rolls_back_if_entry_insert_fails(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             CREATE TRIGGER reject_initial_entry
@@ -677,7 +677,7 @@ def test_create_with_initial_rolls_back_if_entry_insert_fails(
     result = runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_count = connection.execute(
             "SELECT COUNT(*) FROM portfolios"
         ).fetchone()[0]
@@ -690,8 +690,8 @@ def test_create_with_initial_rolls_back_if_entry_insert_fails(
 
 
 def test_summary_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000.50"])
 
@@ -704,8 +704,8 @@ def test_summary_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_log_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000.50"])
 
@@ -719,8 +719,8 @@ def test_log_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -728,7 +728,7 @@ def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert "Deposit recorded for portfolio 'stocks'." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             """
             SELECT p.name, e.entry_type, e.amount_minor, e.entry_date, e.note
@@ -741,8 +741,8 @@ def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_accepts_past_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     past_date = date.today() - timedelta(days=1)
@@ -753,7 +753,7 @@ def test_inflow_accepts_past_date(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry_date = connection.execute(
             "SELECT entry_date FROM capital_entries"
         ).fetchone()[0]
@@ -761,8 +761,8 @@ def test_inflow_accepts_past_date(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_accepts_today(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     today = date.today()
@@ -776,8 +776,8 @@ def test_inflow_accepts_today(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     future_date = date.today() + timedelta(days=1)
@@ -803,8 +803,8 @@ def test_inflow_stores_decimal_amount_as_minor_units(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -824,7 +824,7 @@ def test_inflow_stores_decimal_amount_as_minor_units(
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             "SELECT amount_minor, entry_date, note FROM capital_entries"
         ).fetchone()
@@ -833,8 +833,8 @@ def test_inflow_stores_decimal_amount_as_minor_units(
 
 
 def test_inflow_rejects_zero_amount(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -845,8 +845,8 @@ def test_inflow_rejects_zero_amount(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_rejects_negative_amount(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -857,8 +857,8 @@ def test_inflow_rejects_negative_amount(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_inflow_rejects_invalid_amount(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -872,8 +872,8 @@ def test_inflow_rejects_more_than_two_decimal_places(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -884,19 +884,19 @@ def test_inflow_rejects_more_than_two_decimal_places(
 
 
 def test_inflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_inflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -909,11 +909,11 @@ def test_inflow_fails_for_soft_deleted_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE portfolios SET deleted_at = CURRENT_TIMESTAMP WHERE name = ?",
             ("stocks",),
@@ -926,8 +926,8 @@ def test_inflow_fails_for_soft_deleted_portfolio(
 
 
 def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -936,7 +936,7 @@ def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert "Withdrawal recorded for portfolio 'stocks'." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             """
             SELECT entry_type, amount_minor, entry_date, note
@@ -949,8 +949,8 @@ def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_outflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     future_date = date.today() + timedelta(days=1)
@@ -976,8 +976,8 @@ def test_outflow_stores_decimal_amount_as_minor_units(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -998,7 +998,7 @@ def test_outflow_stores_decimal_amount_as_minor_units(
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             """
             SELECT amount_minor, entry_date, note
@@ -1025,8 +1025,8 @@ def test_outflow_rejects_invalid_amounts(
     amount: str,
     message: str,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1038,19 +1038,19 @@ def test_outflow_rejects_invalid_amounts(
 
 
 def test_outflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_outflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
@@ -1063,8 +1063,8 @@ def test_outflow_fails_when_cash_is_insufficient(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
@@ -1073,7 +1073,7 @@ def test_outflow_fails_when_cash_is_insufficient(
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         outflow_count = connection.execute(
             "SELECT COUNT(*) FROM capital_entries WHERE entry_type = 'outflow'"
         ).fetchone()[0]
@@ -1085,8 +1085,8 @@ def test_outflow_succeeds_when_cash_is_exactly_enough(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "250.50", "-p", "stocks"])
@@ -1100,8 +1100,8 @@ def test_outflow_cash_check_includes_prior_active_outflows(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
@@ -1117,12 +1117,12 @@ def test_outflow_cash_check_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             UPDATE capital_entries
@@ -1141,8 +1141,8 @@ def test_summary_for_portfolio_with_no_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1166,8 +1166,8 @@ def test_summary_for_portfolio_with_no_entries(
 
 
 def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000.50", "-p", "stocks"])
@@ -1179,8 +1179,8 @@ def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_summary_after_inflow_and_outflow(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1196,13 +1196,13 @@ def test_summary_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             UPDATE capital_entries
@@ -1222,13 +1222,13 @@ def test_summary_ignores_soft_deleted_outflow(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             UPDATE capital_entries
@@ -1245,22 +1245,22 @@ def test_summary_ignores_soft_deleted_outflow(
 
 
 def test_summary_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_summary_fails_for_unknown_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "show", "stocks"])
@@ -1273,8 +1273,8 @@ def test_summary_formats_money_with_two_decimal_places(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1.2", "-p", "stocks"])
@@ -1291,8 +1291,8 @@ def test_summary_hides_internal_and_ambiguous_columns(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1309,8 +1309,8 @@ def test_summary_v01_book_fields_are_deterministic(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1329,19 +1329,19 @@ def test_summary_v01_book_fields_are_deterministic(
 
 
 def test_summary_all_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "list"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_summary_all_with_no_portfolios(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "list"])
@@ -1354,8 +1354,8 @@ def test_summary_all_lists_multiple_active_portfolios(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -1371,8 +1371,8 @@ def test_summary_all_uses_exact_documented_columns(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1400,8 +1400,8 @@ def test_summary_all_derives_each_portfolio_independently(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -1420,13 +1420,13 @@ def test_summary_all_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
         )
@@ -1442,12 +1442,12 @@ def test_summary_all_ignores_soft_deleted_portfolios(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE portfolios SET deleted_at = CURRENT_TIMESTAMP WHERE name = ?",
             ("crypto",),
@@ -1464,8 +1464,8 @@ def test_summary_all_ordering_is_name_ascending(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -1482,8 +1482,8 @@ def test_portfolio_show_rejects_removed_all_flag(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1494,19 +1494,19 @@ def test_portfolio_show_rejects_removed_all_flag(
 
 
 def test_log_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_log_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
@@ -1516,8 +1516,8 @@ def test_log_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_log_for_empty_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1531,8 +1531,8 @@ def test_log_shows_deposit_entry_with_date_note_and_amount(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -1564,8 +1564,8 @@ def test_log_shows_deposit_entry_with_date_note_and_amount(
 
 
 def test_log_shows_withdraw_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
@@ -1595,8 +1595,8 @@ def test_log_shows_withdraw_entry(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_log_ignores_soft_deleted_entries(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -1607,7 +1607,7 @@ def test_log_ignores_soft_deleted_entries(tmp_path: Path, monkeypatch) -> None:
         app,
         ["capital", "deposit", "200", "-p", "stocks", "--note", "hide this"],
     )
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             UPDATE capital_entries
@@ -1627,8 +1627,8 @@ def test_log_only_shows_selected_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -1650,15 +1650,15 @@ def test_entry_numbers_start_at_one_for_each_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
     runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "200", "-p", "crypto"])
 
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             """
             SELECT p.name, e.entry_no
@@ -1675,14 +1675,14 @@ def test_new_entries_increment_portfolio_entry_numbers(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "100", "-p", "stocks"])
 
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             "SELECT entry_no, entry_type FROM capital_entries ORDER BY entry_no"
         ).fetchall()
@@ -1694,8 +1694,8 @@ def test_deleted_and_reset_entries_do_not_reuse_entry_numbers(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
@@ -1704,7 +1704,7 @@ def test_deleted_and_reset_entries_do_not_reuse_entry_numbers(
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
     runner.invoke(app, ["capital", "deposit", "400", "-p", "stocks"])
 
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             "SELECT entry_no, deleted_at FROM capital_entries ORDER BY entry_no"
         ).fetchall()
@@ -1717,14 +1717,14 @@ def test_reused_portfolio_name_starts_entry_numbers_at_one(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "500"])
 
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             """
             SELECT p.id, p.deleted_at, e.entry_no
@@ -1744,8 +1744,8 @@ def test_log_ordering_is_date_then_entry_number(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -1799,8 +1799,8 @@ def test_log_ordering_is_date_then_entry_number(
 
 
 def test_edit_amount(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1811,7 +1811,7 @@ def test_edit_amount(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert "Capital entry 1 updated for portfolio 'stocks'." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             "SELECT entry_type, amount_minor FROM capital_entries WHERE id = 1"
         ).fetchone()
@@ -1820,8 +1820,8 @@ def test_edit_amount(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1832,7 +1832,7 @@ def test_edit_date(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry_date = connection.execute(
             "SELECT entry_date FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -1841,8 +1841,8 @@ def test_edit_date(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_note(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -1855,7 +1855,7 @@ def test_edit_note(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         note = connection.execute(
             "SELECT note FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -1864,8 +1864,8 @@ def test_edit_note(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_multiple_fields_atomically(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1888,7 +1888,7 @@ def test_edit_multiple_fields_atomically(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             """
             SELECT entry_type, amount_minor, entry_date, note
@@ -1904,8 +1904,8 @@ def test_edit_multiple_fields_roll_back_together_on_cash_failure(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -1942,7 +1942,7 @@ def test_edit_multiple_fields_roll_back_together_on_cash_failure(
     )
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entry = connection.execute(
             """
             SELECT amount_minor, entry_date, note
@@ -1955,21 +1955,21 @@ def test_edit_multiple_fields_roll_back_together_on_cash_failure(
 
 
 def test_edit_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(
         app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_edit_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(
@@ -1981,8 +1981,8 @@ def test_edit_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -1998,8 +1998,8 @@ def test_edit_fails_when_entry_belongs_to_another_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2017,8 +2017,8 @@ def test_edit_targets_portfolio_local_entry_number(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2030,7 +2030,7 @@ def test_edit_targets_portfolio_local_entry_number(
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             """
             SELECT p.name, e.entry_no, e.amount_minor
@@ -2044,12 +2044,12 @@ def test_edit_targets_portfolio_local_entry_number(
 
 
 def test_edit_fails_for_soft_deleted_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 1"
         )
@@ -2063,8 +2063,8 @@ def test_edit_fails_for_soft_deleted_entry(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_fails_without_edit_options(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2090,8 +2090,8 @@ def test_edit_rejects_invalid_amount(
     amount: str,
     message: str,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2105,8 +2105,8 @@ def test_edit_rejects_invalid_amount(
 
 
 def test_edit_rejects_invalid_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2121,8 +2121,8 @@ def test_edit_rejects_invalid_date(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2137,8 +2137,8 @@ def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_edit_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     future_date = date.today() + timedelta(days=1)
@@ -2156,8 +2156,8 @@ def test_edit_outflow_cannot_make_cash_negative(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2170,7 +2170,7 @@ def test_edit_outflow_cannot_make_cash_negative(
 
     assert result.exit_code == 1
     assert "Edit would make portfolio cash negative." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         amount_minor = connection.execute(
             "SELECT amount_minor FROM capital_entries WHERE id = 2"
         ).fetchone()[0]
@@ -2182,8 +2182,8 @@ def test_edit_inflow_downward_cannot_make_cash_negative(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2195,7 +2195,7 @@ def test_edit_inflow_downward_cannot_make_cash_negative(
 
     assert result.exit_code == 1
     assert "Edit would make portfolio cash negative." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         amount_minor = connection.execute(
             "SELECT amount_minor FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -2207,13 +2207,13 @@ def test_edit_cash_validation_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "900", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
         )
@@ -2223,7 +2223,7 @@ def test_edit_cash_validation_ignores_soft_deleted_entries(
     )
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         amount_minor = connection.execute(
             "SELECT amount_minor FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -2232,8 +2232,8 @@ def test_edit_cash_validation_ignores_soft_deleted_entries(
 
 
 def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2246,8 +2246,8 @@ def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -2280,8 +2280,8 @@ def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2290,7 +2290,7 @@ def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> 
 
     assert result.exit_code == 0
     assert "Capital entry 1 deleted from portfolio 'stocks'." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         row = connection.execute(
             "SELECT id, deleted_at FROM capital_entries WHERE id = 1"
         ).fetchone()
@@ -2300,8 +2300,8 @@ def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> 
 
 
 def test_deleted_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
@@ -2320,8 +2320,8 @@ def test_deleted_entry_is_ignored_by_summary(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2336,22 +2336,22 @@ def test_deleted_entry_is_ignored_by_summary(
 
 
 def test_delete_entry_fails_before_init(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_delete_entry_fails_for_unknown_portfolio(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
@@ -2361,8 +2361,8 @@ def test_delete_entry_fails_for_unknown_portfolio(
 
 
 def test_delete_entry_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -2376,8 +2376,8 @@ def test_delete_entry_number_in_another_portfolio_is_not_found(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2393,8 +2393,8 @@ def test_delete_targets_portfolio_local_entry_number(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2404,7 +2404,7 @@ def test_delete_targets_portfolio_local_entry_number(
     result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             """
             SELECT p.name, e.entry_no, e.deleted_at
@@ -2423,8 +2423,8 @@ def test_delete_entry_fails_for_already_soft_deleted_entry(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2440,8 +2440,8 @@ def test_deleting_outflow_succeeds_and_increases_cash(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2460,8 +2460,8 @@ def test_deleting_inflow_fails_if_cash_would_be_negative(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2477,8 +2477,8 @@ def test_failed_delete_entry_keeps_entry_active(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2487,7 +2487,7 @@ def test_failed_delete_entry_keeps_entry_active(
     result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         deleted_at = connection.execute(
             "SELECT deleted_at FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -2499,13 +2499,13 @@ def test_delete_entry_cash_validation_ignores_soft_deleted_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "900", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
         )
@@ -2516,19 +2516,19 @@ def test_delete_entry_cash_validation_ignores_soft_deleted_entries(
 
 
 def test_reset_requires_initialized_database(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_reset_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
@@ -2538,8 +2538,8 @@ def test_reset_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_reset_requires_yes(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
@@ -2553,8 +2553,8 @@ def test_reset_without_yes_does_not_change_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2562,7 +2562,7 @@ def test_reset_without_yes_does_not_change_entries(
     result = runner.invoke(app, ["portfolio", "reset", "stocks"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         deleted_at = connection.execute(
             "SELECT deleted_at FROM capital_entries WHERE id = 1"
         ).fetchone()[0]
@@ -2574,8 +2574,8 @@ def test_reset_soft_deletes_all_active_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2585,7 +2585,7 @@ def test_reset_soft_deletes_all_active_entries(
 
     assert result.exit_code == 0
     assert "Portfolio 'stocks' reset." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             "SELECT id, deleted_at FROM capital_entries ORDER BY id"
         ).fetchall()
@@ -2598,13 +2598,13 @@ def test_reset_preserves_already_soft_deleted_timestamp(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
             ("2000-01-01 00:00:00",),
@@ -2613,7 +2613,7 @@ def test_reset_preserves_already_soft_deleted_timestamp(
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             "SELECT id, deleted_at FROM capital_entries ORDER BY id"
         ).fetchall()
@@ -2626,8 +2626,8 @@ def test_reset_does_not_affect_other_portfolios(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2637,7 +2637,7 @@ def test_reset_does_not_affect_other_portfolios(
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         rows = connection.execute(
             """
             SELECT p.name, e.deleted_at
@@ -2653,8 +2653,8 @@ def test_reset_does_not_affect_other_portfolios(
 
 
 def test_log_is_empty_after_reset(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2667,8 +2667,8 @@ def test_log_is_empty_after_reset(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_summary_is_zero_after_reset(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2684,8 +2684,8 @@ def test_summary_is_zero_after_reset(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
@@ -2696,7 +2696,7 @@ def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None
     assert reset_result.exit_code == 0
     assert summary_result.exit_code == 0
     assert "stocks" in summary_result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio = connection.execute(
             "SELECT name, deleted_at FROM portfolios WHERE name = 'stocks'"
         ).fetchone()
@@ -2705,19 +2705,19 @@ def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None
 
 
 def test_delete_requires_initialized_database(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
     assert result.exit_code == 1
-    assert "Run 'fundlog init' first." in result.output
-    assert not (data_dir / "fundlog.db").exists()
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
 
 
 def test_delete_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
@@ -2727,8 +2727,8 @@ def test_delete_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None
 
 
 def test_delete_requires_yes(tmp_path: Path, monkeypatch) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
 
@@ -2742,15 +2742,15 @@ def test_delete_without_yes_does_not_change_data(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
 
     result = runner.invoke(app, ["portfolio", "delete", "stocks"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_deleted_at = connection.execute(
             "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
         ).fetchone()[0]
@@ -2766,8 +2766,8 @@ def test_delete_soft_deletes_portfolio_and_active_entries(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
@@ -2776,7 +2776,7 @@ def test_delete_soft_deletes_portfolio_and_active_entries(
 
     assert result.exit_code == 0
     assert "Portfolio 'stocks' deleted." in result.output
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolios = connection.execute(
             "SELECT name, deleted_at FROM portfolios"
         ).fetchall()
@@ -2795,12 +2795,12 @@ def test_delete_preserves_existing_soft_deleted_entry_timestamp(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
             ("2000-01-01 00:00:00",),
@@ -2809,7 +2809,7 @@ def test_delete_preserves_existing_soft_deleted_entry_timestamp(
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
             "SELECT id, deleted_at FROM capital_entries ORDER BY id"
         ).fetchall()
@@ -2822,8 +2822,8 @@ def test_delete_does_not_affect_other_portfolios(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["portfolio", "create", "crypto", "--initial", "500"])
@@ -2831,7 +2831,7 @@ def test_delete_does_not_affect_other_portfolios(
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         rows = connection.execute(
             """
             SELECT p.name, p.deleted_at, e.deleted_at
@@ -2851,8 +2851,8 @@ def test_deleted_portfolio_disappears_from_summary_all(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
@@ -2882,8 +2882,8 @@ def test_deleted_portfolio_rejects_portfolio_commands(
     monkeypatch,
     arguments: list[str],
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
@@ -2898,8 +2898,8 @@ def test_deleted_portfolio_name_can_be_reused(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
@@ -2907,7 +2907,7 @@ def test_deleted_portfolio_name_can_be_reused(
     result = runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "500"])
 
     assert result.exit_code == 0
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolios = connection.execute(
             "SELECT name, deleted_at FROM portfolios ORDER BY id"
         ).fetchall()
@@ -2930,11 +2930,11 @@ def test_delete_is_atomic_if_portfolio_update_fails(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             CREATE TRIGGER reject_portfolio_delete
@@ -2949,7 +2949,7 @@ def test_delete_is_atomic_if_portfolio_update_fails(
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_deleted_at = connection.execute(
             "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
         ).fetchone()[0]
@@ -2965,11 +2965,11 @@ def test_delete_keeps_portfolio_active_if_entry_update_fails(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
             CREATE TRIGGER reject_entry_delete
@@ -2984,7 +2984,7 @@ def test_delete_keeps_portfolio_active_if_entry_update_fails(
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
     assert result.exit_code == 1
-    with sqlite3.connect(data_dir / "fundlog.db") as connection:
+    with sqlite3.connect(data_dir / "mpal.db") as connection:
         portfolio_deleted_at = connection.execute(
             "SELECT deleted_at FROM portfolios WHERE name = 'stocks'"
         ).fetchone()[0]

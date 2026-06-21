@@ -1,4 +1,4 @@
-"""Shared semantic styles for FundLog terminal output."""
+"""Shared semantic styles for mpal terminal output."""
 
 TABLE_HEADER = "#C084FC"
 TABLE_BORDER = "#3A3D4D"

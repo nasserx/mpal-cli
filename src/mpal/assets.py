@@ -2,7 +2,7 @@
 
 import re
 
-from fundlog.errors import InvalidSymbolError
+from mpal.errors import InvalidSymbolError
 
 MAX_SYMBOL_LENGTH = 32
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]*$")

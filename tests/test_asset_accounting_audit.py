@@ -7,8 +7,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from fundlog.cli import app
-from fundlog.storage import (
+from mpal.cli import app
+from mpal.storage import (
     get_all_portfolio_summaries,
     get_asset_summary,
     get_assets,
@@ -19,10 +19,10 @@ runner = CliRunner()
 
 
 def _initialize(tmp_path: Path, monkeypatch) -> Path:
-    data_dir = tmp_path / "fundlog-data"
-    monkeypatch.setenv("FUNDLOG_DATA_DIR", str(data_dir))
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     _invoke("init")
-    return data_dir / "fundlog.db"
+    return data_dir / "mpal.db"
 
 
 def _invoke(*arguments: str):
@@ -386,12 +386,12 @@ def test_soft_deleted_transaction_is_excluded_from_every_read_model(
 def test_financial_modules_contain_no_float_arithmetic() -> None:
     project_root = Path(__file__).parents[1]
     modules = (
-        "src/fundlog/amounts.py",
-        "src/fundlog/numbers.py",
-        "src/fundlog/storage/asset_transactions.py",
-        "src/fundlog/storage/assets.py",
-        "src/fundlog/storage/summaries.py",
-        "src/fundlog/output/console.py",
+        "src/mpal/amounts.py",
+        "src/mpal/numbers.py",
+        "src/mpal/storage/asset_transactions.py",
+        "src/mpal/storage/assets.py",
+        "src/mpal/storage/summaries.py",
+        "src/mpal/output/console.py",
     )
 
     for relative_path in modules:

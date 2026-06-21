@@ -1,4 +1,4 @@
-# FundLog Data Model
+# mpal Data Model
 
 This document describes the implemented SQLite model and planned future audit
 infrastructure.
@@ -147,7 +147,7 @@ Portfolio summaries read all active transaction effects.
 
 ## Future `schema_migrations`
 
-**Purpose:** Track database schema evolution across FundLog versions.
+**Purpose:** Track database schema evolution across mpal versions.
 
 **Important conceptual fields:** Migration identifier or version and application timestamp.
 
