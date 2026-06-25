@@ -194,6 +194,9 @@ Columns:
 
 `# | Date | Type | Price | Quantity | Fee | Total | Note`
 
+The `#` value is the stable asset-local transaction number. It is not an
+internal database ID.
+
 Rows order by transaction date and then asset-local entry number. Income rows
 display placeholders for Price, Quantity, and Fee.
 
@@ -229,6 +232,106 @@ withdrawal and capital-entry edit/delete validation use Cash including active
 asset transaction effects.
 
 Soft-deleted assets and transactions do not contribute to current values.
+
+## Planned transaction correction
+
+Individual asset transaction correction is planned but not implemented in the
+current CLI. The intended command shapes are:
+
+```console
+mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+```
+
+`entry-number` is the asset-local number shown by the asset log for the same
+symbol and portfolio. Internal row IDs remain hidden.
+
+### Editable fields
+
+Transaction type is immutable. Editing a `buy` remains a `buy`, editing a
+`sell` remains a `sell`, and editing `income` remains `income`.
+
+Planned editable fields:
+
+- `income`: amount, date, note
+- `buy`: price, quantity, fee, total, date, note
+- `sell`: price, quantity, fee, total, date, note
+
+The edit command must require at least one editable option. It must reuse the
+existing money, price, quantity, and date parsers; reject future dates; reject
+invalid amounts, prices, quantities, fees, and totals; and continue to avoid
+Python `float`.
+
+### Exact total edits
+
+Buy and sell edits preserve the current exact-total rules:
+
+- buy total remains `price × quantity + fee`
+- sell total remains `price × quantity - fee`
+- if price, quantity, or fee changes and `--total` is not supplied, mpal
+  recomputes the total and requires exact minor-unit representation
+- if `--total` is supplied and the computed total is exactly representable,
+  the supplied total must match
+- if the computed total is not exactly representable, `--total` is required
+- no silent rounding is allowed
+
+If only date or note changes, stored accounting effects should remain
+unchanged because the planned accounting replay order is asset-local entry
+number, not date.
+
+### Planned delete-entry behavior
+
+`mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes` should:
+
+- require an active portfolio
+- require an active asset
+- require an active transaction with that asset-local entry number
+- require `--yes`
+- soft-delete only that transaction
+- not delete the asset row
+- preserve all database rows
+- reject the deletion if replaying the remaining active transactions would
+  make the asset ledger invalid
+
+Deleting income removes its income and cash effect. Deleting a buy may be
+rejected when later sells would exceed remaining open quantity. Deleting a sell
+restores quantity and cost basis through replay, and deleting a full sell may
+restore an open position.
+
+### Planned replay and validation
+
+Asset transaction edit/delete must be atomic. The safe correction model is:
+
+1. Load active transactions for the asset.
+2. Apply the edit or soft delete virtually.
+3. Replay the resulting active transactions from scratch in asset-local
+   `entry_no` order.
+4. Validate every step:
+   - open quantity never becomes negative
+   - every sell has sufficient open quantity
+   - buy, sell, and income cash effects remain exact and valid
+   - full sells relieve all remaining Cost Basis
+5. If replay fails, reject the operation and leave existing rows unchanged.
+6. If replay succeeds, update the changed transaction and all affected active
+   transaction accounting fields consistently.
+
+Asset logs may continue displaying rows by transaction date and then entry
+number, but accounting replay for correction should use `entry_no` order. An
+edited date can therefore move a row in the displayed log without changing
+where it sits in accounting replay.
+
+After a successful edit or delete-entry, portfolio Cash, Positions, Book Value,
+Realized PnL, Income, and Return are derived from the recalculated active
+transactions.
+
+Examples:
+
+```console
+mpal asset log MSFT -p stocks
+mpal asset edit MSFT 2 -p stocks --price 2.50 --quantity 10
+mpal asset edit MSFT 3 -p stocks --note "Corrected broker note"
+mpal asset delete-entry MSFT 4 -p stocks --yes
+```
 
 ## Non-goals
 

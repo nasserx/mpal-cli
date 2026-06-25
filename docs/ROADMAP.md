@@ -55,6 +55,12 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 
 ## v0.4 — Reporting and delivery
 
+- Add safe individual asset transaction editing:
+  `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`.
+- Add safe individual asset transaction soft deletion:
+  `mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`.
+- Recalculate affected asset transaction accounting fields by replaying active
+  transactions in asset-local entry-number order.
 - Add richer reports.
 - Add CSV import and export.
 - Add stronger audit tools.

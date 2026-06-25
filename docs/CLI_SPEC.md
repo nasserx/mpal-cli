@@ -143,6 +143,52 @@ Asset log columns remain:
 
 `# | Date | Type | Price | Quantity | Fee | Total | Note`
 
+The `#` value is a stable asset-local transaction number and is not an
+internal database ID.
+
+### Planned asset transaction correction
+
+The following asset transaction correction commands are planned, not currently
+implemented:
+
+```console
+mpal asset edit <symbol> <entry-number> --portfolio <portfolio> [options...]
+mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
+
+mpal asset delete-entry <symbol> <entry-number> --portfolio <portfolio> --yes
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+```
+
+`entry-number` is the asset-local number displayed by the asset log for the
+same symbol and portfolio. Internal database IDs must not be accepted or
+displayed.
+
+Planned `edit` behavior:
+
+- `income` rows may edit amount, date, and note.
+- `buy` rows may edit price, quantity, fee, total, date, and note.
+- `sell` rows may edit price, quantity, fee, total, date, and note.
+- Transaction type cannot be changed.
+- At least one editable option is required.
+- Existing money, price, quantity, and date validation applies.
+- Future dates, invalid amounts, invalid totals, and recalculation failures are
+  rejected.
+- Buy and sell total validation keeps the current exact-total rules.
+
+Planned `delete-entry` behavior:
+
+- Requires an active portfolio, active asset, active transaction, and `--yes`.
+- Soft-deletes only the transaction row.
+- Does not delete the asset.
+- Preserves database rows.
+- Replays the remaining active asset ledger and rejects the deletion if the
+  remaining ledger would be invalid.
+
+Planned accounting replay for these correction commands uses asset-local
+`entry_no` order. The displayed asset log may continue to sort by transaction
+date and then entry number, so editing a date can change display order without
+changing accounting replay order.
+
 ## Shared input rules
 
 - Money is parsed with the shared exact minor-unit parser.

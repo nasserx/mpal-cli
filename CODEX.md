@@ -51,6 +51,11 @@ Implemented asset commands:
 - `mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 - `mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 
+Planned, not implemented, asset transaction correction commands:
+
+- `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`
+- `mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`
+
 The long `--portfolio` option is equivalent to `-p` and is required for every
 capital and asset operation. There is no default portfolio.
 
@@ -67,6 +72,13 @@ part of the product interface.
 Implemented asset behavior includes symbol management, income, exact buys,
 exact sells, moving-average Cost Basis, Realized PnL, summaries, logs, and
 portfolio integration.
+
+Planned individual asset transaction correction must keep transaction type
+immutable, use asset-local entry numbers from `mpal asset log`, soft-delete
+only for transaction deletion, and replay active transactions in asset-local
+`entry_no` order before committing an edit or delete-entry. Asset log display
+may remain sorted by date then entry number. Do not expose internal database IDs
+or introduce hard delete, restore, purge, market value, or unrealized PnL.
 
 Do not introduce:
 
