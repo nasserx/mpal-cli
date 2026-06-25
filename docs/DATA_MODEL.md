@@ -135,13 +135,12 @@ timestamps, and soft-delete state.
 - Asset logs order rows by transaction date and then entry number.
 - Internal IDs are not exposed by the CLI.
 - The table contains no market value or unrealized PnL.
-- Planned individual transaction correction must preserve row identity and
-  asset-local entry numbers. `asset edit` updates the existing active row and
-  recalculates affected active transaction accounting fields. `asset
-  delete-entry` soft-deletes one active row only. Neither operation hard-deletes
-  rows or exposes internal IDs.
-- Planned correction replay uses active transactions in asset-local `entry_no`
-  order. Display order may remain transaction date then entry number.
+- Individual transaction deletion preserves row identity and asset-local entry
+  numbers. `asset delete-entry` soft-deletes one active row only and
+  recalculates affected active transaction accounting fields on remaining
+  active rows. It does not hard-delete rows or expose internal IDs.
+- Correction replay uses active transactions in asset-local `entry_no` order.
+  Display order may remain transaction date then entry number.
 
 The asset income command inserts `income` rows with null price and quantity,
 zero fee, positive total/cash/income fields, and zero

@@ -50,6 +50,8 @@ implemented. Official help exposes only `init`, `portfolio`, `capital`, and
 - Use moving average cost as the initial cost basis method.
 - Reject inexact minor-unit trade cash effects unless an explicit exact cash
   total is supplied.
+- Soft-delete individual asset transactions by asset-local entry number and
+  replay remaining active transactions atomically.
 
 mpal will remain fully manual. Live prices, market APIs, market value, and unrealized PnL are not planned.
 
@@ -57,10 +59,6 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 
 - Add safe individual asset transaction editing:
   `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`.
-- Add safe individual asset transaction soft deletion:
-  `mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`.
-- Recalculate affected asset transaction accounting fields by replaying active
-  transactions in asset-local entry-number order.
 - Add richer reports.
 - Add CSV import and export.
 - Add stronger audit tools.

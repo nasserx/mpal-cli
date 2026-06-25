@@ -4,6 +4,7 @@ from mpal.storage.asset_logs import AssetTransaction, get_asset_transaction_log
 from mpal.storage.asset_transactions import (
     calculate_buy_total_minor,
     calculate_sell_total_minor,
+    delete_asset_transaction_entry,
     record_buy,
     record_income,
     record_sell,
@@ -47,6 +48,7 @@ __all__ = [
     "calculate_sell_total_minor",
     "delete_capital_entry",
     "delete_asset",
+    "delete_asset_transaction_entry",
     "delete_portfolio",
     "edit_capital_entry",
     "get_all_portfolio_summaries",

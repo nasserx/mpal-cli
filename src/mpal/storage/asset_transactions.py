@@ -4,9 +4,13 @@ from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 from pathlib import Path
 
+from mpal.asset_replay import AssetReplayTransaction, replay_asset_transactions
 from mpal.errors import (
     AssetNotFoundError,
+    AssetTransactionNotFoundError,
     InsufficientAssetQuantityError,
+    InvalidLedgerDeleteError,
+    InvalidLedgerEditError,
     InvalidTradeTotalError,
     PortfolioNotFoundError,
 )
@@ -328,3 +332,125 @@ def record_sell(
         )
 
     return entry_no
+
+
+def delete_asset_transaction_entry(
+    portfolio_name: str,
+    symbol: str,
+    entry_no: int,
+    database_path: Path | None = None,
+) -> None:
+    """Soft-delete one active asset transaction after replaying the remainder."""
+    with connect_database(database_path) as connection:
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        asset = connection.execute(
+            """
+            SELECT id
+            FROM assets
+            WHERE portfolio_id = ?
+                AND symbol = ?
+                AND deleted_at IS NULL
+            """,
+            (portfolio[0], symbol),
+        ).fetchone()
+        if asset is None:
+            raise AssetNotFoundError(
+                f"Active asset '{symbol}' does not exist in portfolio "
+                f"'{portfolio_name}'."
+            )
+
+        target = connection.execute(
+            """
+            SELECT id, deleted_at
+            FROM asset_transactions
+            WHERE asset_id = ? AND entry_no = ?
+            """,
+            (asset[0], entry_no),
+        ).fetchone()
+        if target is None:
+            raise AssetTransactionNotFoundError(
+                f"Asset transaction {entry_no} does not exist for asset "
+                f"'{symbol}' in portfolio '{portfolio_name}'."
+            )
+        if target[1] is not None:
+            raise AssetTransactionNotFoundError(
+                f"Asset transaction {entry_no} is not active."
+            )
+
+        remaining_rows = connection.execute(
+            """
+            SELECT
+                entry_no,
+                transaction_type,
+                price_text,
+                quantity_text,
+                fee_minor,
+                total_minor
+            FROM asset_transactions
+            WHERE asset_id = ?
+                AND deleted_at IS NULL
+                AND id != ?
+            ORDER BY entry_no ASC
+            """,
+            (asset[0], target[0]),
+        ).fetchall()
+        remaining_transactions = [
+            AssetReplayTransaction(
+                entry_no=row[0],
+                transaction_type=row[1],
+                price_text=row[2],
+                quantity_text=row[3],
+                fee_minor=row[4],
+                total_minor=row[5],
+            )
+            for row in remaining_rows
+        ]
+
+        try:
+            replay = replay_asset_transactions(remaining_transactions)
+        except InvalidLedgerEditError as error:
+            raise InvalidLedgerDeleteError(
+                "Asset transaction cannot be deleted because it would make "
+                "the remaining asset ledger invalid."
+            ) from error
+
+        for transaction in replay.transactions:
+            connection.execute(
+                """
+                UPDATE asset_transactions
+                SET cash_effect_minor = ?,
+                    position_effect_minor = ?,
+                    realized_pnl_minor = ?,
+                    income_minor = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE asset_id = ?
+                    AND entry_no = ?
+                    AND deleted_at IS NULL
+                """,
+                (
+                    transaction.cash_effect_minor,
+                    transaction.position_effect_minor,
+                    transaction.realized_pnl_minor,
+                    transaction.income_minor,
+                    asset[0],
+                    transaction.entry_no,
+                ),
+            )
+
+        connection.execute(
+            """
+            UPDATE asset_transactions
+            SET deleted_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (target[0],),
+        )

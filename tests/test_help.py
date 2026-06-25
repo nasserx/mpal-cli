@@ -57,6 +57,7 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["asset", "summary"],
         ["asset", "log"],
         ["asset", "delete"],
+        ["asset", "delete-entry"],
         ["asset", "income"],
         ["asset", "buy"],
         ["asset", "sell"],
@@ -78,7 +79,16 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         assert f"│ {command} " in portfolio.output
     for command in ("deposit", "withdraw", "log", "edit", "delete"):
         assert f"│ {command} " in capital.output
-    for command in ("add", "summary", "log", "delete", "income", "buy", "sell"):
+    for command in (
+        "add",
+        "summary",
+        "log",
+        "delete",
+        "delete-entry",
+        "income",
+        "buy",
+        "sell",
+    ):
         assert f"│ {command} " in asset.output
     assert "│ list " not in asset.output
     assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
@@ -104,6 +114,7 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         ["asset", "summary"],
         ["asset", "log"],
         ["asset", "delete"],
+        ["asset", "delete-entry"],
         ["asset", "income"],
         ["asset", "buy"],
         ["asset", "sell"],
@@ -129,6 +140,7 @@ def test_official_command_help_is_registered(arguments: list[str]) -> None:
         ["asset", "summary", "--help"],
         ["asset", "log", "--help"],
         ["asset", "delete", "--help"],
+        ["asset", "delete-entry", "--help"],
         ["asset", "income", "--help"],
         ["asset", "buy", "--help"],
         ["asset", "sell", "--help"],

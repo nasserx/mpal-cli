@@ -37,6 +37,10 @@ class AssetNotFoundError(MpalError):
     """Raised when an active asset cannot be found in an active portfolio."""
 
 
+class AssetTransactionNotFoundError(MpalError):
+    """Raised when an asset transaction does not exist or is inactive."""
+
+
 class InvalidAmountError(MpalError):
     """Raised when a monetary amount is invalid."""
 

@@ -122,23 +122,24 @@ remains balanced. This is book cost allocation, not market valuation.
 ## Asset accounting replay
 
 Asset buys, sells, and income are append-style manual records. Current summary
-values are derived from active transaction effects. Planned future asset
-transaction edit/delete support must recalculate those effects by replaying the
-active transaction history for one asset from scratch.
+values are derived from active transaction effects. Asset transaction
+delete-entry recalculates those effects by replaying the active transaction
+history for one asset from scratch. Planned future asset edit support must use
+the same replay rule.
 
-The planned correction replay order is asset-local `entry_no` order, not
-transaction date. Transaction date remains the effective date shown in logs and
-may be used for display sorting. This keeps accounting tied to the user's
-stable ledger sequence even if a corrected date moves a row earlier or later in
-the displayed asset log.
+The correction replay order is asset-local `entry_no` order, not transaction
+date. Transaction date remains the effective date shown in logs and may be used
+for display sorting. This keeps accounting tied to the user's stable ledger
+sequence even if a future corrected date moves a row earlier or later in the
+displayed asset log.
 
-Replay validation must reject any edit or delete-entry that would make the
+Replay validation rejects any delete-entry, or future edit, that would make the
 ledger invalid. A replay step is invalid if it creates negative quantity, sells
 more than the open quantity, produces an invalid exact cash effect, or leaves
 residual Cost Basis after a full sell. Failed replay leaves existing rows and
-accounting effects unchanged. Successful replay updates the changed row and any
-later active transaction accounting fields affected by moving-average Cost
-Basis.
+accounting effects unchanged. Successful delete-entry soft-deletes the selected
+row and updates remaining active transaction accounting fields affected by
+moving-average Cost Basis.
 
 ## Capital entry rules
 

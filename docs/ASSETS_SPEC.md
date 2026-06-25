@@ -11,6 +11,7 @@ asset model supports:
 - manual income
 - manual buys
 - manual sells
+- individual transaction soft deletion with replay
 - moving-average Cost Basis
 - Realized PnL
 - portfolio Cash, Positions, Book Value, Income, and Return integration
@@ -29,6 +30,7 @@ mpal asset summary -p <portfolio>
 mpal asset summary <symbol> -p <portfolio>
 mpal asset log <symbol> -p <portfolio>
 mpal asset delete <symbol> -p <portfolio> --yes
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
 mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
 mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
@@ -216,6 +218,27 @@ Deletion is soft and atomic:
 
 The command fails without `--yes`.
 
+## Transaction deletion
+
+```console
+mpal asset delete-entry AAPL 2 -p stocks --yes
+```
+
+Individual transaction deletion is soft and atomic:
+
+- the active transaction row receives a deletion timestamp
+- the asset row remains active
+- rows are not physically removed
+- asset-local entry numbers are not reused
+- the remaining active asset transactions are replayed in `entry_no` order
+- replay-owned derived fields on remaining active transactions are updated:
+  Cash effect, Positions/Cost Basis effect, Realized PnL, and Income
+- deleted effects disappear from asset and portfolio read models
+
+The command requires an active portfolio, active asset, active transaction, and
+`--yes`. If replaying the remaining active transactions would make the ledger
+invalid, the delete is rejected and existing rows remain unchanged.
+
 ## Portfolio integration
 
 Active asset transactions contribute to portfolio summaries:
@@ -233,14 +256,14 @@ asset transaction effects.
 
 Soft-deleted assets and transactions do not contribute to current values.
 
-## Planned transaction correction
+## Transaction correction
 
-Individual asset transaction correction is planned but not implemented in the
-current CLI. The intended command shapes are:
+Individual asset transaction deletion is implemented. Individual asset
+transaction editing is planned but not implemented in the current CLI. The
+intended edit command shape is:
 
 ```console
 mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
-mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 ```
 
 `entry-number` is the asset-local number shown by the asset log for the same
@@ -279,9 +302,9 @@ If only date or note changes, stored accounting effects should remain
 unchanged because the planned accounting replay order is asset-local entry
 number, not date.
 
-### Planned delete-entry behavior
+### Implemented delete-entry behavior
 
-`mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes` should:
+`mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`:
 
 - require an active portfolio
 - require an active asset
@@ -290,7 +313,7 @@ number, not date.
 - soft-delete only that transaction
 - not delete the asset row
 - preserve all database rows
-- reject the deletion if replaying the remaining active transactions would
+- rejects the deletion if replaying the remaining active transactions would
   make the asset ledger invalid
 
 Deleting income removes its income and cash effect. Deleting a buy may be
@@ -298,9 +321,10 @@ rejected when later sells would exceed remaining open quantity. Deleting a sell
 restores quantity and cost basis through replay, and deleting a full sell may
 restore an open position.
 
-### Planned replay and validation
+### Replay and validation
 
-Asset transaction edit/delete must be atomic. The safe correction model is:
+Asset transaction delete-entry is atomic. Planned edit must follow the same
+safe correction model:
 
 1. Load active transactions for the asset.
 2. Apply the edit or soft delete virtually.

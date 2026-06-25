@@ -108,6 +108,9 @@ mpal asset log <symbol> -p <portfolio>
 mpal asset delete <symbol> --portfolio <portfolio> --yes
 mpal asset delete <symbol> -p <portfolio> --yes
 
+mpal asset delete-entry <symbol> <entry-number> --portfolio <portfolio> --yes
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+
 mpal asset income <symbol> <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
 mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
 
@@ -127,6 +130,10 @@ uppercase through the shared symbol validator.
 - `log` shows one asset's active transactions.
 - `delete` requires `--yes` and soft-deletes the asset and its active
   transactions.
+- `delete-entry` requires `--yes`, soft-deletes one active transaction by
+  asset-local entry number, replays the remaining active transactions in
+  `entry_no` order, and updates derived transaction accounting fields
+  atomically.
 - `income` records generic manually entered asset income.
 - `buy` records exact manual buy values.
 - `sell` records exact manual sell values and uses the existing moving-average
@@ -146,17 +153,21 @@ Asset log columns remain:
 The `#` value is a stable asset-local transaction number and is not an
 internal database ID.
 
-### Planned asset transaction correction
+### Asset transaction correction
 
-The following asset transaction correction commands are planned, not currently
+The individual asset transaction delete command is implemented:
+
+```console
+mpal asset delete-entry <symbol> <entry-number> --portfolio <portfolio> --yes
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+```
+
+The individual asset transaction edit command is planned, not currently
 implemented:
 
 ```console
 mpal asset edit <symbol> <entry-number> --portfolio <portfolio> [options...]
 mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
-
-mpal asset delete-entry <symbol> <entry-number> --portfolio <portfolio> --yes
-mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 ```
 
 `entry-number` is the asset-local number displayed by the asset log for the
@@ -175,7 +186,7 @@ Planned `edit` behavior:
   rejected.
 - Buy and sell total validation keeps the current exact-total rules.
 
-Planned `delete-entry` behavior:
+Implemented `delete-entry` behavior:
 
 - Requires an active portfolio, active asset, active transaction, and `--yes`.
 - Soft-deletes only the transaction row.
@@ -184,10 +195,9 @@ Planned `delete-entry` behavior:
 - Replays the remaining active asset ledger and rejects the deletion if the
   remaining ledger would be invalid.
 
-Planned accounting replay for these correction commands uses asset-local
-`entry_no` order. The displayed asset log may continue to sort by transaction
-date and then entry number, so editing a date can change display order without
-changing accounting replay order.
+Accounting replay for `delete-entry` uses asset-local `entry_no` order. The
+displayed asset log continues to sort by transaction date and then entry
+number.
 
 ## Shared input rules
 

@@ -31,6 +31,7 @@ from mpal.storage import (
     create_portfolio,
     create_portfolio_with_initial,
     delete_asset,
+    delete_asset_transaction_entry,
     delete_capital_entry,
     delete_portfolio,
     edit_capital_entry,
@@ -113,6 +114,8 @@ ASSET_HELP_EXAMPLES = r"""Examples:
   mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
   mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
+
+  mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 
   mpal asset delete <symbol> -p <portfolio> --yes
 """
@@ -530,6 +533,40 @@ def asset_delete(
         raise typer.Exit(code=1) from error
 
     print_success(f"Asset '{normalized_symbol}' deleted from portfolio '{portfolio}'.")
+
+
+@asset_app.command("delete-entry")
+def asset_delete_entry(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    entry_number: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Transaction number shown by the asset log.",
+        ),
+    ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm the asset transaction soft delete."),
+    ] = False,
+) -> None:
+    """Soft-delete one asset transaction by its asset-local number."""
+    if not yes:
+        print_warning("Asset transaction delete requires the --yes confirmation flag.")
+        raise typer.Exit(code=1)
+
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        delete_asset_transaction_entry(portfolio, normalized_symbol, entry_number)
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(
+        f"Asset transaction {entry_number} deleted for asset '{normalized_symbol}' "
+        f"in portfolio '{portfolio}'."
+    )
 
 
 @asset_app.command("income", context_settings={"ignore_unknown_options": True})
