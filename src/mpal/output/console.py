@@ -18,12 +18,15 @@ from mpal.output.formatting import (
     format_income_money,
     format_profit_loss_money,
     format_profit_loss_percent,
+    style_transaction_type,
 )
 from mpal.output.theme import (
     ERROR,
     INFO,
+    MUTED,
     SUCCESS,
     TABLE_BORDER,
+    TABLE_BOX,
     TABLE_CELL,
     TABLE_HEADER,
     WARNING,
@@ -76,11 +79,7 @@ def print_portfolio_summary(summary: PortfolioSummary) -> None:
 
 def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
     """Print portfolio summaries using the documented columns."""
-    table = Table(
-        header_style=TABLE_HEADER,
-        border_style=TABLE_BORDER,
-        style=TABLE_CELL,
-    )
+    table = _make_table()
     table.add_column("Portfolio")
     table.add_column("Capital", justify="right")
     table.add_column("Cash", justify="right")
@@ -108,11 +107,7 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 
 def print_assets(assets: list[Asset]) -> None:
     """Print portfolio-wide active asset summaries."""
-    table = Table(
-        header_style=TABLE_HEADER,
-        border_style=TABLE_BORDER,
-        style=TABLE_CELL,
-    )
+    table = _make_table()
     table.add_column("Asset")
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
@@ -144,11 +139,7 @@ def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
     """Print one active asset's derived accounting summary."""
     console = Console(width=120)
 
-    table = Table(
-        header_style=TABLE_HEADER,
-        border_style=TABLE_BORDER,
-        style=TABLE_CELL,
-    )
+    table = _make_table()
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
     table.add_column("Average Cost", justify="right")
@@ -181,11 +172,7 @@ def print_asset_transaction_log(
     """Print one asset's active transactions using the documented columns."""
     console = Console(width=120)
 
-    table = Table(
-        header_style=TABLE_HEADER,
-        border_style=TABLE_BORDER,
-        style=TABLE_CELL,
-    )
+    table = _make_table()
     table.add_column("#", justify="right")
     table.add_column("Date")
     table.add_column("Type")
@@ -201,7 +188,7 @@ def print_asset_transaction_log(
         table.add_row(
             str(transaction.entry_no),
             transaction.transaction_date,
-            transaction.transaction_type,
+            style_transaction_type(transaction.transaction_type),
             (
                 "--"
                 if transaction.price_text is None
@@ -225,7 +212,7 @@ def print_asset_transaction_log(
                 if transaction.transaction_type == "income"
                 else format_money(transaction.total_minor)
             ),
-            transaction.note or "",
+            Text(transaction.note, style=MUTED) if transaction.note else "",
         )
     console.print(table)
 
@@ -246,11 +233,7 @@ def _format_average_cost(
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
     """Print active capital entries using the documented log columns."""
-    table = Table(
-        header_style=TABLE_HEADER,
-        border_style=TABLE_BORDER,
-        style=TABLE_CELL,
-    )
+    table = _make_table()
     table.add_column("#", justify="right")
     table.add_column("Date")
     table.add_column("Type")
@@ -262,6 +245,17 @@ def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
             entry.entry_date,
             format_capital_entry_type(entry.entry_type),
             format_capital_entry_amount(entry.entry_type, entry.amount_minor),
-            entry.note or "",
+            Text(entry.note, style=MUTED) if entry.note else "",
         )
     Console().print(table)
+
+
+def _make_table() -> Table:
+    """Create mpal's shared row-oriented Rich table."""
+    return Table(
+        box=TABLE_BOX,
+        header_style=TABLE_HEADER,
+        border_style=TABLE_BORDER,
+        style=TABLE_CELL,
+        show_lines=False,
+    )

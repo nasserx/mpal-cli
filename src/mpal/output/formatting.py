@@ -41,8 +41,22 @@ def format_income_money(amount_minor: int) -> Text:
 def format_capital_entry_type(entry_type: str) -> Text:
     """Format an internal capital entry type for user-facing logs."""
     if entry_type == "outflow":
-        return Text("withdraw", style=LOSS)
-    return Text("deposit", style=TABLE_CELL)
+        return style_transaction_type("withdraw")
+    return style_transaction_type("deposit")
+
+
+def style_transaction_type(transaction_type: str) -> Text:
+    """Style a user-facing Type column value by transaction semantics."""
+    normalized = transaction_type.lower()
+    if normalized in {"buy", "deposit"}:
+        style = PROFIT
+    elif normalized in {"sell", "withdraw"}:
+        style = LOSS
+    elif normalized == "income":
+        style = INCOME
+    else:
+        style = TABLE_CELL
+    return Text(transaction_type, style=style)
 
 
 def format_capital_entry_amount(entry_type: str, amount_minor: int) -> Text:

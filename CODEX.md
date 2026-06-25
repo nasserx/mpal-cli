@@ -173,7 +173,10 @@ and validation normally use active rows only.
 - Keep storage and accounting logic out of Rich rendering helpers.
 - Do not pass raw `Decimal` values directly into Rich tables; format money,
   quantity, price, and average-cost values explicitly first.
-- Reuse the semantic palette in `src/mpal/output/theme.py`.
+- Reuse the centralized semantic palette in `src/mpal/output/theme.py`.
+- Tables should use the shared row-oriented Rich table helper, with rounded
+  borders, themed headers and borders, and no internal vertical column
+  dividers.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.
 

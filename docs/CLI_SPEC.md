@@ -219,6 +219,12 @@ User-facing numeric output uses explicit display helpers:
   active asset's buy/sell prices, with at least two decimal places.
 - Display rounding is presentation-only; internal accounting remains exact.
 
+Terminal styling is presentation-only. Rich output uses centralized semantic
+theme styles for headers, normal values, profit/loss, income/info, warnings,
+errors, borders, and muted note text. Data tables use a shared rounded,
+row-oriented layout with a header separator and without internal vertical
+column dividers.
+
 Trade totals retain the existing behavior:
 
 - buy total: `price × quantity + fee`

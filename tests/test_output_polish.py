@@ -14,8 +14,25 @@ from mpal.output.formatting import (
     format_profit_loss_money,
     format_profit_loss_percent,
     format_signed_percent,
+    style_transaction_type,
 )
-from mpal.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
+from mpal.output.theme import (
+    BORDER,
+    ERROR,
+    HEADER,
+    INCOME,
+    INFO,
+    LOSS,
+    MUTED,
+    PROFIT,
+    SUCCESS,
+    TABLE_BORDER,
+    TABLE_BOX,
+    TABLE_CELL,
+    TABLE_HEADER,
+    VALUE,
+    WARNING,
+)
 from mpal.storage.asset_logs import AssetTransaction
 
 runner = CliRunner()
@@ -165,16 +182,79 @@ def test_semantic_result_helpers_use_reusable_theme_styles() -> None:
     assert format_income_money(1).style == INCOME
 
 
-def test_capital_log_styles_withdrawals_only() -> None:
+def test_theme_uses_documented_dark_terminal_palette() -> None:
+    assert HEADER == "#C77DFF"
+    assert SUCCESS == "#4ADE80"
+    assert PROFIT == "#4ADE80"
+    assert ERROR == "#F87171"
+    assert LOSS == "#F87171"
+    assert INFO == "#60A5FA"
+    assert INCOME == "#60A5FA"
+    assert WARNING == "#FACC15"
+    assert BORDER == "#4B5563"
+    assert MUTED == "#9CA3AF"
+    assert VALUE == "#D1D5DB"
+    assert TABLE_HEADER == HEADER
+    assert TABLE_BORDER == BORDER
+    assert TABLE_CELL == VALUE
+
+
+def test_shared_table_helper_uses_theme_styles() -> None:
+    table = console_output._make_table()
+
+    assert table.box == TABLE_BOX
+    assert table.header_style == TABLE_HEADER
+    assert table.border_style == TABLE_BORDER
+    assert table.style == TABLE_CELL
+    assert table.show_lines is False
+
+
+def test_table_output_uses_rounded_row_oriented_layout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy(price="100", quantity="1")
+
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "╭" in result.output
+    assert "╮" in result.output
+    assert "╰" in result.output
+    assert "╯" in result.output
+    assert "┬" not in result.output
+    assert "┼" not in result.output
+    assert "┴" not in result.output
+    row = next(line for line in result.output.splitlines() if "100.00" in line)
+    assert row.count("│") == 2
+
+
+def test_capital_log_styles_type_and_withdrawal_amount() -> None:
     assert format_capital_entry_type("outflow").plain == "withdraw"
     assert format_capital_entry_type("outflow").style == LOSS
     assert format_capital_entry_amount("outflow", 25_000).plain == "250.00"
     assert format_capital_entry_amount("outflow", 25_000).style == LOSS
 
     assert format_capital_entry_type("inflow").plain == "deposit"
-    assert format_capital_entry_type("inflow").style == TABLE_CELL
+    assert format_capital_entry_type("inflow").style == PROFIT
     assert format_capital_entry_amount("inflow", 100_000).plain == "1,000.00"
     assert format_capital_entry_amount("inflow", 100_000).style == TABLE_CELL
+
+
+def test_type_column_values_use_transaction_semantic_styles() -> None:
+    assert style_transaction_type("deposit").plain == "deposit"
+    assert style_transaction_type("deposit").style == PROFIT
+    assert style_transaction_type("Deposit").plain == "Deposit"
+    assert style_transaction_type("Deposit").style == PROFIT
+    assert style_transaction_type("withdraw").style == LOSS
+    assert style_transaction_type("Withdraw").style == LOSS
+    assert style_transaction_type("buy").style == PROFIT
+    assert style_transaction_type("Buy").style == PROFIT
+    assert style_transaction_type("sell").style == LOSS
+    assert style_transaction_type("Sell").style == LOSS
+    assert style_transaction_type("income").style == INCOME
+    assert style_transaction_type("Income").style == INCOME
 
 
 def test_signed_percent_uses_exact_formula_and_neutral_zero() -> None:
@@ -209,6 +289,33 @@ def test_asset_log_styles_only_income_total_as_income(
     console_output.print_asset_transaction_log("stocks", "AAPL", transactions)
 
     assert styled_amounts == [500]
+
+
+def test_asset_log_styles_type_column_values(
+    monkeypatch,
+) -> None:
+    styled_types: list[str] = []
+
+    def record_type_style(transaction_type: str):
+        styled_types.append(transaction_type)
+        return style_transaction_type(transaction_type)
+
+    monkeypatch.setattr(console_output, "style_transaction_type", record_type_style)
+    transactions = [
+        AssetTransaction(
+            1, date.today().isoformat(), "buy", "100", "1", 0, 10_000, None
+        ),
+        AssetTransaction(
+            2, date.today().isoformat(), "sell", "110", "1", 0, 11_000, None
+        ),
+        AssetTransaction(
+            3, date.today().isoformat(), "income", None, None, 0, 500, None
+        ),
+    ]
+
+    console_output.print_asset_transaction_log("stocks", "AAPL", transactions)
+
+    assert styled_types == ["buy", "sell", "income"]
 
 
 def test_buy_sell_income_formulas_remain_correct_with_signed_display(
