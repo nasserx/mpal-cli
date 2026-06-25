@@ -34,6 +34,7 @@ from mpal.storage import (
     delete_asset_transaction_entry,
     delete_capital_entry,
     delete_portfolio,
+    edit_asset_transaction_entry,
     edit_capital_entry,
     get_all_portfolio_summaries,
     get_asset_summary,
@@ -114,6 +115,8 @@ ASSET_HELP_EXAMPLES = r"""Examples:
   mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
   mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
+
+  mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
 
   mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 
@@ -565,6 +568,84 @@ def asset_delete_entry(
 
     print_success(
         f"Asset transaction {entry_number} deleted for asset '{normalized_symbol}' "
+        f"in portfolio '{portfolio}'."
+    )
+
+
+@asset_app.command("edit")
+def asset_edit(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    entry_number: Annotated[
+        int,
+        typer.Argument(
+            metavar="ENTRY_NUMBER",
+            help="Transaction number shown by the asset log.",
+        ),
+    ],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    amount: Annotated[
+        str | None,
+        typer.Option("--amount", help="Replacement income amount."),
+    ] = None,
+    price: Annotated[
+        str | None,
+        typer.Option("--price", help="Replacement trade unit price."),
+    ] = None,
+    quantity: Annotated[
+        str | None,
+        typer.Option("--quantity", help="Replacement trade quantity."),
+    ] = None,
+    fee: Annotated[
+        str | None,
+        typer.Option("--fee", help="Replacement trade fee."),
+    ] = None,
+    total: Annotated[
+        str | None,
+        typer.Option("--total", help="Replacement trade total."),
+    ] = None,
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Replacement date in YYYY-MM-DD; cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Replacement transaction note."),
+    ] = None,
+) -> None:
+    """Edit one asset transaction by its asset-local number."""
+    if all(
+        value is None for value in (amount, price, quantity, fee, total, date, note)
+    ):
+        print_error(
+            "Provide at least one of --amount, --price, --quantity, --fee, "
+            "--total, --date, or --note."
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        transaction_date = None if date is None else parse_transaction_date(date)
+        edit_asset_transaction_entry(
+            portfolio,
+            normalized_symbol,
+            entry_number,
+            amount=amount,
+            price=price,
+            quantity=quantity,
+            fee=fee,
+            total=total,
+            transaction_date=transaction_date,
+            note=note,
+        )
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_success(
+        f"Asset transaction {entry_number} updated for asset '{normalized_symbol}' "
         f"in portfolio '{portfolio}'."
     )
 

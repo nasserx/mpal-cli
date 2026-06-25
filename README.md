@@ -57,6 +57,7 @@ mpal asset summary -p stocks
 mpal asset summary AAPL -p stocks
 mpal asset log AAPL -p stocks
 mpal asset delete AAPL -p stocks --yes
+mpal asset edit AAPL 2 -p stocks --price 234.50 --quantity 3
 mpal asset delete-entry AAPL 2 -p stocks --yes
 mpal asset income AAPL 32 -p stocks --date 2026-06-20 --note "Distribution"
 mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
@@ -82,11 +83,11 @@ portfolios. The read-only asset log and its transaction storage foundation are
 also present. Manual asset income updates asset and portfolio summaries.
 Manual buys update open quantity, Cost Basis, portfolio Cash, and Positions.
 Manual sells use moving-average book cost and update open quantity, Cost Basis,
-Cash, Positions, and Realized PnL. Individual asset transactions can be
-soft-deleted by asset-local entry number, with remaining active transactions
-replayed before commit. Asset summary reports current open quantity, Cost
-Basis, Average Cost, Realized PnL, Income, and Realized Return from active
-manual transactions.
+Cash, Positions, and Realized PnL. Individual asset transactions can be edited
+or soft-deleted by asset-local entry number, with active transactions replayed
+before commit. Asset summary reports current open quantity, Cost Basis, Average
+Cost, Realized PnL, Income, and Realized Return from active manual
+transactions.
 
 ## Planned capabilities
 

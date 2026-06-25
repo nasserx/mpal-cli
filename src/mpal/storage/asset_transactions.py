@@ -4,6 +4,7 @@ from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 from pathlib import Path
 
+from mpal.amounts import parse_amount_minor
 from mpal.asset_replay import AssetReplayTransaction, replay_asset_transactions
 from mpal.errors import (
     AssetNotFoundError,
@@ -14,6 +15,7 @@ from mpal.errors import (
     InvalidTradeTotalError,
     PortfolioNotFoundError,
 )
+from mpal.numbers import parse_price, parse_quantity
 from mpal.storage.database import connect_database, next_asset_transaction_no
 
 
@@ -454,3 +456,268 @@ def delete_asset_transaction_entry(
             """,
             (target[0],),
         )
+
+
+def edit_asset_transaction_entry(
+    portfolio_name: str,
+    symbol: str,
+    entry_no: int,
+    *,
+    amount: str | None = None,
+    price: str | None = None,
+    quantity: str | None = None,
+    fee: str | None = None,
+    total: str | None = None,
+    transaction_date: date | None = None,
+    note: str | None = None,
+    database_path: Path | None = None,
+) -> None:
+    """Edit one active asset transaction and replay active transaction effects."""
+    with connect_database(database_path) as connection:
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        asset = connection.execute(
+            """
+            SELECT id
+            FROM assets
+            WHERE portfolio_id = ?
+                AND symbol = ?
+                AND deleted_at IS NULL
+            """,
+            (portfolio[0], symbol),
+        ).fetchone()
+        if asset is None:
+            raise AssetNotFoundError(
+                f"Active asset '{symbol}' does not exist in portfolio "
+                f"'{portfolio_name}'."
+            )
+
+        target = connection.execute(
+            """
+            SELECT
+                id,
+                transaction_type,
+                transaction_date,
+                price_text,
+                quantity_text,
+                fee_minor,
+                total_minor,
+                note,
+                deleted_at
+            FROM asset_transactions
+            WHERE asset_id = ? AND entry_no = ?
+            """,
+            (asset[0], entry_no),
+        ).fetchone()
+        if target is None:
+            raise AssetTransactionNotFoundError(
+                f"Asset transaction {entry_no} does not exist for asset "
+                f"'{symbol}' in portfolio '{portfolio_name}'."
+            )
+        if target[8] is not None:
+            raise AssetTransactionNotFoundError(
+                f"Asset transaction {entry_no} is not active."
+            )
+
+        edited = _resolve_asset_transaction_edit(
+            transaction_type=target[1],
+            current_date=target[2],
+            current_price_text=target[3],
+            current_quantity_text=target[4],
+            current_fee_minor=target[5],
+            current_total_minor=target[6],
+            amount=amount,
+            price=price,
+            quantity=quantity,
+            fee=fee,
+            total=total,
+            transaction_date=transaction_date,
+        )
+
+        active_rows = connection.execute(
+            """
+            SELECT
+                entry_no,
+                transaction_type,
+                price_text,
+                quantity_text,
+                fee_minor,
+                total_minor
+            FROM asset_transactions
+            WHERE asset_id = ? AND deleted_at IS NULL
+            ORDER BY entry_no ASC
+            """,
+            (asset[0],),
+        ).fetchall()
+        replay_inputs = []
+        for row in active_rows:
+            if row[0] == entry_no:
+                replay_inputs.append(
+                    AssetReplayTransaction(
+                        entry_no=entry_no,
+                        transaction_type=target[1],
+                        price_text=edited["price_text"],
+                        quantity_text=edited["quantity_text"],
+                        fee_minor=edited["fee_minor"],
+                        total_minor=edited["total_minor"],
+                    )
+                )
+                continue
+            replay_inputs.append(
+                AssetReplayTransaction(
+                    entry_no=row[0],
+                    transaction_type=row[1],
+                    price_text=row[2],
+                    quantity_text=row[3],
+                    fee_minor=row[4],
+                    total_minor=row[5],
+                )
+            )
+
+        try:
+            replay = replay_asset_transactions(replay_inputs)
+        except InvalidLedgerEditError as error:
+            raise InvalidLedgerEditError(
+                "Asset transaction cannot be edited because it would make "
+                "the active asset ledger invalid."
+            ) from error
+
+        connection.execute(
+            """
+            UPDATE asset_transactions
+            SET transaction_date = ?,
+                price_text = ?,
+                quantity_text = ?,
+                fee_minor = ?,
+                total_minor = ?,
+                note = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                edited["transaction_date"],
+                edited["price_text"],
+                edited["quantity_text"],
+                edited["fee_minor"],
+                edited["total_minor"],
+                note if note is not None else target[7],
+                target[0],
+            ),
+        )
+
+        for transaction in replay.transactions:
+            connection.execute(
+                """
+                UPDATE asset_transactions
+                SET cash_effect_minor = ?,
+                    position_effect_minor = ?,
+                    realized_pnl_minor = ?,
+                    income_minor = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE asset_id = ?
+                    AND entry_no = ?
+                    AND deleted_at IS NULL
+                """,
+                (
+                    transaction.cash_effect_minor,
+                    transaction.position_effect_minor,
+                    transaction.realized_pnl_minor,
+                    transaction.income_minor,
+                    asset[0],
+                    transaction.entry_no,
+                ),
+            )
+
+
+def _resolve_asset_transaction_edit(
+    *,
+    transaction_type: str,
+    current_date: str,
+    current_price_text: str | None,
+    current_quantity_text: str | None,
+    current_fee_minor: int,
+    current_total_minor: int,
+    amount: str | None,
+    price: str | None,
+    quantity: str | None,
+    fee: str | None,
+    total: str | None,
+    transaction_date: date | None,
+) -> dict[str, int | str | None]:
+    edited_date = (
+        current_date if transaction_date is None else transaction_date.isoformat()
+    )
+
+    if transaction_type == "income":
+        if any(value is not None for value in (price, quantity, fee, total)):
+            raise InvalidLedgerEditError(
+                "Income transactions can edit only amount, date, or note."
+            )
+        edited_total = (
+            current_total_minor if amount is None else parse_amount_minor(amount)
+        )
+        return {
+            "transaction_date": edited_date,
+            "price_text": None,
+            "quantity_text": None,
+            "fee_minor": 0,
+            "total_minor": edited_total,
+        }
+
+    if amount is not None:
+        raise InvalidLedgerEditError(
+            "Trade transactions cannot edit --amount; use --total for trade totals."
+        )
+    if transaction_type not in {"buy", "sell"}:
+        raise InvalidLedgerEditError(
+            f"Unknown asset transaction type '{transaction_type}'."
+        )
+    if current_price_text is None:
+        raise InvalidLedgerEditError("Trade transactions require a price.")
+    if current_quantity_text is None:
+        raise InvalidLedgerEditError("Trade transactions require a quantity.")
+
+    edited_price = (
+        parse_price(current_price_text) if price is None else parse_price(price)
+    )
+    edited_quantity = (
+        parse_quantity(current_quantity_text)
+        if quantity is None
+        else parse_quantity(quantity)
+    )
+    edited_fee = (
+        current_fee_minor if fee is None else parse_amount_minor(fee, allow_zero=True)
+    )
+    provided_total = None if total is None else parse_amount_minor(total)
+    numeric_changed = any(value is not None for value in (price, quantity, fee, total))
+    if not numeric_changed:
+        edited_total = current_total_minor
+    elif transaction_type == "buy":
+        edited_total = calculate_buy_total_minor(
+            edited_price,
+            edited_quantity,
+            edited_fee,
+            provided_total,
+        )
+    else:
+        edited_total = calculate_sell_total_minor(
+            edited_price,
+            edited_quantity,
+            edited_fee,
+            provided_total,
+        )
+
+    return {
+        "transaction_date": edited_date,
+        "price_text": format(edited_price, "f"),
+        "quantity_text": format(edited_quantity, "f"),
+        "fee_minor": edited_fee,
+        "total_minor": edited_total,
+    }

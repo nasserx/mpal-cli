@@ -47,14 +47,11 @@ Implemented asset commands:
 - `mpal asset summary <symbol> -p <portfolio>`
 - `mpal asset log <symbol> -p <portfolio>`
 - `mpal asset delete <symbol> -p <portfolio> --yes`
+- `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`
 - `mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`
 - `mpal asset income <symbol> <amount> -p <portfolio>`
 - `mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 - `mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
-
-Planned, not implemented, asset transaction correction command:
-
-- `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`
 
 The long `--portfolio` option is equivalent to `-p` and is required for every
 capital and asset operation. There is no default portfolio.
@@ -71,14 +68,15 @@ part of the product interface.
 
 Implemented asset behavior includes symbol management, income, exact buys,
 exact sells, moving-average Cost Basis, Realized PnL, summaries, logs,
-portfolio integration, and individual transaction soft deletion with replay.
+portfolio integration, and individual transaction correction with replay.
 
 Individual asset transaction correction uses asset-local entry numbers from
-`mpal asset log`. Transaction deletion is soft-delete only and replays active
+`mpal asset log`. Transaction edit keeps transaction type immutable.
+Transaction deletion is soft-delete only. Both correction commands replay active
 transactions in asset-local `entry_no` order before committing. Asset log
-display may remain sorted by date then entry number. Planned edit must keep
-transaction type immutable. Do not expose internal database IDs or introduce
-hard delete, restore, purge, market value, or unrealized PnL.
+display may remain sorted by date then entry number. Do not expose internal
+database IDs or introduce hard delete, restore, purge, market value, or
+unrealized PnL.
 
 Do not introduce:
 
@@ -150,6 +148,8 @@ Deletion is soft:
 - portfolio delete preserves the existing portfolio/capital soft-delete
   behavior
 - asset delete atomically marks the asset and active transactions deleted
+- asset edit atomically updates one active transaction after replaying active
+  transaction effects
 - asset delete-entry atomically marks one active transaction deleted after
   replaying and updating remaining active transaction effects
 

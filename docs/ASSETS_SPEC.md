@@ -11,6 +11,7 @@ asset model supports:
 - manual income
 - manual buys
 - manual sells
+- individual transaction editing with replay
 - individual transaction soft deletion with replay
 - moving-average Cost Basis
 - Realized PnL
@@ -30,6 +31,7 @@ mpal asset summary -p <portfolio>
 mpal asset summary <symbol> -p <portfolio>
 mpal asset log <symbol> -p <portfolio>
 mpal asset delete <symbol> -p <portfolio> --yes
+mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
 mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
 mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
@@ -239,6 +241,32 @@ The command requires an active portfolio, active asset, active transaction, and
 `--yes`. If replaying the remaining active transactions would make the ledger
 invalid, the delete is rejected and existing rows remain unchanged.
 
+## Transaction editing
+
+```console
+mpal asset edit AAPL 2 -p stocks --price 234.50 --quantity 3
+```
+
+Individual transaction editing is atomic:
+
+- the active transaction row is updated in place
+- transaction type and asset-local entry number do not change
+- soft-deleted transactions cannot be edited
+- user-entered fields not supplied by the edit remain unchanged
+- all active asset transactions are replayed in `entry_no` order
+- replay-owned derived fields on active transactions are updated: Cash effect,
+  Positions/Cost Basis effect, Realized PnL, and Income
+- failed replay rejects the edit and leaves existing rows unchanged
+
+Editable fields are constrained by transaction type:
+
+- `income`: amount, date, note
+- `buy`: price, quantity, fee, total, date, note
+- `sell`: price, quantity, fee, total, date, note
+
+`income` rows cannot edit price, quantity, fee, or total. `buy` and `sell`
+rows cannot edit amount. Transaction type changes are not supported.
+
 ## Portfolio integration
 
 Active asset transactions contribute to portfolio summaries:
@@ -258,12 +286,11 @@ Soft-deleted assets and transactions do not contribute to current values.
 
 ## Transaction correction
 
-Individual asset transaction deletion is implemented. Individual asset
-transaction editing is planned but not implemented in the current CLI. The
-intended edit command shape is:
+Individual asset transaction editing and deletion are implemented:
 
 ```console
 mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
+mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
 ```
 
 `entry-number` is the asset-local number shown by the asset log for the same
@@ -274,16 +301,16 @@ symbol and portfolio. Internal row IDs remain hidden.
 Transaction type is immutable. Editing a `buy` remains a `buy`, editing a
 `sell` remains a `sell`, and editing `income` remains `income`.
 
-Planned editable fields:
+Editable fields:
 
 - `income`: amount, date, note
 - `buy`: price, quantity, fee, total, date, note
 - `sell`: price, quantity, fee, total, date, note
 
-The edit command must require at least one editable option. It must reuse the
-existing money, price, quantity, and date parsers; reject future dates; reject
-invalid amounts, prices, quantities, fees, and totals; and continue to avoid
-Python `float`.
+The edit command requires at least one editable option. It reuses the existing
+money, price, quantity, and date parsers; rejects future dates; rejects invalid
+amounts, prices, quantities, fees, and totals; and continues to avoid Python
+`float`.
 
 ### Exact total edits
 
@@ -298,9 +325,8 @@ Buy and sell edits preserve the current exact-total rules:
 - if the computed total is not exactly representable, `--total` is required
 - no silent rounding is allowed
 
-If only date or note changes, stored accounting effects should remain
-unchanged because the planned accounting replay order is asset-local entry
-number, not date.
+If only date or note changes, accounting effects remain unchanged after replay
+because accounting replay order is asset-local entry number, not date.
 
 ### Implemented delete-entry behavior
 
@@ -323,8 +349,8 @@ restore an open position.
 
 ### Replay and validation
 
-Asset transaction delete-entry is atomic. Planned edit must follow the same
-safe correction model:
+Asset transaction edit and delete-entry are atomic. They use the same safe
+correction model:
 
 1. Load active transactions for the asset.
 2. Apply the edit or soft delete virtually.

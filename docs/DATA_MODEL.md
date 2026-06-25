@@ -135,10 +135,11 @@ timestamps, and soft-delete state.
 - Asset logs order rows by transaction date and then entry number.
 - Internal IDs are not exposed by the CLI.
 - The table contains no market value or unrealized PnL.
-- Individual transaction deletion preserves row identity and asset-local entry
-  numbers. `asset delete-entry` soft-deletes one active row only and
-  recalculates affected active transaction accounting fields on remaining
-  active rows. It does not hard-delete rows or expose internal IDs.
+- Individual transaction correction preserves row identity and asset-local
+  entry numbers. `asset edit` updates one active row in place. `asset
+  delete-entry` soft-deletes one active row only. Both commands recalculate
+  affected active transaction accounting fields. Neither command hard-deletes
+  rows or exposes internal IDs.
 - Correction replay uses active transactions in asset-local `entry_no` order.
   Display order may remain transaction date then entry number.
 
@@ -151,11 +152,11 @@ and quantity, a nonnegative fee, positive net total and cash effect, negative
 relieved-cost position effect, calculated Realized PnL, and zero income.
 Portfolio summaries read all active transaction effects.
 
-For planned edits, `transaction_type` is immutable. Income rows keep null price
-and quantity, zero fee, zero position effect, and zero realized-PnL. Buy and
-sell rows keep exact normalized price and quantity text, exact integer minor
-unit fee and total fields, and recalculated cash, position, and realized-PnL
-effects according to the replay rules in `docs/FINANCIAL_MODEL.md`.
+For edits, `transaction_type` is immutable. Income rows keep null price and
+quantity, zero fee, zero position effect, and zero realized-PnL. Buy and sell
+rows keep exact normalized price and quantity text, exact integer minor unit
+fee and total fields, and recalculated cash, position, and realized-PnL effects
+according to the replay rules in `docs/FINANCIAL_MODEL.md`.
 
 ## Future `schema_migrations`
 
