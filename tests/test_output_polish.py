@@ -40,21 +40,21 @@ def _initialize_asset(
     assert runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"]).exit_code == 0
 
 
-def _buy(*, price: str, quantity: str) -> None:
-    result = runner.invoke(
-        app,
-        [
-            "asset",
-            "buy",
-            "AAPL",
-            "-p",
-            "stocks",
-            "--price",
-            price,
-            "--quantity",
-            quantity,
-        ],
-    )
+def _buy(*, price: str, quantity: str, total: str | None = None) -> None:
+    args = [
+        "asset",
+        "buy",
+        "AAPL",
+        "-p",
+        "stocks",
+        "--price",
+        price,
+        "--quantity",
+        quantity,
+    ]
+    if total is not None:
+        args.extend(["--total", total])
+    result = runner.invoke(app, args)
     assert result.exit_code == 0
 
 
@@ -232,3 +232,65 @@ def test_buy_sell_income_formulas_remain_correct_with_signed_display(
     assert "+150.00" in portfolio.output
     assert "20.00" in portfolio.output
     assert "+17.00%" in portfolio.output
+
+
+def test_asset_log_price_display_preserves_two_decimal_price_style(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy(price="1.30", quantity="3")
+
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    row = next(line for line in result.output.splitlines() if "buy" in line)
+    assert "1.30" in row
+    assert " 3 " in row
+    assert "3.000000000000000000" not in row
+
+
+def test_asset_log_tiny_price_display_preserves_inferred_precision(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy(price="0.00334", quantity="1000")
+
+    result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "0.00334" in result.output
+
+
+def test_fractional_quantity_display_is_dynamic_without_padding(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy(price="100", quantity="0.0433")
+
+    log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+    summary_result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+
+    assert log_result.exit_code == 0
+    assert summary_result.exit_code == 0
+    assert "0.0433" in log_result.output
+    assert "0.0433" in summary_result.output
+    assert "0.043300000000000000" not in log_result.output
+    assert "0.043300000000000000" not in summary_result.output
+
+
+def test_asset_summary_average_cost_does_not_show_raw_decimal_tail(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy(price="1.00", quantity="1")
+    _buy(price="1.31", quantity="2")
+
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "1.21" in result.output
+    assert "1.206666" not in result.output

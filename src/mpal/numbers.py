@@ -1,7 +1,7 @@
 """Exact parsing and display formatting for asset quantities and prices."""
 
 import re
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 
 from mpal.errors import InvalidPriceError, InvalidQuantityError
 
@@ -28,6 +28,50 @@ def parse_price(value: str) -> Decimal:
 def format_price(value: Decimal | str) -> str:
     """Format an exact unit price without money-specific precision rules."""
     return _format_decimal(value, "Price", InvalidPriceError, allow_zero=False)
+
+
+def format_price_display(value: Decimal | str, scale: int) -> str:
+    """Format a price-like value with a fixed display scale."""
+    if isinstance(value, float):
+        raise TypeError("Price formatting does not accept Python float.")
+    if scale < 0 or scale > MAX_FRACTIONAL_DIGITS:
+        raise InvalidPriceError(
+            f"Price display scale must be between 0 and {MAX_FRACTIONAL_DIGITS}."
+        )
+
+    text = format(value, "f") if isinstance(value, Decimal) else value
+    if not isinstance(text, str) or PLAIN_DECIMAL_PATTERN.fullmatch(text) is None:
+        raise InvalidPriceError(f"Invalid price: '{text}'. Use plain decimal notation.")
+
+    decimal_value = Decimal(text)
+    if not decimal_value.is_finite():
+        raise InvalidPriceError(f"Invalid price: '{text}'.")
+    if decimal_value < 0:
+        raise InvalidPriceError("Price must be nonnegative.")
+
+    quantum = Decimal("1") if scale == 0 else Decimal(f"1e-{scale}")
+    rounded = decimal_value.quantize(quantum, rounding=ROUND_HALF_EVEN)
+    integer_part, _, fractional_part = f"{rounded:f}".partition(".")
+    grouped_integer = f"{int(integer_part):,}"
+    if scale == 0:
+        return grouped_integer
+    return f"{grouped_integer}.{fractional_part.ljust(scale, '0')}"
+
+
+def infer_price_display_scale(
+    price_texts: list[str | None] | tuple[str | None, ...],
+    *,
+    minimum: int = 2,
+) -> int:
+    """Infer a user-facing price display scale from stored price text values."""
+    max_scale = minimum
+    for price_text in price_texts:
+        if price_text is None:
+            continue
+        _, separator, fractional_part = price_text.partition(".")
+        if separator:
+            max_scale = max(max_scale, len(fractional_part))
+    return min(max_scale, MAX_FRACTIONAL_DIGITS)
 
 
 def _parse_positive_decimal(

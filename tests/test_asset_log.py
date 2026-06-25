@@ -316,7 +316,7 @@ def test_asset_log_displays_title_columns_and_formatted_values(
     assert "AAPL/stocks" not in result.output
     for column in ("#", "Date", "Type", "Price", "Quantity", "Fee", "Total", "Note"):
         assert column in result.output
-    assert "123,456.0543" in result.output
+    assert "123,456.054300" in result.output
     assert "3.5" in result.output
     assert "1.25" in result.output
     assert "432.09" in result.output

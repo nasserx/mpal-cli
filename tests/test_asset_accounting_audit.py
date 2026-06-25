@@ -115,7 +115,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
     assert " 10 " in summary.output
     assert "1,000.00" in summary.output
-    assert " 100 " in summary.output
+    assert "100.00" in summary.output
     assert "0.00%" in summary.output
 
     _sell("stocks/AAPL", price="150", quantity="3", total="450.00")
@@ -134,7 +134,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
     assert " 7 " in summary.output
     assert "700.00" in summary.output
-    assert " 100 " in summary.output
+    assert "100.00" in summary.output
     assert "150.00" in summary.output
     assert "15.00%" in summary.output
     portfolio_output = _invoke("portfolio", "show", "stocks")

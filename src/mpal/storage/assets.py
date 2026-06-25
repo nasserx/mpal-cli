@@ -11,6 +11,7 @@ from mpal.errors import (
     InvalidSymbolError,
     PortfolioNotFoundError,
 )
+from mpal.numbers import infer_price_display_scale
 from mpal.storage.database import connect_database
 
 
@@ -24,6 +25,7 @@ class Asset:
     realized_pnl_minor: int
     income_minor: int
     total_buy_cost_minor: int
+    price_display_scale: int
 
 
 def create_assets(
@@ -149,12 +151,13 @@ def get_asset_summary(
 def _get_active_transactions(
     connection,
     asset_id: int,
-) -> list[tuple[str, str | None, int, int, int, int]]:
+) -> list[tuple[str, str | None, str | None, int, int, int, int]]:
     """Return the active transaction fields used by asset aggregations."""
     return connection.execute(
         """
         SELECT
             transaction_type,
+            price_text,
             quantity_text,
             position_effect_minor,
             realized_pnl_minor,
@@ -169,24 +172,27 @@ def _get_active_transactions(
 
 def _aggregate_asset(
     symbol: str,
-    transactions: list[tuple[str, str | None, int, int, int, int]],
+    transactions: list[tuple[str, str | None, str | None, int, int, int, int]],
 ) -> Asset:
     """Aggregate active transactions into current asset accounting values."""
     quantity = sum(
         (
-            (Decimal(row[1]) if row[0] == "buy" else -Decimal(row[1]))
+            (Decimal(row[2]) if row[0] == "buy" else -Decimal(row[2]))
             for row in transactions
-            if row[0] in {"buy", "sell"} and row[1] is not None
+            if row[0] in {"buy", "sell"} and row[2] is not None
         ),
         Decimal(0),
     )
     return Asset(
         symbol=symbol,
         quantity=quantity,
-        cost_basis_minor=sum(row[2] for row in transactions),
-        realized_pnl_minor=sum(row[3] for row in transactions if row[0] == "sell"),
-        income_minor=sum(row[4] for row in transactions),
-        total_buy_cost_minor=sum(row[5] for row in transactions if row[0] == "buy"),
+        cost_basis_minor=sum(row[3] for row in transactions),
+        realized_pnl_minor=sum(row[4] for row in transactions if row[0] == "sell"),
+        income_minor=sum(row[5] for row in transactions),
+        total_buy_cost_minor=sum(row[6] for row in transactions if row[0] == "buy"),
+        price_display_scale=infer_price_display_scale(
+            [row[1] for row in transactions if row[0] in {"buy", "sell"}]
+        ),
     )
 
 

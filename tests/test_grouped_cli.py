@@ -76,7 +76,7 @@ def test_official_portfolio_capital_and_asset_workflow(
     asset_row = next(line for line in asset_list.output.splitlines() if "AAPL" in line)
     assert " 7 " in asset_row
     assert "700.00" in asset_row
-    assert " 100 " in asset_row
+    assert "100.00" in asset_row
     assert "150.00" in asset_row
     assert "20.00" in asset_row
     assert "+17.00%" in asset_row

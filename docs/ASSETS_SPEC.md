@@ -92,6 +92,19 @@ soft deletion. Internal row IDs are not part of the CLI.
 - Explicit dates use strict `YYYY-MM-DD`, cannot be in the future, and default
   to the current local date.
 
+Display formatting is presentation-only and never changes stored values or
+accounting:
+
+- Money displays with thousands separators and exactly two decimal places.
+- Quantity displays with thousands separators, meaningful fractional
+  precision, and no unnecessary trailing zeros.
+- Price-like values display with a fixed asset-level price scale inferred from
+  active buy/sell price text, with a minimum of two decimal places and a cap at
+  the parser-supported precision.
+- `Average Cost` is calculated from exact Cost Basis and Quantity, then
+  displayed as a price-like value using the inferred asset price scale. Raw
+  Decimal division output is never displayed.
+
 ### Buy total
 
 `buy total = price × quantity + fee`

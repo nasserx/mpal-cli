@@ -90,12 +90,20 @@ Do not introduce:
 ## Financial model
 
 Money is stored as integer minor units. Use `parse_amount_minor()` for money
-input and `format_money()` for display.
+input and `format_money()` for display. User-facing money output uses
+thousands separators and exactly two decimal places.
 
 Price and quantity use exact `Decimal` helpers from
 `src/mpal/numbers.py`. Do not use the money formatter for price or quantity.
 Trade cash effects must be exact in minor units or require the statement
 `--total`; never silently round.
+
+User-facing quantity output must use the quantity formatter so integer
+quantities and meaningful fractions do not show padded Decimal tails.
+User-facing price output must use the price display helper when a fixed display
+scale is needed. `Average Cost` is a price-like display value: calculate it
+exactly, then display it with the active asset's inferred price scale instead
+of exposing raw Decimal division output.
 
 Current portfolio formulas:
 
@@ -163,6 +171,8 @@ and validation normally use active rows only.
 - Symbols use `normalize_symbol()` and are stored uppercase.
 - Expected user errors are concise and omit tracebacks.
 - Keep storage and accounting logic out of Rich rendering helpers.
+- Do not pass raw `Decimal` values directly into Rich tables; format money,
+  quantity, price, and average-cost values explicitly first.
 - Reuse the semantic palette in `src/mpal/output/theme.py`.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.

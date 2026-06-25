@@ -176,13 +176,13 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
     msft_row = next(line for line in result.output.splitlines() if "MSFT" in line)
     assert " 7 " in aapl_row
     assert "700.00" in aapl_row
-    assert " 100 " in aapl_row
+    assert "100.00" in aapl_row
     assert "+150.00" in aapl_row
     assert "20.00" in aapl_row
     assert "+17.00%" in aapl_row
     assert " 3 " in msft_row
     assert "150.00" in msft_row
-    assert " 50 " in msft_row
+    assert "50.00" in msft_row
     assert "+30.00" in msft_row
     assert "10.00" in msft_row
     assert "+20.00%" in msft_row
@@ -300,7 +300,7 @@ def test_asset_summary_after_buy_shows_open_accounting_values(
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "1,000.00" in line)
     assert " 10 " in row
-    assert " 100 " in row
+    assert "100.00" in row
     assert row.count("0.00") >= 2
     assert "0.00%" in row
 
@@ -353,7 +353,7 @@ def test_partial_sell_reduces_quantity_and_cost_basis_and_shows_pnl(
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "700.00" in line)
     assert " 7 " in row
-    assert " 100 " in row
+    assert "100.00" in row
     assert "150.00" in row
     assert "15.00%" in row
 
@@ -411,8 +411,37 @@ def test_average_cost_uses_price_style_precision(
     result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
-    assert "3.333333333333333333" in result.output
+    assert "3.333333" in result.output
+    assert "3.333333333333333333" not in result.output
     assert "10.00" in result.output
+
+
+def test_average_cost_uses_inferred_two_decimal_price_scale(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy("stocks/AAPL", price="1.00", quantity="1")
+    _buy("stocks/AAPL", price="1.31", quantity="2")
+
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "1.21" in result.output
+    assert "1.206666" not in result.output
+
+
+def test_tiny_average_cost_uses_inferred_price_precision(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch)
+    _buy("stocks/AAPL", price="0.00334", quantity="1000")
+
+    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "0.00334" in result.output
 
 
 def test_quantity_and_money_columns_use_distinct_formatting(

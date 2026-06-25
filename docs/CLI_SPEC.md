@@ -210,6 +210,15 @@ number.
 - Expected application errors are concise and do not print tracebacks.
 - Failed atomic operations do not leave partial records.
 
+User-facing numeric output uses explicit display helpers:
+
+- Money fields use thousands separators and exactly two decimal places.
+- Quantity fields use thousands separators and dynamic decimal precision
+  without padded trailing zeros.
+- Price fields and `Average Cost` use a price display scale inferred from the
+  active asset's buy/sell prices, with at least two decimal places.
+- Display rounding is presentation-only; internal accounting remains exact.
+
 Trade totals retain the existing behavior:
 
 - buy total: `price × quantity + fee`

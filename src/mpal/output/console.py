@@ -1,13 +1,17 @@
 """Rich terminal output helpers."""
 
-from decimal import ROUND_HALF_EVEN, Decimal, localcontext
+from decimal import Decimal, localcontext
 
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
 from mpal.amounts import format_money
-from mpal.numbers import format_price, format_quantity
+from mpal.numbers import (
+    format_price_display,
+    format_quantity,
+    infer_price_display_scale,
+)
 from mpal.output.formatting import (
     format_capital_entry_amount,
     format_capital_entry_type,
@@ -121,7 +125,11 @@ def print_assets(assets: list[Asset]) -> None:
             asset.symbol,
             format_quantity(asset.quantity),
             format_money(asset.cost_basis_minor),
-            _format_average_cost(asset.cost_basis_minor, asset.quantity),
+            _format_average_cost(
+                asset.cost_basis_minor,
+                asset.quantity,
+                asset.price_display_scale,
+            ),
             format_profit_loss_money(asset.realized_pnl_minor),
             format_income_money(asset.income_minor),
             format_profit_loss_percent(
@@ -150,7 +158,11 @@ def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
     table.add_row(
         format_quantity(asset.quantity),
         format_money(asset.cost_basis_minor),
-        _format_average_cost(asset.cost_basis_minor, asset.quantity),
+        _format_average_cost(
+            asset.cost_basis_minor,
+            asset.quantity,
+            asset.price_display_scale,
+        ),
         format_profit_loss_money(asset.realized_pnl_minor),
         format_income_money(asset.income_minor),
         format_profit_loss_percent(
@@ -182,6 +194,9 @@ def print_asset_transaction_log(
     table.add_column("Fee", justify="right")
     table.add_column("Total", justify="right")
     table.add_column("Note")
+    price_display_scale = infer_price_display_scale(
+        [transaction.price_text for transaction in transactions]
+    )
     for transaction in transactions:
         table.add_row(
             str(transaction.entry_no),
@@ -190,7 +205,10 @@ def print_asset_transaction_log(
             (
                 "--"
                 if transaction.price_text is None
-                else format_price(transaction.price_text)
+                else format_price_display(
+                    transaction.price_text,
+                    price_display_scale,
+                )
             ),
             (
                 "--"
@@ -212,18 +230,18 @@ def print_asset_transaction_log(
     console.print(table)
 
 
-def _format_average_cost(cost_basis_minor: int, quantity: Decimal) -> str:
+def _format_average_cost(
+    cost_basis_minor: int,
+    quantity: Decimal,
+    price_display_scale: int,
+) -> str:
     """Format derived unit book cost with deterministic price precision."""
     if quantity == 0:
         return "--"
     with localcontext() as context:
         context.prec = 80
         average_cost = Decimal(cost_basis_minor) / Decimal(100) / quantity
-        average_cost = average_cost.quantize(
-            Decimal("0.000000000000000001"),
-            rounding=ROUND_HALF_EVEN,
-        )
-    return format_price(average_cost)
+    return format_price_display(average_cost, price_display_scale)
 
 
 def print_capital_entry_log(entries: list[CapitalEntry]) -> None:

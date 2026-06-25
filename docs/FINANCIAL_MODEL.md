@@ -11,7 +11,7 @@ application code; binary floating point is not used.
 
 Displayed monetary values use thousands separators and exactly two decimal
 places. This display rule is specific to money and does not define formatting
-for quantities or unit prices.
+for quantities, unit prices, or price-like derived values.
 
 Manual asset calculations use exact decimal arithmetic for price
 and quantity and integer minor units for every cash effect. Price and quantity
@@ -21,10 +21,13 @@ trade cash effect must be exactly representable in minor units or the trade must
 use the exact-money `--total` override described in
 `docs/ASSETS_SPEC.md`.
 
-The reusable `parse_quantity()`, `format_quantity()`, `parse_price()`, and
-`format_price()` helpers implement the exact input and display contract.
-Quantity and price formatting remain separate from `format_money()` and do not
-force two decimal places.
+The reusable `parse_quantity()`, `format_quantity()`, `parse_price()`,
+`format_price()`, and `format_price_display()` helpers implement the exact
+input and display contract. Quantity and price formatting remain separate from
+`format_money()`. Quantity display removes unnecessary trailing zeros. Price
+display for user-facing tables uses an asset-level fixed scale inferred from
+active buy/sell price text, with a minimum of two decimal places and a cap at
+the parser-supported precision.
 
 ## Summary table
 
@@ -107,7 +110,9 @@ Total Buy Cost is cumulative buy cash outflow including buy fees. If Total Buy
 Cost is zero, asset Realized Return is `0.00%`.
 
 The asset summary also displays `Average Cost = Cost Basis / Quantity` when
-open Quantity is positive. It uses price-style display precision; zero Quantity
+open Quantity is positive. The calculation remains exact internally, and the
+result is displayed as a price-like value using the asset's inferred price
+display scale. Raw Decimal division output is never displayed. Zero Quantity
 displays `--`.
 
 Realized PnL and return values use signed display formatting: positive values
