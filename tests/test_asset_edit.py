@@ -318,6 +318,28 @@ def test_editing_buy_with_subcent_computed_total_requires_total(
     )
 
 
+def test_editing_buy_with_subcent_computed_total_accepts_explicit_total(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_asset(tmp_path, monkeypatch)
+    _buy(quantity="1")
+
+    result = _edit("1", price="0.000533", quantity="0.0538", total="0.01")
+
+    assert result.exit_code == 0
+    assert _rows(database_path)[0][3:11] == (
+        "0.000533",
+        "0.0538",
+        0,
+        1,
+        -1,
+        1,
+        0,
+        0,
+    )
+
+
 def test_editing_buy_rejects_mismatching_exact_total(
     tmp_path: Path,
     monkeypatch,
@@ -330,6 +352,28 @@ def test_editing_buy_rejects_mismatching_exact_total(
     assert result.exit_code == 1
     assert "does not match price × quantity + fee" in result.output
     assert _rows(database_path)[0][6:11] == (10_000, -10_000, 10_000, 0, 0)
+
+
+def test_asset_edit_rejects_invalid_values_without_traceback_or_changes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = _initialize_asset(tmp_path, monkeypatch)
+    _buy(quantity="1")
+    before = _rows(database_path)
+
+    cases = (
+        {"price": "invalid"},
+        {"quantity": "0"},
+        {"fee": "-1"},
+        {"total": "0"},
+        {"date": "2999-01-01"},
+    )
+    for options in cases:
+        result = _edit("1", **options)
+        assert result.exit_code == 1
+        assert "Traceback" not in result.output
+        assert _rows(database_path) == before
 
 
 def test_editing_buy_that_would_make_later_sell_invalid_is_rejected(
