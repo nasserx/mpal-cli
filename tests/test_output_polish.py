@@ -43,7 +43,7 @@ from mpal.output.theme import (
 from mpal.storage.asset_logs import AssetTransaction
 from mpal.storage.assets import Asset
 from mpal.storage.logs import CapitalEntry, CapitalState
-from mpal.storage.summaries import PortfolioSummary
+from mpal.storage.summaries import GlobalSummary, PortfolioSummary
 
 runner = CliRunner()
 
@@ -222,6 +222,7 @@ def test_shared_table_helper_uses_theme_styles() -> None:
     assert table.row_separator_style == ROW_SEPARATOR
     assert table.show_lines is False
     assert table.min_width == console_output.STANDARD_TABLE_WIDTH
+    assert table.layout == "default"
 
 
 def test_shared_table_helper_styles_first_column_values_as_row_keys() -> None:
@@ -235,6 +236,130 @@ def test_shared_table_helper_styles_first_column_values_as_row_keys() -> None:
     assert table.columns[1].style == ""
     assert table.header_style == TABLE_HEADER
     assert table.columns[0]._cells[0].style == ROW_KEY
+
+
+def test_shared_table_helper_applies_central_column_alignment_policy() -> None:
+    table = console_output._make_table()
+    table.add_column("#", justify="right")
+    table.add_column("Date")
+    table.add_column("Type")
+    table.add_column("Note")
+    table.add_column("Amount")
+    table.add_column("Return")
+
+    assert [column.justify for column in table.columns] == [
+        "left",
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+    ]
+
+
+def test_default_table_layout_keeps_financial_columns_right_aligned() -> None:
+    table = console_output._make_table()
+    table.add_column("TOTAL CAPITAL")
+    table.add_column("TOTAL INCOME")
+    table.add_column("REALIZED P&L")
+    table.add_column("RETURN")
+
+    assert [column.justify for column in table.columns] == [
+        "right",
+        "right",
+        "right",
+        "right",
+    ]
+
+
+def test_spread_table_layout_is_opt_in() -> None:
+    default_table = console_output._make_table()
+    spread_table = console_output._make_table(layout="spread")
+    for table in (default_table, spread_table):
+        table.add_column("TOTAL CAPITAL")
+        table.add_column("TOTAL INCOME")
+        table.add_column("REALIZED P&L")
+        table.add_column("RETURN")
+
+    assert default_table.layout == "default"
+    assert spread_table.layout == "spread"
+    assert [column.justify for column in default_table.columns] == [
+        "right",
+        "right",
+        "right",
+        "right",
+    ]
+    assert [column.justify for column in spread_table.columns] == [
+        "left",
+        "center",
+        "center",
+        "right",
+    ]
+
+
+def test_summary_table_uses_spread_layout(monkeypatch) -> None:
+    tables = []
+
+    def record_table(table):
+        tables.append(table)
+
+    monkeypatch.setattr(console_output, "_print_table", record_table)
+
+    console_output.print_global_summary(
+        GlobalSummary(
+            capital_minor=4_000_000,
+            income_minor=18_000,
+            realized_pnl_minor=125_000,
+        )
+    )
+
+    table = tables[0]
+
+    assert table.layout == "spread"
+    assert [column.header for column in table.columns] == [
+        "TOTAL CAPITAL",
+        "TOTAL INCOME",
+        "REALIZED P&L",
+        "RETURN",
+    ]
+    assert [column.justify for column in table.columns] == [
+        "left",
+        "center",
+        "center",
+        "right",
+    ]
+    assert table.columns[0]._cells[0] == "40,000.00"
+    assert table.columns[1]._cells[0].plain == "180.00"
+    assert table.columns[2]._cells[0].plain == "+1,250.00"
+    assert table.columns[3]._cells[0].plain == "+3.58%"
+
+
+def test_spread_summary_output_places_edges_near_table_edges(monkeypatch) -> None:
+    rendered_tables: list[str] = []
+
+    def record_table(table):
+        output_console = Console(width=140, record=True)
+        output_console.print(table)
+        rendered_tables.append(output_console.export_text())
+
+    monkeypatch.setattr(console_output, "_print_table", record_table)
+
+    console_output.print_global_summary(
+        GlobalSummary(
+            capital_minor=4_000_000,
+            income_minor=18_000,
+            realized_pnl_minor=125_000,
+        )
+    )
+
+    lines = rendered_tables[0].splitlines()
+    header_line = next(line for line in lines if "TOTAL CAPITAL" in line)
+    value_line = next(line for line in lines if "40,000.00" in line)
+
+    assert header_line.index("TOTAL CAPITAL") <= 3
+    assert value_line.index("40,000.00") <= 3
+    assert header_line.rstrip().endswith("RETURN │")
+    assert value_line.rstrip().endswith("+3.58% │")
 
 
 def test_shared_table_helper_limits_row_key_style_to_identity_headers() -> None:

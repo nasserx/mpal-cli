@@ -52,6 +52,36 @@ STANDARD_TABLE_WIDTH = 110
 ROW_KEY_COLUMN_HEADERS = frozenset(
     {"#", "Portfolio", "Asset", "Symbol", "Asset/Portfolio"}
 )
+LEFT_ALIGNED_COLUMN_HEADERS = frozenset(
+    {"#", "Portfolio", "Asset", "Symbol", "Asset/Portfolio", "Type", "Date", "Note"}
+)
+RIGHT_ALIGNED_COLUMN_HEADERS = frozenset(
+    {
+        "Amount",
+        "Average Cost",
+        "Book Value",
+        "Capital",
+        "Cash",
+        "Cost Basis",
+        "Deposits",
+        "Fee",
+        "Income",
+        "Net Capital",
+        "Positions",
+        "Price",
+        "Quantity",
+        "Realized PnL",
+        "Realized P&L",
+        "Realized Return",
+        "Return",
+        "Total",
+        "TOTAL CAPITAL",
+        "TOTAL INCOME",
+        "REALIZED P&L",
+        "RETURN",
+        "Withdrawals",
+    }
+)
 
 
 def print_message(message: str) -> None:
@@ -124,11 +154,11 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 
 def print_global_summary(summary: GlobalSummary) -> None:
     """Print global totals across active portfolios."""
-    table = _make_table()
-    table.add_column("TOTAL CAPITAL", justify="right")
-    table.add_column("TOTAL INCOME", justify="right")
-    table.add_column("REALIZED P&L", justify="right")
-    table.add_column("RETURN", justify="right")
+    table = _make_table(layout="spread")
+    table.add_column("TOTAL CAPITAL")
+    table.add_column("TOTAL INCOME")
+    table.add_column("REALIZED P&L")
+    table.add_column("RETURN")
     table.add_row(
         format_money(summary.capital_minor),
         format_income_money(summary.income_minor),
@@ -298,7 +328,7 @@ def print_capital_state(state: CapitalState) -> None:
     _print_table(table)
 
 
-def _make_table() -> Table:
+def _make_table(*, layout: str = "default") -> Table:
     """Create mpal's shared row-oriented Rich table."""
     return MpalTable(
         box=TABLE_BOX,
@@ -307,6 +337,7 @@ def _make_table() -> Table:
         style=TABLE_CELL,
         row_separator_style=ROW_SEPARATOR,
         show_lines=False,
+        layout=layout,
     )
 
 
@@ -326,17 +357,29 @@ def _table_console_width() -> int:
 class MpalTable(Table):
     """Rich table with mpal's rounded, row-oriented separators."""
 
-    def __init__(self, *args, row_separator_style: str, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        row_separator_style: str,
+        layout: str = "default",
+        **kwargs,
+    ) -> None:
         kwargs.setdefault("min_width", STANDARD_TABLE_WIDTH)
         super().__init__(*args, **kwargs)
         self.row_separator_style = row_separator_style
+        self.layout = layout
 
     def add_column(self, *args, **kwargs) -> None:
-        """Add a column, styling identity-column body values as row keys."""
+        """Add a column with mpal's centralized alignment and key styling."""
         header = args[0] if args else kwargs.get("header", "")
+        justify = _column_justify(header, kwargs.get("justify"))
+        if justify is not None:
+            kwargs["justify"] = justify
         if not self.columns and _is_row_key_header(header) and "style" not in kwargs:
             kwargs["style"] = ROW_KEY
         super().add_column(*args, **kwargs)
+        if self.layout == "spread":
+            _apply_spread_alignment(self.columns)
 
     def add_row(self, *renderables, style=None, end_section: bool = False) -> None:
         """Add a row, applying row-key styling to identity first-column cells."""
@@ -563,11 +606,34 @@ class MpalTable(Table):
 
 
 def _is_row_key_header(header) -> bool:
+    return _plain_header(header) in ROW_KEY_COLUMN_HEADERS
+
+
+def _column_justify(header, requested_justify):
+    header_text = _plain_header(header)
+    if header_text in LEFT_ALIGNED_COLUMN_HEADERS:
+        return "left"
+    if header_text in RIGHT_ALIGNED_COLUMN_HEADERS:
+        return "right"
+    return requested_justify
+
+
+def _apply_spread_alignment(columns) -> None:
+    if not columns:
+        return
+    if len(columns) == 1:
+        columns[0].justify = "left"
+        return
+    columns[0].justify = "left"
+    columns[-1].justify = "right"
+    for column in columns[1:-1]:
+        column.justify = "center"
+
+
+def _plain_header(header) -> str:
     if isinstance(header, Text):
-        header_text = header.plain
-    else:
-        header_text = str(header)
-    return header_text in ROW_KEY_COLUMN_HEADERS
+        return header.plain
+    return str(header)
 
 
 def _style_row_key_renderable(renderable):
