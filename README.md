@@ -47,6 +47,7 @@ Portfolio summaries use book/accounting values. Book Value is derived from manua
 
 ```console
 mpal init
+mpal summary
 mpal portfolio create stocks
 mpal capital deposit 1000 -p stocks
 mpal capital show -p stocks
@@ -63,6 +64,8 @@ mpal groups commands by the records they manage:
 
 ```console
 mpal init
+
+mpal summary
 
 mpal portfolio create stocks
 mpal portfolio create stocks --initial 5000
@@ -91,9 +94,15 @@ mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
+`mpal summary` is a top-level global dashboard summary across active
+portfolios. It aggregates active portfolio capital, active asset income, and
+active realized PnL without live prices, market value, or unrealized PnL.
+Global return is computed from global totals, not by averaging portfolio
+returns.
+
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
-Global collection views such as `mpal asset list` do not require `-p`. No
-compatibility aliases are kept in this CLI redesign.
+Global collection views such as `mpal summary` and `mpal asset list` do not
+require `-p`. No compatibility aliases are kept in this CLI redesign.
 
 Asset list output uses an `Asset/Portfolio` column. Combined labels display
 as `<SYMBOL> • <Portfolio>`, such as `AAPL • Stocks`; portfolio capitalization

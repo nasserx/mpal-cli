@@ -38,8 +38,10 @@ from mpal.storage.portfolios import (
     delete_portfolio,
 )
 from mpal.storage.summaries import (
+    GlobalSummary,
     PortfolioSummary,
     get_all_portfolio_summaries,
+    get_global_summary,
     get_portfolio_summary,
 )
 
@@ -48,6 +50,7 @@ __all__ = [
     "AssetTransaction",
     "CapitalEntry",
     "CapitalState",
+    "GlobalSummary",
     "PortfolioSummary",
     "create_assets",
     "create_portfolio",
@@ -67,6 +70,7 @@ __all__ = [
     "get_asset_transaction_log",
     "get_capital_entry_log",
     "get_capital_state",
+    "get_global_summary",
     "get_portfolio_summary",
     "initialize_database",
     "record_inflow",

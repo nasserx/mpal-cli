@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 from mpal.storage.asset_logs import AssetTransaction
 from mpal.storage.assets import Asset
 from mpal.storage.logs import CapitalEntry, CapitalState
-from mpal.storage.summaries import PortfolioSummary
+from mpal.storage.summaries import GlobalSummary, PortfolioSummary
 
 STANDARD_TABLE_WIDTH = 110
 ROW_KEY_COLUMN_HEADERS = frozenset(
@@ -119,6 +119,25 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
                 summary.capital_minor,
             ),
         )
+    _print_table(table)
+
+
+def print_global_summary(summary: GlobalSummary) -> None:
+    """Print global totals across active portfolios."""
+    table = _make_table()
+    table.add_column("TOTAL CAPITAL", justify="right")
+    table.add_column("TOTAL INCOME", justify="right")
+    table.add_column("REALIZED P&L", justify="right")
+    table.add_column("RETURN", justify="right")
+    table.add_row(
+        format_money(summary.capital_minor),
+        format_income_money(summary.income_minor),
+        format_profit_loss_money(summary.realized_pnl_minor),
+        format_profit_loss_percent(
+            summary.income_minor + summary.realized_pnl_minor,
+            summary.capital_minor,
+        ),
+    )
     _print_table(table)
 
 

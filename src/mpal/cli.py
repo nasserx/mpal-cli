@@ -19,6 +19,7 @@ from mpal.output.console import (
     print_capital_entry_log,
     print_capital_state,
     print_error,
+    print_global_summary,
     print_info,
     print_portfolio_summaries,
     print_portfolio_summary,
@@ -44,6 +45,7 @@ from mpal.storage import (
     get_assets,
     get_capital_entry_log,
     get_capital_state,
+    get_global_summary,
     get_portfolio_summary,
     initialize_database,
     record_buy,
@@ -63,6 +65,8 @@ PORTFOLIO_OPTION = typer.Option(
 HELP_EXAMPLES = r"""Examples:
 
   mpal init
+
+  mpal summary
 
   mpal portfolio create <portfolio> [--initial <amount>]
 
@@ -225,6 +229,18 @@ def init_command() -> None:
         raise typer.Exit(code=1) from error
 
     print_success(f"mpal initialized at {database_path}")
+
+
+@app.command("summary")
+def summary_command() -> None:
+    """Show a global summary across active portfolios."""
+    try:
+        summary = get_global_summary()
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_global_summary(summary)
 
 
 @portfolio_app.command("create")

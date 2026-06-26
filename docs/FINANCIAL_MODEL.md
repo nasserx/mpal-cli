@@ -38,6 +38,19 @@ The summary output has exactly these columns:
 
 The internal portfolio database ID is not part of summary output.
 
+The top-level global summary command uses one aggregate row across active
+portfolios:
+
+| TOTAL CAPITAL | TOTAL INCOME | REALIZED P&L | RETURN |
+|---:|---:|---:|---:|
+
+`TOTAL CAPITAL` is the sum of active portfolio Capital. `TOTAL INCOME` is the
+sum of active asset Income. `REALIZED P&L` is the sum of active realized sell
+PnL. Global `RETURN` is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or
+`0.00%` when total capital is zero. Global return is computed from global
+totals, not by averaging portfolio returns. It does not use live prices,
+market value, or unrealized PnL.
+
 ### Capital
 
 External capital only.

@@ -20,6 +20,15 @@ class PortfolioSummary:
     income_minor: int
 
 
+@dataclass(frozen=True)
+class GlobalSummary:
+    """Derived summary values across all active portfolios."""
+
+    capital_minor: int
+    realized_pnl_minor: int
+    income_minor: int
+
+
 def get_portfolio_summary(
     portfolio_name: str,
     database_path: Path | None = None,
@@ -126,6 +135,16 @@ def get_all_portfolio_summaries(
         ).fetchall()
 
     return [_summary_from_row(row) for row in rows]
+
+
+def get_global_summary(database_path: Path | None = None) -> GlobalSummary:
+    """Return global totals across all active portfolio summaries."""
+    summaries = get_all_portfolio_summaries(database_path)
+    return GlobalSummary(
+        capital_minor=sum(summary.capital_minor for summary in summaries),
+        realized_pnl_minor=sum(summary.realized_pnl_minor for summary in summaries),
+        income_minor=sum(summary.income_minor for summary in summaries),
+    )
 
 
 def _summary_from_row(

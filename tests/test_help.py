@@ -13,11 +13,10 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
 
     assert result.exit_code == 0
     assert "Multi-Portfolio Asset Ledger" in result.output
-    for command in ("init", "portfolio", "capital", "asset"):
+    for command in ("init", "summary", "portfolio", "capital", "asset"):
         assert f"│ {command} " in result.output
     for command in (
         "create",
-        "summary",
         "reset",
         "delete",
         "inflow",
@@ -43,6 +42,7 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["capital"],
         ["asset"],
         ["init"],
+        ["summary"],
         ["portfolio", "create"],
         ["portfolio", "list"],
         ["portfolio", "show"],
@@ -125,6 +125,7 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     "arguments",
     [
         ["portfolio", "create"],
+        ["summary"],
         ["portfolio", "list"],
         ["portfolio", "show"],
         ["portfolio", "reset"],

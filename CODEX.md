@@ -20,6 +20,7 @@ Before changing behavior, read `README.md`, `docs/PRODUCT_SPEC.md`,
 Root help exposes only:
 
 - `mpal init`
+- `mpal summary`
 - `mpal portfolio`
 - `mpal capital`
 - `mpal asset`
@@ -72,8 +73,8 @@ Command vocabulary rule:
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.
 
-`summary` may remain in output titles, such as `Portfolio Summary` or `Asset
-Summary`, but is not a command name.
+`summary` is the top-level global dashboard command and is not used inside
+command groups.
 
 Use `mpal` in help, docs, tests, and examples. User shell shortcuts are not
 part of the product interface.
@@ -128,6 +129,17 @@ Current portfolio formulas:
 - Realized PnL = active sell realized-PnL effects
 - Income = active income effects
 - Return = `(Realized PnL + Income) / Capital`, or `0.00%` for zero Capital
+
+Global summary formulas:
+
+- Total Capital = sum of active portfolio Capital
+- Total Income = sum of active asset Income across active portfolios
+- Realized P&L = sum of active realized sell PnL across active portfolios
+- Return = `(Total Income + Realized P&L) / Total Capital`, or `0.00%` for
+  zero Total Capital
+
+Global return is computed from global totals, not by averaging portfolio
+returns. It does not use live prices, market value, or unrealized PnL.
 
 Sell cost relief uses moving-average book cost and deterministic half-even
 minor-unit allocation. A full close relieves all remaining Cost Basis.

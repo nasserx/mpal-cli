@@ -17,13 +17,13 @@ VISIBLE_COMMANDS = {
     "capital",
     "init",
     "portfolio",
+    "summary",
 }
 LEGACY_COMMANDS = {
     "buy",
     "create",
     "inflow",
     "outflow",
-    "summary",
     "log",
     "edit",
     "income",

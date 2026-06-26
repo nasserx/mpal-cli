@@ -9,13 +9,13 @@ implemented, including current asset output. The governing contract is
 documented in `docs/ASSETS_SPEC.md`.
 
 The breaking command hierarchy documented in `docs/CLI_SPEC.md` is
-implemented. Official help exposes only `init`, `portfolio`, `capital`, and
-`asset` at the root.
+implemented. Official help exposes only `init`, `summary`, `portfolio`,
+`capital`, and `asset` at the root.
 
 A breaking cleanup standardized command vocabulary: `list` for current
 collections, `show` for current details of one thing, `log` for history, and
-`entry edit/delete` for historical entry correction. `summary` may remain an
-output title but is not a command name.
+`entry edit/delete` for historical entry correction. `summary` is the
+top-level global dashboard command and is not used inside command groups.
 
 ## v0.1 — Capital ledger foundation
 
@@ -28,6 +28,7 @@ output title but is not a command name.
 - Record withdrawals with Cash validation.
 - Show a portfolio summary.
 - Show all portfolio summaries.
+- Show a global summary across active portfolios.
 - Show a portfolio capital-entry log.
 - Edit portfolio capital entries.
 - Soft-delete portfolio capital entries.
@@ -74,6 +75,9 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 
 - Official `portfolio`, `capital`, and organized `asset` command groups are
   implemented.
+- Top-level `summary` is implemented for global active-portfolio totals. It
+  does not use live prices, market value, or unrealized PnL, and global return
+  is computed from global totals rather than averaging portfolio returns.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
 - Capital cleanup added `capital show -p <portfolio>` and moved historical

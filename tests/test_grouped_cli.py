@@ -141,7 +141,6 @@ def test_portfolio_option_is_required(arguments: list[str]) -> None:
     "command",
     [
         "create",
-        "summary",
         "reset",
         "delete",
         "inflow",

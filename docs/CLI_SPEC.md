@@ -13,6 +13,7 @@ market APIs, calculate market value, or calculate unrealized PnL.
 `mpal --help` exposes only:
 
 - `init`
+- `summary`
 - `portfolio`
 - `capital`
 - `asset`
@@ -31,8 +32,8 @@ being shown or modified:
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.
 
-`summary` may remain in output titles such as `Portfolio Summary` or `Asset
-Summary`, but it is not a command name.
+`summary` is reserved for the top-level global dashboard command. It is not
+used inside `portfolio`, `capital`, or `asset` command groups.
 
 This is a breaking local CLI cleanup. Old command names are removed rather
 than retained as compatibility aliases.
@@ -47,6 +48,34 @@ mpal init
 
 Creates or upgrades the local SQLite database using the existing idempotent
 schema checks.
+
+### Global summary
+
+```console
+mpal summary
+```
+
+Shows one global summary table across all active portfolios. Deleted
+portfolios and soft-deleted entries or transactions do not contribute. The
+command uses existing active-only portfolio summary behavior and does not
+display portfolio names or internal database IDs.
+
+Global summary columns are uppercase:
+
+`TOTAL CAPITAL | TOTAL INCOME | REALIZED P&L | RETURN`
+
+Definitions:
+
+- `TOTAL CAPITAL` is active deposits minus active withdrawals across active
+  portfolios.
+- `TOTAL INCOME` is active asset income across active portfolios.
+- `REALIZED P&L` is active realized sell PnL across active portfolios.
+- `RETURN` is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or `0.00%`
+  when total capital is zero.
+
+Global return is computed from global totals, not by averaging portfolio
+returns. The command does not use live prices, market value, or unrealized
+PnL.
 
 ### Portfolio
 
@@ -328,7 +357,6 @@ The following commands and shapes must fail rather than delegate:
 
 ```text
 mpal create
-mpal summary
 mpal reset
 mpal delete
 mpal inflow
@@ -349,7 +377,7 @@ No hidden alias plan exists for this cleanup.
 
 ## Help contract
 
-- Root help lists only the four root commands.
+- Root help lists only the five root commands.
 - Help examples use `mpal`.
 - Help examples use `--portfolio` / `-p`.
 - Help does not advertise removed commands or compatibility aliases.
