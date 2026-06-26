@@ -200,7 +200,7 @@ def test_theme_uses_documented_dark_terminal_palette() -> None:
     assert LOSS == "#E57373"
     assert INFO == "#64B5F6"
     assert INCOME == "#60A5FA"
-    assert ROW_KEY == "#FDBA74"
+    assert ROW_KEY == "#EFAE83"
     assert WARNING == "#FFD54F"
     assert BORDER == "#4B5563"
     assert MUTED == "#9CA3AF"
