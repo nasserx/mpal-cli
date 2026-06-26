@@ -12,4 +12,5 @@
 - Corrected asset transaction edit/delete behavior through replay before commit.
 - Added dynamic numeric display formatting.
 - Polished terminal theme and table output.
+- Added release-readiness metadata, documentation, and local validation scripts.
 - Still intentionally excludes live prices, market value, and unrealized PnL.

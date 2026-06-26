@@ -108,7 +108,7 @@ capital-only current-state view.
 Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 `--date` is omitted, mpal uses the current local date.
 
-v0.1 covers initialization, portfolio creation, optional initial capital,
+The current release covers initialization, portfolio creation, optional initial capital,
 deposits, withdrawals, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The asset foundation adds
 manual symbol creation, current-state views, and soft deletion under existing
