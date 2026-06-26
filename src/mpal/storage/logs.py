@@ -18,6 +18,58 @@ class CapitalEntry:
     note: str | None
 
 
+@dataclass(frozen=True)
+class CapitalState:
+    """Capital-only current state for one active portfolio."""
+
+    portfolio_name: str
+    deposits_minor: int
+    withdrawals_minor: int
+    net_capital_minor: int
+
+
+def get_capital_state(
+    portfolio_name: str,
+    database_path: Path | None = None,
+) -> CapitalState:
+    """Return capital-only current state for one active portfolio."""
+    with connect_database(database_path) as connection:
+        portfolio = connection.execute(
+            "SELECT id FROM portfolios WHERE name = ? AND deleted_at IS NULL",
+            (portfolio_name,),
+        ).fetchone()
+        if portfolio is None:
+            raise PortfolioNotFoundError(
+                f"Active portfolio '{portfolio_name}' does not exist."
+            )
+
+        row = connection.execute(
+            """
+            SELECT
+                COALESCE(
+                    SUM(CASE WHEN entry_type = 'inflow' THEN amount_minor ELSE 0 END),
+                    0
+                ),
+                COALESCE(
+                    SUM(CASE WHEN entry_type = 'outflow' THEN amount_minor ELSE 0 END),
+                    0
+                )
+            FROM capital_entries
+            WHERE portfolio_id = ? AND deleted_at IS NULL
+            """,
+            (portfolio[0],),
+        ).fetchone()
+
+    deposits_minor = row[0]
+    withdrawals_minor = row[1]
+    return CapitalState(
+        portfolio_name=portfolio_name,
+        deposits_minor=deposits_minor,
+        withdrawals_minor=withdrawals_minor,
+        net_capital_minor=deposits_minor - withdrawals_minor,
+    )
+
+
 def get_capital_entry_log(
     portfolio_name: str,
     database_path: Path | None = None,

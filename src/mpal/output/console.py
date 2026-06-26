@@ -33,7 +33,7 @@ from mpal.output.theme import (
 )
 from mpal.storage.asset_logs import AssetTransaction
 from mpal.storage.assets import Asset
-from mpal.storage.logs import CapitalEntry
+from mpal.storage.logs import CapitalEntry, CapitalState
 from mpal.storage.summaries import PortfolioSummary
 
 
@@ -248,6 +248,22 @@ def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
             Text(entry.note, style=MUTED) if entry.note else "",
         )
     Console().print(table)
+
+
+def print_capital_state(state: CapitalState) -> None:
+    """Print capital-only current state for one portfolio."""
+    table = _make_table()
+    table.add_column("Portfolio")
+    table.add_column("Deposits", justify="right")
+    table.add_column("Withdrawals", justify="right")
+    table.add_column("Net Capital", justify="right")
+    table.add_row(
+        state.portfolio_name,
+        format_capital_entry_amount("inflow", state.deposits_minor),
+        format_capital_entry_amount("outflow", state.withdrawals_minor),
+        format_money(state.net_capital_minor),
+    )
+    Console(width=120).print(table)
 
 
 def _make_table() -> Table:

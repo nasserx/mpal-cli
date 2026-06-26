@@ -123,7 +123,7 @@ def test_edit_validation_includes_active_asset_cash_effects(
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--amount", "700"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "700"],
     )
 
     assert result.exit_code == 1
@@ -142,7 +142,7 @@ def test_delete_validation_includes_active_asset_cash_effects(
     database_path = _initialize_asset(tmp_path, monkeypatch)
     _buy()
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Delete would make portfolio cash negative." in result.output

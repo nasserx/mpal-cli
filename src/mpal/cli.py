@@ -17,6 +17,7 @@ from mpal.output.console import (
     print_asset_transaction_log,
     print_assets,
     print_capital_entry_log,
+    print_capital_state,
     print_error,
     print_info,
     print_portfolio_summaries,
@@ -42,6 +43,7 @@ from mpal.storage import (
     get_asset_transaction_log,
     get_assets,
     get_capital_entry_log,
+    get_capital_state,
     get_portfolio_summary,
     initialize_database,
     record_buy,
@@ -70,6 +72,8 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal capital deposit <amount> -p <portfolio>
 
+  mpal capital show -p <portfolio>
+
   mpal asset add <symbol> \[symbol...] -p <portfolio>
 
   mpal asset list
@@ -94,15 +98,24 @@ PORTFOLIO_HELP_EXAMPLES = """Examples:
 
 CAPITAL_HELP_EXAMPLES = """Examples:
 
+  mpal capital show -p <portfolio>
+
   mpal capital deposit <amount> -p <portfolio>
 
   mpal capital withdraw <amount> -p <portfolio>
 
   mpal capital log -p <portfolio>
 
-  mpal capital edit <entry-number> -p <portfolio> --amount <amount>
+  mpal capital entry edit <entry-number> -p <portfolio> --amount <amount>
 
-  mpal capital delete <entry-number> -p <portfolio>
+  mpal capital entry delete <entry-number> -p <portfolio>
+"""
+
+CAPITAL_ENTRY_HELP_EXAMPLES = """Examples:
+
+  mpal capital entry edit <entry-number> -p <portfolio> --amount <amount>
+
+  mpal capital entry delete <entry-number> -p <portfolio>
 """
 
 ASSET_HELP_EXAMPLES = r"""Examples:
@@ -148,6 +161,12 @@ capital_app = typer.Typer(
     epilog=CAPITAL_HELP_EXAMPLES,
     no_args_is_help=True,
 )
+capital_entry_app = typer.Typer(
+    name="entry",
+    help="Edit or delete historical capital entries.",
+    epilog=CAPITAL_ENTRY_HELP_EXAMPLES,
+    no_args_is_help=True,
+)
 asset_app = typer.Typer(
     name="asset",
     help="Manage symbols inside a portfolio.",
@@ -156,6 +175,7 @@ asset_app = typer.Typer(
 )
 app.add_typer(portfolio_app)
 app.add_typer(capital_app)
+capital_app.add_typer(capital_entry_app)
 app.add_typer(asset_app)
 
 
@@ -355,6 +375,20 @@ def capital_withdraw(
     print_success(f"Withdrawal recorded for portfolio '{portfolio}'.")
 
 
+@capital_app.command("show")
+def capital_show(
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+) -> None:
+    """Show capital-only current state for a portfolio."""
+    try:
+        state = get_capital_state(portfolio)
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    print_capital_state(state)
+
+
 @capital_app.command("log")
 def capital_log(
     portfolio: Annotated[str, PORTFOLIO_OPTION],
@@ -372,8 +406,8 @@ def capital_log(
     print_capital_entry_log(entries)
 
 
-@capital_app.command("edit")
-def capital_edit(
+@capital_entry_app.command("edit")
+def capital_entry_edit(
     entry_number: Annotated[
         int,
         typer.Argument(
@@ -420,8 +454,8 @@ def capital_edit(
     print_success(f"Capital entry {entry_number} updated for portfolio '{portfolio}'.")
 
 
-@capital_app.command("delete")
-def capital_delete(
+@capital_entry_app.command("delete")
+def capital_entry_delete(
     entry_number: Annotated[
         int,
         typer.Argument(

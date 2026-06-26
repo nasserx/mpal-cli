@@ -46,11 +46,12 @@ mpal portfolio show stocks
 mpal portfolio reset stocks --yes
 mpal portfolio delete stocks --yes
 
+mpal capital show -p stocks
 mpal capital deposit 1000 -p stocks
 mpal capital withdraw 250 --portfolio stocks --date 2026-06-19 --note "withdrawal"
 mpal capital log -p stocks
-mpal capital edit 2 -p stocks --amount 500
-mpal capital delete 2 -p stocks
+mpal capital entry edit 2 -p stocks --amount 500
+mpal capital entry delete 2 -p stocks
 
 mpal asset add AAPL AMZN MSFT -p stocks
 mpal asset list
@@ -67,12 +68,15 @@ mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal asset list` do not require `-p`. The
-previous root commands, `asset summary`, and the old combined portfolio/symbol
-argument form have been removed. No compatibility aliases are kept in this CLI
-redesign.
+previous root commands, `capital edit`, `capital delete`, `asset summary`, and
+the old combined portfolio/symbol argument form have been removed. No
+compatibility aliases are kept in this CLI redesign.
 
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
+Capital entry correction is under `mpal capital entry edit/delete`; `mpal
+capital log` remains the historical entry view, and `mpal capital show` is the
+capital-only current-state view.
 
 Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 `--date` is omitted, mpal uses the current local date.

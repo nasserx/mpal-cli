@@ -12,10 +12,10 @@ The breaking command hierarchy documented in `docs/CLI_SPEC.md` is
 implemented. Official help exposes only `init`, `portfolio`, `capital`, and
 `asset` at the root.
 
-A follow-up breaking cleanup is planned to standardize command vocabulary:
-`list` for current collections, `show` for current details of one thing, `log`
-for history, and `entry edit/delete` for historical entry correction.
-`summary` may remain an output title but should not remain a command name.
+A breaking cleanup is standardizing command vocabulary: `list` for current
+collections, `show` for current details of one thing, `log` for history, and
+`entry edit/delete` for historical entry correction. `summary` may remain an
+output title but should not remain a command name.
 
 ## v0.1 — Capital ledger foundation
 
@@ -76,13 +76,13 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   implemented.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
-- Planned capital cleanup adds `capital show -p <portfolio>` and moves
-  historical entry correction under `capital entry edit/delete`.
+- Capital cleanup added `capital show -p <portfolio>` and moved historical
+  entry correction under `capital entry edit/delete`.
 - Asset current-state cleanup replaced `asset summary` with `asset list` and
   `asset show`, including a global `asset list` that omits `-p`.
 - Planned asset transaction correction moves under `asset entry edit/delete`.
 - The previous root commands are removed.
 - The old combined portfolio/symbol argument form is removed.
-- The planned entry cleanup should remove old `capital edit`, `capital delete`,
-  `asset edit`, and `asset delete-entry` without compatibility aliases.
+- The planned asset entry cleanup should remove old `asset edit` and
+  `asset delete-entry` without compatibility aliases.
 - Official commands are shown in help.

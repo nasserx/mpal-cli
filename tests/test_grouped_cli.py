@@ -57,6 +57,7 @@ def test_official_portfolio_capital_and_asset_workflow(
     asset_list = runner.invoke(app, ["asset", "list", "-p", "stocks"])
     asset_show = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     asset_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
+    capital_show = runner.invoke(app, ["capital", "show", "-p", "stocks"])
     capital_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     portfolio_list = runner.invoke(app, ["portfolio", "list"])
     portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
@@ -65,6 +66,7 @@ def test_official_portfolio_capital_and_asset_workflow(
         asset_list,
         asset_show,
         asset_log,
+        capital_show,
         capital_log,
         portfolio_list,
         portfolio_show,
@@ -87,6 +89,12 @@ def test_official_portfolio_capital_and_asset_workflow(
     assert "withdraw" in capital_log.output
     assert "inflow" not in capital_log.output
     assert "outflow" not in capital_log.output
+    capital_row = next(
+        line for line in capital_show.output.splitlines() if "stocks" in line
+    )
+    assert "2,100.00" in capital_row
+    assert "50.00" in capital_row
+    assert "2,050.00" in capital_row
 
     list_row = next(
         line for line in portfolio_list.output.splitlines() if "stocks" in line
@@ -106,9 +114,10 @@ def test_official_portfolio_capital_and_asset_workflow(
     [
         ["capital", "deposit", "100"],
         ["capital", "withdraw", "100"],
+        ["capital", "show"],
         ["capital", "log"],
-        ["capital", "edit", "1", "--note", "changed"],
-        ["capital", "delete", "1"],
+        ["capital", "entry", "edit", "1", "--note", "changed"],
+        ["capital", "entry", "delete", "1"],
         ["asset", "add", "AAPL"],
         ["asset", "show", "AAPL"],
         ["asset", "log", "AAPL"],
@@ -182,6 +191,19 @@ def test_legacy_root_commands_are_removed(command: str) -> None:
     ],
 )
 def test_legacy_asset_command_shapes_are_removed(arguments: list[str]) -> None:
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 2
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["capital", "edit", "1", "-p", "stocks", "--note", "changed"],
+        ["capital", "delete", "1", "-p", "stocks"],
+    ],
+)
+def test_legacy_capital_command_shapes_are_removed(arguments: list[str]) -> None:
     result = runner.invoke(app, arguments)
 
     assert result.exit_code == 2

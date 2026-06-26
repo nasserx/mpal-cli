@@ -115,7 +115,7 @@ Capital entry numbers are stable within one portfolio and are not internal row
 IDs.
 
 The previous `mpal capital edit` and `mpal capital delete` command names are
-planned for removal when this cleanup is implemented.
+removed. No compatibility aliases are retained.
 
 ### Assets
 

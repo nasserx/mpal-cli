@@ -48,11 +48,13 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["portfolio", "show"],
         ["portfolio", "reset"],
         ["portfolio", "delete"],
+        ["capital", "show"],
         ["capital", "deposit"],
         ["capital", "withdraw"],
         ["capital", "log"],
-        ["capital", "edit"],
-        ["capital", "delete"],
+        ["capital", "entry"],
+        ["capital", "entry", "edit"],
+        ["capital", "entry", "delete"],
         ["asset", "add"],
         ["asset", "list"],
         ["asset", "show"],
@@ -79,8 +81,14 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     assert portfolio.exit_code == capital.exit_code == asset.exit_code == 0
     for command in ("create", "list", "show", "delete", "reset"):
         assert f"│ {command} " in portfolio.output
-    for command in ("deposit", "withdraw", "log", "edit", "delete"):
+    for command in ("show", "deposit", "withdraw", "log", "entry"):
         assert f"│ {command} " in capital.output
+    for command in ("edit", "delete"):
+        assert f"│ {command} " not in capital.output
+    entry = runner.invoke(app, ["capital", "entry", "--help"])
+    assert entry.exit_code == 0
+    for command in ("edit", "delete"):
+        assert f"│ {command} " in entry.output
     for command in (
         "add",
         "list",
@@ -95,7 +103,9 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     ):
         assert f"│ {command} " in asset.output
     assert "│ summary " not in asset.output
+    assert "mpal capital show -p <portfolio>" in capital.output
     assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
+    assert "mpal capital entry edit <entry-number> -p <portfolio>" in capital.output
     assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in asset.output
     assert "mpal asset list -p <portfolio>" in asset.output
     assert "mpal asset show <symbol> -p <portfolio>" in asset.output
@@ -110,11 +120,13 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         ["portfolio", "show"],
         ["portfolio", "reset"],
         ["portfolio", "delete"],
+        ["capital", "show"],
         ["capital", "deposit"],
         ["capital", "withdraw"],
         ["capital", "log"],
-        ["capital", "edit"],
-        ["capital", "delete"],
+        ["capital", "entry"],
+        ["capital", "entry", "edit"],
+        ["capital", "entry", "delete"],
         ["asset", "add"],
         ["asset", "list"],
         ["asset", "show"],
@@ -138,11 +150,12 @@ def test_official_command_help_is_registered(arguments: list[str]) -> None:
 @pytest.mark.parametrize(
     "arguments",
     [
+        ["capital", "show", "--help"],
         ["capital", "deposit", "--help"],
         ["capital", "withdraw", "--help"],
         ["capital", "log", "--help"],
-        ["capital", "edit", "--help"],
-        ["capital", "delete", "--help"],
+        ["capital", "entry", "edit", "--help"],
+        ["capital", "entry", "delete", "--help"],
         ["asset", "add", "--help"],
         ["asset", "list", "--help"],
         ["asset", "show", "--help"],

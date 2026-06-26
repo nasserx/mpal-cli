@@ -34,15 +34,10 @@ Implemented portfolio commands:
 
 Implemented capital commands:
 
+- `mpal capital show -p <portfolio>`
 - `mpal capital deposit <amount> -p <portfolio>`
 - `mpal capital withdraw <amount> -p <portfolio>`
 - `mpal capital log -p <portfolio>`
-- `mpal capital edit <entry-number> -p <portfolio>`
-- `mpal capital delete <entry-number> -p <portfolio>`
-
-Planned capital cleanup:
-
-- `mpal capital show -p <portfolio>`
 - `mpal capital entry edit <entry-number> -p <portfolio>`
 - `mpal capital entry delete <entry-number> -p <portfolio>`
 
@@ -71,8 +66,8 @@ portfolio. Global views, such as `mpal asset list`, may omit `-p`.
 
 This branch intentionally removes the earlier root commands and the old
 combined `<portfolio>/<symbol>` argument. The next cleanup should remove old
-`capital edit`, `capital delete`, `asset edit`, and `asset delete-entry`
-without hidden or compatibility aliases. `asset summary` is already removed.
+`asset edit` and `asset delete-entry` without hidden or compatibility aliases.
+`asset summary`, `capital edit`, and `capital delete` are already removed.
 
 Command vocabulary rule:
 
@@ -175,7 +170,7 @@ idempotent migrations. Do not add command-specific migration calls.
 
 Deletion is soft:
 
-- planned capital entry delete marks one active entry deleted
+- capital entry delete marks one active entry deleted
 - portfolio reset marks active capital entries deleted and keeps the portfolio
 - portfolio delete preserves the existing portfolio/capital soft-delete
   behavior

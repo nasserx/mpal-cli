@@ -98,10 +98,26 @@ def test_delete_rejects_entry_number_with_yes(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks", "--yes"])
+    result = runner.invoke(
+        app, ["capital", "entry", "delete", "1", "-p", "stocks", "--yes"]
+    )
 
     assert result.exit_code == 2
     assert "No such option: --yes" in result.output
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["capital", "edit", "1", "-p", "stocks", "--amount", "500"],
+        ["capital", "delete", "1", "-p", "stocks"],
+    ],
+)
+def test_old_capital_entry_commands_are_removed(arguments: list[str]) -> None:
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 2
+    assert f"No such command '{arguments[1]}'" in result.output
 
 
 def test_init_help_exits_successfully() -> None:
@@ -112,7 +128,7 @@ def test_init_help_exits_successfully() -> None:
 
 
 def test_edit_help_references_portfolio_log_entry_number() -> None:
-    result = runner.invoke(app, ["capital", "edit", "--help"])
+    result = runner.invoke(app, ["capital", "entry", "edit", "--help"])
 
     assert result.exit_code == 0
     assert "Edit a capital entry by its portfolio-local number." in result.output
@@ -121,7 +137,7 @@ def test_edit_help_references_portfolio_log_entry_number() -> None:
 
 def test_delete_help_explains_entry_and_portfolio_soft_delete() -> None:
     portfolio = runner.invoke(app, ["portfolio", "delete", "--help"])
-    capital = runner.invoke(app, ["capital", "delete", "--help"])
+    capital = runner.invoke(app, ["capital", "entry", "delete", "--help"])
 
     assert portfolio.exit_code == 0
     assert capital.exit_code == 0
@@ -375,9 +391,11 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
     duplicate_result = runner.invoke(app, ["portfolio", "create", "stocks"])
     edit_result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--amount", "1250"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "1250"],
     )
-    delete_result = runner.invoke(app, ["capital", "delete", "2", "-p", "stocks"])
+    delete_result = runner.invoke(
+        app, ["capital", "entry", "delete", "2", "-p", "stocks"]
+    )
     final_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
     for result in (
@@ -578,6 +596,86 @@ def test_create_with_initial_supports_decimal_amount(
         ).fetchone()[0]
 
     assert amount_minor == 500050
+
+
+def test_capital_show_requires_initialized_database(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
+
+    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Run 'mpal init' first." in result.output
+    assert not (data_dir / "mpal.db").exists()
+
+
+def test_capital_show_requires_active_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+
+    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_capital_show_displays_capital_only_state(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
+    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["capital", "deposit", "250.50", "-p", "stocks"])
+    runner.invoke(app, ["capital", "withdraw", "75.25", "-p", "stocks"])
+
+    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    for column in ("Portfolio", "Deposits", "Withdrawals", "Net Capital"):
+        assert column in result.output
+    for excluded_column in (
+        "Positions",
+        "Book Value",
+        "Realized PnL",
+        "Income",
+        "Return",
+    ):
+        assert excluded_column not in result.output
+    row = next(line for line in result.output.splitlines() if "stocks" in line)
+    assert "1,250.50" in row
+    assert "75.25" in row
+    assert "1,175.25" in row
+    assert " ID " not in result.output.upper()
+
+
+def test_capital_show_ignores_soft_deleted_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_dir = tmp_path / "mpal-data"
+    monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["portfolio", "create", "stocks"])
+    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
+
+    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    row = next(line for line in result.output.splitlines() if "stocks" in line)
+    assert row.count("1,000.00") == 2
+    assert "250.00" not in row
 
 
 @pytest.mark.parametrize(
@@ -1699,7 +1797,7 @@ def test_deleted_and_reset_entries_do_not_reuse_entry_numbers(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    runner.invoke(app, ["capital", "delete", "2", "-p", "stocks"])
+    runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "300", "-p", "stocks"])
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
     runner.invoke(app, ["capital", "deposit", "400", "-p", "stocks"])
@@ -1806,7 +1904,7 @@ def test_edit_amount(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500.50"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500.50"]
     )
 
     assert result.exit_code == 0
@@ -1828,7 +1926,7 @@ def test_edit_date(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--date", "2026-06-19"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--date", "2026-06-19"],
     )
 
     assert result.exit_code == 0
@@ -1851,7 +1949,16 @@ def test_edit_note(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--note", "corrected deposit"],
+        [
+            "capital",
+            "entry",
+            "edit",
+            "1",
+            "-p",
+            "stocks",
+            "--note",
+            "corrected deposit",
+        ],
     )
 
     assert result.exit_code == 0
@@ -1874,6 +1981,7 @@ def test_edit_multiple_fields_atomically(tmp_path: Path, monkeypatch) -> None:
         app,
         [
             "capital",
+            "entry",
             "edit",
             "1",
             "-p",
@@ -1928,6 +2036,7 @@ def test_edit_multiple_fields_roll_back_together_on_cash_failure(
         app,
         [
             "capital",
+            "entry",
             "edit",
             "2",
             "-p",
@@ -1959,7 +2068,7 @@ def test_edit_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -1973,7 +2082,7 @@ def test_edit_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -1987,7 +2096,7 @@ def test_edit_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "99", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "99", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -2006,7 +2115,7 @@ def test_edit_fails_when_entry_belongs_to_another_portfolio(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "crypto"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -2026,7 +2135,7 @@ def test_edit_targets_portfolio_local_entry_number(
     runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "150"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "150"]
     )
 
     assert result.exit_code == 0
@@ -2055,7 +2164,7 @@ def test_edit_fails_for_soft_deleted_entry(tmp_path: Path, monkeypatch) -> None:
         )
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -2069,7 +2178,7 @@ def test_edit_fails_without_edit_options(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "edit", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "edit", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Provide at least one of --amount, --date, or --note." in result.output
@@ -2097,7 +2206,7 @@ def test_edit_rejects_invalid_amount(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", amount]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", amount]
     )
 
     assert result.exit_code == 1
@@ -2113,7 +2222,7 @@ def test_edit_rejects_invalid_date(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--date", "19-06-2026"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--date", "19-06-2026"],
     )
 
     assert result.exit_code == 1
@@ -2129,7 +2238,7 @@ def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--date", "20260619"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--date", "20260619"],
     )
 
     assert result.exit_code == 1
@@ -2145,7 +2254,16 @@ def test_edit_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "1", "-p", "stocks", "--date", future_date.isoformat()],
+        [
+            "capital",
+            "entry",
+            "edit",
+            "1",
+            "-p",
+            "stocks",
+            "--date",
+            future_date.isoformat(),
+        ],
     )
 
     assert result.exit_code == 1
@@ -2165,7 +2283,7 @@ def test_edit_outflow_cannot_make_cash_negative(
 
     result = runner.invoke(
         app,
-        ["capital", "edit", "2", "-p", "stocks", "--amount", "1000.01"],
+        ["capital", "entry", "edit", "2", "-p", "stocks", "--amount", "1000.01"],
     )
 
     assert result.exit_code == 1
@@ -2190,7 +2308,7 @@ def test_edit_inflow_downward_cannot_make_cash_negative(
     runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "500"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
     )
 
     assert result.exit_code == 1
@@ -2219,7 +2337,7 @@ def test_edit_cash_validation_ignores_soft_deleted_entries(
         )
 
     result = runner.invoke(
-        app, ["capital", "edit", "1", "-p", "stocks", "--amount", "100"]
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "100"]
     )
 
     assert result.exit_code == 0
@@ -2237,7 +2355,9 @@ def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "edit", "1", "-p", "stocks", "--amount", "1250.50"])
+    runner.invoke(
+        app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "1250.50"]
+    )
 
     result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
@@ -2257,6 +2377,7 @@ def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
         app,
         [
             "capital",
+            "entry",
             "edit",
             "1",
             "-p",
@@ -2286,7 +2407,7 @@ def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> 
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "Capital entry 1 deleted from portfolio 'stocks'." in result.output
@@ -2307,7 +2428,7 @@ def test_deleted_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(
         app, ["capital", "deposit", "1000", "-p", "stocks", "--note", "removed entry"]
     )
-    runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
@@ -2326,7 +2447,7 @@ def test_deleted_entry_is_ignored_by_summary(
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    runner.invoke(app, ["capital", "delete", "2", "-p", "stocks"])
+    runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
 
     result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
@@ -2339,7 +2460,7 @@ def test_delete_entry_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -2354,7 +2475,7 @@ def test_delete_entry_fails_for_unknown_portfolio(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -2366,7 +2487,7 @@ def test_delete_entry_fails_for_unknown_entry(tmp_path: Path, monkeypatch) -> No
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "99", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "99", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Capital entry 99 does not exist in portfolio 'stocks'." in result.output
@@ -2383,7 +2504,7 @@ def test_delete_entry_number_in_another_portfolio_is_not_found(
     runner.invoke(app, ["portfolio", "create", "crypto"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "crypto"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Capital entry 1 does not exist in portfolio 'stocks'." in result.output
@@ -2401,7 +2522,7 @@ def test_delete_targets_portfolio_local_entry_number(
     runner.invoke(app, ["capital", "deposit", "200", "-p", "crypto"])
     runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 0
     with sqlite3.connect(data_dir / "mpal.db") as connection:
@@ -2428,9 +2549,9 @@ def test_delete_entry_fails_for_already_soft_deleted_entry(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Capital entry 1 is not active." in result.output
@@ -2447,7 +2568,9 @@ def test_deleting_outflow_succeeds_and_increases_cash(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
 
-    delete_result = runner.invoke(app, ["capital", "delete", "2", "-p", "stocks"])
+    delete_result = runner.invoke(
+        app, ["capital", "entry", "delete", "2", "-p", "stocks"]
+    )
     summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert delete_result.exit_code == 0
@@ -2467,7 +2590,7 @@ def test_deleting_inflow_fails_if_cash_would_be_negative(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Delete would make portfolio cash negative." in result.output
@@ -2484,7 +2607,7 @@ def test_failed_delete_entry_keeps_entry_active(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     with sqlite3.connect(data_dir / "mpal.db") as connection:
@@ -2510,7 +2633,7 @@ def test_delete_entry_cash_validation_ignores_soft_deleted_entries(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
         )
 
-    result = runner.invoke(app, ["capital", "delete", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     assert result.exit_code == 0
 
@@ -2869,11 +2992,12 @@ def test_deleted_portfolio_disappears_from_summary_all(
     "arguments",
     [
         ["portfolio", "show", "stocks"],
+        ["capital", "show", "-p", "stocks"],
         ["capital", "log", "-p", "stocks"],
         ["capital", "deposit", "100", "-p", "stocks"],
         ["capital", "withdraw", "100", "-p", "stocks"],
-        ["capital", "edit", "1", "-p", "stocks", "--note", "changed"],
-        ["capital", "delete", "1", "-p", "stocks"],
+        ["capital", "entry", "edit", "1", "-p", "stocks", "--note", "changed"],
+        ["capital", "entry", "delete", "1", "-p", "stocks"],
         ["portfolio", "reset", "stocks", "--yes"],
     ],
 )

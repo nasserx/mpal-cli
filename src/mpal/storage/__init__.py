@@ -26,7 +26,12 @@ from mpal.storage.entries import (
     record_outflow,
     reset_portfolio_entries,
 )
-from mpal.storage.logs import CapitalEntry, get_capital_entry_log
+from mpal.storage.logs import (
+    CapitalEntry,
+    CapitalState,
+    get_capital_entry_log,
+    get_capital_state,
+)
 from mpal.storage.portfolios import (
     create_portfolio,
     create_portfolio_with_initial,
@@ -42,6 +47,7 @@ __all__ = [
     "Asset",
     "AssetTransaction",
     "CapitalEntry",
+    "CapitalState",
     "PortfolioSummary",
     "create_assets",
     "create_portfolio",
@@ -60,6 +66,7 @@ __all__ = [
     "get_asset_summary",
     "get_asset_transaction_log",
     "get_capital_entry_log",
+    "get_capital_state",
     "get_portfolio_summary",
     "initialize_database",
     "record_inflow",
