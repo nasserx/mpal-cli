@@ -7,7 +7,16 @@ The CLI command is `mpal`. The package/distribution name is `mpal-cli`.
 
 ## Installation
 
-mpal requires Python 3.11 or later. From a project checkout:
+mpal requires Python 3.11 or later.
+
+For a future PyPI release:
+
+```console
+python -m pip install mpal-cli
+mpal --help
+```
+
+From a project checkout:
 
 ```console
 python -m pip install -e .
@@ -26,13 +35,29 @@ mpal calculates its results only from manually recorded operations.
 
 ## Scope
 
-mpal is intentionally simple. It does not fetch market data, calculate live prices, connect to market APIs or other external services, or provide financial advice.
+mpal is intentionally simple. It does not fetch market data, calculate live
+prices, calculate market value, calculate unrealized PnL, connect to market
+APIs or other external services, or provide financial advice.
 
 mpal only works with the records you enter manually.
 
 Portfolio summaries use book/accounting values. Book Value is derived from manual records and is not market value.
 
-## Official command hierarchy
+## Quick Start
+
+```console
+mpal init
+mpal portfolio create stocks
+mpal capital deposit 1000 -p stocks
+mpal capital show -p stocks
+mpal asset add AAPL -p stocks
+mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
+mpal asset list
+mpal asset show AAPL -p stocks
+mpal asset log AAPL -p stocks
+```
+
+## Command Hierarchy
 
 mpal groups commands by the records they manage:
 
@@ -67,11 +92,8 @@ mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
-Global collection views such as `mpal asset list` do not require `-p`. The
-previous root commands, `capital edit`, `capital delete`, `asset summary`,
-`asset edit`, `asset delete-entry`, and the old combined portfolio/symbol
-argument form have been removed. No compatibility aliases are kept in this CLI
-redesign.
+Global collection views such as `mpal asset list` do not require `-p`. No
+compatibility aliases are kept in this CLI redesign.
 
 Asset list output uses an `Asset/Portfolio` column. Combined labels display
 as `<SYMBOL> • <Portfolio>`, such as `AAPL • Stocks`; portfolio capitalization
@@ -100,8 +122,7 @@ before commit. `asset list` is the current asset collection view, and
 `asset show` reports current open quantity, Cost Basis, Average Cost, Realized
 PnL, Income, and Realized Return for one asset from active manual transactions.
 Asset transaction correction is under `mpal asset entry edit/delete`; `mpal
-asset log` remains the historical transaction view. `summary` is no longer a
-command name.
+asset log` remains the historical transaction view.
 
 ## Planned capabilities
 

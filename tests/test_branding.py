@@ -3,6 +3,8 @@
 import tomllib
 from pathlib import Path
 
+from mpal import __version__
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -13,10 +15,14 @@ def test_project_metadata_uses_only_mpal_entry_point() -> None:
     old_name = "fund" + "log"
 
     assert project["name"] == "mpal-cli"
+    assert project["version"] == __version__ == "0.5.2"
     assert project["description"] == (
         "Multi-Portfolio Asset Ledger (mpal) - A minimal CLI tool for manual "
         "asset tracking and capital management."
     )
+    assert project["readme"] == "README.md"
+    assert project["requires-python"] == ">=3.11"
+    assert project["license"] == "MIT"
     assert scripts == {"mpal": "mpal.cli:app"}
     assert old_name not in scripts
 
