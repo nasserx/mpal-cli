@@ -15,7 +15,7 @@ Before changing behavior, read `README.md`, `docs/PRODUCT_SPEC.md`,
 `docs/CLI_SPEC.md`, `docs/ASSETS_SPEC.md`, `docs/FINANCIAL_MODEL.md`,
 `docs/DATA_MODEL.md`, and `docs/ROADMAP.md`.
 
-## Current CLI contract
+## Current CLI contract and planned cleanup
 
 Root help exposes only:
 
@@ -40,6 +40,12 @@ Implemented capital commands:
 - `mpal capital edit <entry-number> -p <portfolio>`
 - `mpal capital delete <entry-number> -p <portfolio>`
 
+Planned capital cleanup:
+
+- `mpal capital show -p <portfolio>`
+- `mpal capital entry edit <entry-number> -p <portfolio>`
+- `mpal capital entry delete <entry-number> -p <portfolio>`
+
 Implemented asset commands:
 
 - `mpal asset add <symbol> [symbol...] -p <portfolio>`
@@ -53,13 +59,33 @@ Implemented asset commands:
 - `mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 - `mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 
-The long `--portfolio` option is equivalent to `-p` and is required for every
-capital and asset operation. There is no default portfolio.
+Planned asset cleanup:
 
-This branch intentionally removes the earlier root commands, `asset list`, and
-the old combined `<portfolio>/<symbol>` argument. There are no hidden or
-compatibility aliases. Do not reintroduce them without a new explicit product
-decision.
+- `mpal asset list`
+- `mpal asset list -p <portfolio>`
+- `mpal asset show <symbol> -p <portfolio>`
+- `mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]`
+- `mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`
+
+The long `--portfolio` option is equivalent to `-p`. There is no default
+portfolio. `-p` remains required when an operation targets one specific
+portfolio. Planned global views, such as `mpal asset list`, may omit `-p`.
+
+This branch intentionally removes the earlier root commands and the old
+combined `<portfolio>/<symbol>` argument. The next cleanup should remove old
+`capital edit`, `capital delete`, `asset summary`, `asset edit`, and
+`asset delete-entry` without hidden or compatibility aliases.
+
+Command vocabulary rule:
+
+- `list` shows a collection of current things.
+- `show` shows current state/details of one thing.
+- `log` shows historical entries or transactions.
+- `entry edit` and `entry delete` edit or delete one historical log entry.
+- `delete` deletes a whole entity.
+
+`summary` may remain in output titles, such as `Portfolio Summary` or `Asset
+Summary`, but should not remain a command name after the planned cleanup.
 
 Use `mpal` in help, docs, tests, and examples. User shell shortcuts are not
 part of the product interface.
@@ -67,8 +93,8 @@ part of the product interface.
 ## Product boundaries
 
 Implemented asset behavior includes symbol management, income, exact buys,
-exact sells, moving-average Cost Basis, Realized PnL, summaries, logs,
-portfolio integration, and individual transaction correction with replay.
+exact sells, moving-average Cost Basis, Realized PnL, current-state output,
+logs, portfolio integration, and individual transaction correction with replay.
 
 Individual asset transaction correction uses asset-local entry numbers from
 `mpal asset log`. Transaction edit keeps transaction type immutable.
@@ -151,15 +177,15 @@ idempotent migrations. Do not add command-specific migration calls.
 
 Deletion is soft:
 
-- capital delete marks one active entry deleted
+- planned capital entry delete marks one active entry deleted
 - portfolio reset marks active capital entries deleted and keeps the portfolio
 - portfolio delete preserves the existing portfolio/capital soft-delete
   behavior
 - asset delete atomically marks the asset and active transactions deleted
-- asset edit atomically updates one active transaction after replaying active
-  transaction effects
-- asset delete-entry atomically marks one active transaction deleted after
-  replaying and updating remaining active transaction effects
+- planned asset entry edit atomically updates one active transaction after
+  replaying active transaction effects
+- planned asset entry delete atomically marks one active transaction deleted
+  after replaying and updating remaining active transaction effects
 
 Do not hard-delete records. Multi-record writes must remain atomic. Read models
 and validation normally use active rows only.

@@ -109,7 +109,7 @@ Asset-level Realized Return uses:
 Total Buy Cost is cumulative buy cash outflow including buy fees. If Total Buy
 Cost is zero, asset Realized Return is `0.00%`.
 
-The asset summary also displays `Average Cost = Cost Basis / Quantity` when
+The asset current-state output displays `Average Cost = Cost Basis / Quantity` when
 open Quantity is positive. The calculation remains exact internally, and the
 result is displayed as a price-like value using the asset's inferred price
 display scale. Raw Decimal division output is never displayed. Zero Quantity
@@ -126,10 +126,11 @@ remains balanced. This is book cost allocation, not market valuation.
 
 ## Asset accounting replay
 
-Asset buys, sells, and income are append-style manual records. Current summary
-values are derived from active transaction effects. Asset transaction edit and
-delete-entry recalculate those effects by replaying the active transaction
-history for one asset from scratch.
+Asset buys, sells, and income are append-style manual records. Current
+portfolio and asset values are derived from active transaction effects. The
+planned `asset entry edit` and `asset entry delete` commands recalculate those
+effects by replaying the active transaction history for one asset from
+scratch.
 
 The correction replay order is asset-local `entry_no` order, not transaction
 date. Transaction date remains the effective date shown in logs and may be used
@@ -137,14 +138,14 @@ for display sorting. This keeps accounting tied to the user's stable ledger
 sequence even if a corrected date moves a row earlier or later in the displayed
 asset log.
 
-Replay validation rejects any edit or delete-entry that would make the ledger
-invalid. A replay step is invalid if it creates negative quantity, sells more
-than the open quantity, produces an invalid exact cash effect, or leaves
+Replay validation rejects any entry edit or entry delete that would make the
+ledger invalid. A replay step is invalid if it creates negative quantity, sells
+more than the open quantity, produces an invalid exact cash effect, or leaves
 residual Cost Basis after a full sell. Failed replay leaves existing rows and
-accounting effects unchanged. Successful edit updates the selected active row
-in place. Successful delete-entry soft-deletes the selected row. Both commands
-update active transaction accounting fields affected by moving-average Cost
-Basis.
+accounting effects unchanged. A successful entry edit updates the selected
+active row in place. A successful entry delete soft-deletes the selected row.
+Both commands update active transaction accounting fields affected by
+moving-average Cost Basis.
 
 ## Capital entry rules
 

@@ -6,7 +6,8 @@ mpal assets are portfolio-owned, manually managed symbols. The implemented
 asset model supports:
 
 - symbol creation and soft deletion
-- portfolio-wide and single-asset summaries
+- global and portfolio-scoped current asset lists
+- single-asset current-state details
 - read-only transaction logs
 - manual income
 - manual buys
@@ -20,19 +21,20 @@ asset model supports:
 mpal does not use live prices, market APIs, market value, automatic
 valuation, or unrealized PnL.
 
-## CLI contract
+## Target CLI contract
 
-Every asset command requires `--portfolio` / `-p`; there is no default
-portfolio.
+Asset commands that target one specific portfolio require `--portfolio` /
+`-p`; there is no default portfolio. The global asset list omits `-p`.
 
 ```console
 mpal asset add <symbol> [symbol...] -p <portfolio>
-mpal asset summary -p <portfolio>
-mpal asset summary <symbol> -p <portfolio>
+mpal asset list
+mpal asset list -p <portfolio>
+mpal asset show <symbol> -p <portfolio>
 mpal asset log <symbol> -p <portfolio>
 mpal asset delete <symbol> -p <portfolio> --yes
-mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
-mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
+mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes
 mpal asset income <symbol> <amount> -p <portfolio> [--date <date>] [--note <text>]
 mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
 mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [--fee <fee>] [--total <amount>] [--date <date>] [--note <text>]
@@ -40,9 +42,13 @@ mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [-
 
 The long `--portfolio` spelling is equivalent to `-p`.
 
-The previous combined portfolio/symbol argument form is removed from the
-current CLI. `asset list` is also removed. No compatibility or hidden aliases
-are retained.
+This cleanup is designed as a breaking command rename with no compatibility or
+hidden aliases. The previous combined portfolio/symbol argument form remains
+removed. The old `asset summary`, `asset edit`, and `asset delete-entry`
+commands should be removed in the implementation phase.
+
+`summary` may still appear in rendered output titles, such as `Asset Summary`,
+but it should not remain a command name.
 
 ## Symbols and ownership
 
@@ -166,22 +172,37 @@ For a partial sell:
 Fractional-minor-unit allocation uses deterministic round-half-even. A full
 sell relieves all remaining Cost Basis so no residual remains.
 
-## Asset summaries
+## Asset list and show
 
-Portfolio-wide summary:
+Global current asset list:
 
 ```console
-mpal asset summary -p stocks
+mpal asset list
 ```
 
 Columns:
 
-`Asset | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
-Single-asset summary:
+Rows include active assets only and are aggregated by asset within each
+portfolio. The same symbol in different portfolios remains separate rows:
+`AAPL/stocks` and `AAPL/retirement` are distinct. Internal database IDs are
+never displayed.
+
+Portfolio-scoped current asset list:
 
 ```console
-mpal asset summary AAPL -p stocks
+mpal asset list -p stocks
+```
+
+The scoped list uses the same columns as the global list, including
+`Asset/Portfolio`, with values such as `ETHA/etfs`. Keeping the same first
+column in global and scoped output is the selected behavior for consistency.
+
+Single-asset current state:
+
+```console
+mpal asset show AAPL -p stocks
 ```
 
 Columns:
@@ -200,6 +221,22 @@ Derived values:
 - zero Total Buy Cost displays `0.00%`
 
 Portfolio-wide rows are ordered by normalized symbol.
+
+Global list ordering should be deterministic by portfolio name and normalized
+symbol unless a later output spec chooses a stronger ordering rule.
+
+Display rules:
+
+- Quantity uses the dynamic quantity display helper.
+- `Average Cost` uses the price display helper with asset-level inferred
+  scale.
+- `Cost Basis`, `Realized PnL`, and `Income` use money display.
+- `Realized PnL` and `Realized Return` use signed display.
+- Positive PnL/return values use the profit style, negative values use the
+  loss style, and income values use the income style.
+- Output uses the shared rounded row-oriented table helper and centralized
+  terminal theme.
+- Raw `Decimal` output and internal database IDs are never displayed.
 
 ## Asset log
 
@@ -236,7 +273,7 @@ The command fails without `--yes`.
 ## Transaction deletion
 
 ```console
-mpal asset delete-entry AAPL 2 -p stocks --yes
+mpal asset entry delete AAPL 2 -p stocks --yes
 ```
 
 Individual transaction deletion is soft and atomic:
@@ -257,7 +294,7 @@ invalid, the delete is rejected and existing rows remain unchanged.
 ## Transaction editing
 
 ```console
-mpal asset edit AAPL 2 -p stocks --price 234.50 --quantity 3
+mpal asset entry edit AAPL 2 -p stocks --price 234.50 --quantity 3
 ```
 
 Individual transaction editing is atomic:
@@ -299,11 +336,11 @@ Soft-deleted assets and transactions do not contribute to current values.
 
 ## Transaction correction
 
-Individual asset transaction editing and deletion are implemented:
+Target individual asset transaction editing and deletion commands:
 
 ```console
-mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
-mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
+mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes
 ```
 
 `entry-number` is the asset-local number shown by the asset log for the same
@@ -341,9 +378,9 @@ Buy and sell edits preserve the current exact-total rules:
 If only date or note changes, accounting effects remain unchanged after replay
 because accounting replay order is asset-local entry number, not date.
 
-### Implemented delete-entry behavior
+### Target entry delete behavior
 
-`mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`:
+`mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`:
 
 - require an active portfolio
 - require an active asset
@@ -362,8 +399,8 @@ restore an open position.
 
 ### Replay and validation
 
-Asset transaction edit and delete-entry are atomic. They use the same safe
-correction model:
+Asset entry edit and entry delete are atomic. They use the same safe correction
+model:
 
 1. Load active transactions for the asset.
 2. Apply the edit or soft delete virtually.
@@ -383,17 +420,17 @@ number, but accounting replay for correction should use `entry_no` order. An
 edited date can therefore move a row in the displayed log without changing
 where it sits in accounting replay.
 
-After a successful edit or delete-entry, portfolio Cash, Positions, Book Value,
-Realized PnL, Income, and Return are derived from the recalculated active
-transactions.
+After a successful entry edit or entry delete, portfolio Cash, Positions, Book
+Value, Realized PnL, Income, and Return are derived from the recalculated
+active transactions.
 
 Examples:
 
 ```console
 mpal asset log MSFT -p stocks
-mpal asset edit MSFT 2 -p stocks --price 2.50 --quantity 10
-mpal asset edit MSFT 3 -p stocks --note "Corrected broker note"
-mpal asset delete-entry MSFT 4 -p stocks --yes
+mpal asset entry edit MSFT 2 -p stocks --price 2.50 --quantity 10
+mpal asset entry edit MSFT 3 -p stocks --note "Corrected broker note"
+mpal asset entry delete MSFT 4 -p stocks --yes
 ```
 
 ## Non-goals
