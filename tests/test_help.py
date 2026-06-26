@@ -60,8 +60,9 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["asset", "show"],
         ["asset", "log"],
         ["asset", "delete"],
-        ["asset", "delete-entry"],
-        ["asset", "edit"],
+        ["asset", "entry"],
+        ["asset", "entry", "delete"],
+        ["asset", "entry", "edit"],
         ["asset", "income"],
         ["asset", "buy"],
         ["asset", "sell"],
@@ -95,13 +96,18 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         "show",
         "log",
         "delete",
-        "delete-entry",
-        "edit",
+        "entry",
         "income",
         "buy",
         "sell",
     ):
         assert f"│ {command} " in asset.output
+    asset_entry = runner.invoke(app, ["asset", "entry", "--help"])
+    assert asset_entry.exit_code == 0
+    for command in ("edit", "delete"):
+        assert f"│ {command} " in asset_entry.output
+    for removed_command in ("summary", "edit", "delete-entry"):
+        assert f"│ {removed_command} " not in asset.output
     assert "│ summary " not in asset.output
     assert "mpal capital show -p <portfolio>" in capital.output
     assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
@@ -109,6 +115,9 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in asset.output
     assert "mpal asset list -p <portfolio>" in asset.output
     assert "mpal asset show <symbol> -p <portfolio>" in asset.output
+    assert "mpal asset entry edit <symbol> <entry-number> -p <portfolio>" in (
+        asset.output
+    )
     assert "<portfolio>/<symbol>" not in asset.output
 
 
@@ -132,8 +141,9 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         ["asset", "show"],
         ["asset", "log"],
         ["asset", "delete"],
-        ["asset", "delete-entry"],
-        ["asset", "edit"],
+        ["asset", "entry"],
+        ["asset", "entry", "delete"],
+        ["asset", "entry", "edit"],
         ["asset", "income"],
         ["asset", "buy"],
         ["asset", "sell"],
@@ -161,8 +171,8 @@ def test_official_command_help_is_registered(arguments: list[str]) -> None:
         ["asset", "show", "--help"],
         ["asset", "log", "--help"],
         ["asset", "delete", "--help"],
-        ["asset", "delete-entry", "--help"],
-        ["asset", "edit", "--help"],
+        ["asset", "entry", "delete", "--help"],
+        ["asset", "entry", "edit", "--help"],
         ["asset", "income", "--help"],
         ["asset", "buy", "--help"],
         ["asset", "sell", "--help"],

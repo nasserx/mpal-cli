@@ -59,8 +59,8 @@ mpal asset list -p stocks
 mpal asset show AAPL -p stocks
 mpal asset log AAPL -p stocks
 mpal asset delete AAPL -p stocks --yes
-mpal asset edit AAPL 2 -p stocks --price 234.50 --quantity 3
-mpal asset delete-entry AAPL 2 -p stocks --yes
+mpal asset entry edit AAPL 2 -p stocks --price 234.50 --quantity 3
+mpal asset entry delete AAPL 2 -p stocks --yes
 mpal asset income AAPL 32 -p stocks --date 2026-06-20 --note "Distribution"
 mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
@@ -68,9 +68,10 @@ mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal asset list` do not require `-p`. The
-previous root commands, `capital edit`, `capital delete`, `asset summary`, and
-the old combined portfolio/symbol argument form have been removed. No
-compatibility aliases are kept in this CLI redesign.
+previous root commands, `capital edit`, `capital delete`, `asset summary`,
+`asset edit`, `asset delete-entry`, and the old combined portfolio/symbol
+argument form have been removed. No compatibility aliases are kept in this CLI
+redesign.
 
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
@@ -94,7 +95,9 @@ or soft-deleted by asset-local entry number, with active transactions replayed
 before commit. `asset list` is the current asset collection view, and
 `asset show` reports current open quantity, Cost Basis, Average Cost, Realized
 PnL, Income, and Realized Return for one asset from active manual transactions.
-`summary` is no longer a command name.
+Asset transaction correction is under `mpal asset entry edit/delete`; `mpal
+asset log` remains the historical transaction view. `summary` is no longer a
+command name.
 
 ## Planned capabilities
 

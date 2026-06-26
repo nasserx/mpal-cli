@@ -80,9 +80,9 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   entry correction under `capital entry edit/delete`.
 - Asset current-state cleanup replaced `asset summary` with `asset list` and
   `asset show`, including a global `asset list` that omits `-p`.
-- Planned asset transaction correction moves under `asset entry edit/delete`.
+- Asset transaction correction moved under `asset entry edit/delete`.
 - The previous root commands are removed.
 - The old combined portfolio/symbol argument form is removed.
-- The planned asset entry cleanup should remove old `asset edit` and
-  `asset delete-entry` without compatibility aliases.
+- Old `asset edit` and `asset delete-entry` are removed without compatibility
+  aliases.
 - Official commands are shown in help.

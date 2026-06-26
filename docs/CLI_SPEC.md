@@ -201,9 +201,8 @@ Asset log columns remain:
 The `#` value is a stable asset-local transaction number and is not an
 internal database ID.
 
-`mpal asset summary` is removed. The previous `mpal asset edit` and
-`mpal asset delete-entry` command names are planned for removal when the entry
-subgroup cleanup is implemented.
+`mpal asset summary`, `mpal asset edit`, and `mpal asset delete-entry` are
+removed. No compatibility aliases are retained.
 
 ### Asset transaction correction
 

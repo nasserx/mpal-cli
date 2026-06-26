@@ -127,10 +127,9 @@ remains balanced. This is book cost allocation, not market valuation.
 ## Asset accounting replay
 
 Asset buys, sells, and income are append-style manual records. Current
-portfolio and asset values are derived from active transaction effects. The
-planned `asset entry edit` and `asset entry delete` commands recalculate those
-effects by replaying the active transaction history for one asset from
-scratch.
+portfolio and asset values are derived from active transaction effects.
+`asset entry edit` and `asset entry delete` recalculate those effects by
+replaying the active transaction history for one asset from scratch.
 
 The correction replay order is asset-local `entry_no` order, not transaction
 date. Transaction date remains the effective date shown in logs and may be used

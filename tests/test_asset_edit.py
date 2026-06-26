@@ -113,7 +113,7 @@ def _income(
 
 def _edit(entry_no: str = "1", *, reference: str = "stocks/AAPL", **options: str):
     portfolio, symbol = reference.split("/", maxsplit=1)
-    args = ["asset", "edit", symbol, entry_no, "-p", portfolio]
+    args = ["asset", "entry", "edit", symbol, entry_no, "-p", portfolio]
     for name, value in options.items():
         args.extend([f"--{name.replace('_', '-')}", value])
     return runner.invoke(app, args)
@@ -189,7 +189,7 @@ def test_asset_edit_rejects_deleted_transaction(tmp_path: Path, monkeypatch) -> 
     assert (
         runner.invoke(
             app,
-            ["asset", "delete-entry", "AAPL", "1", "-p", "stocks", "--yes"],
+            ["asset", "entry", "delete", "AAPL", "1", "-p", "stocks", "--yes"],
         ).exit_code
         == 0
     )
@@ -204,7 +204,7 @@ def test_asset_edit_rejects_no_options(tmp_path: Path, monkeypatch) -> None:
     _initialize_asset(tmp_path, monkeypatch)
     _income(amount="10")
 
-    result = runner.invoke(app, ["asset", "edit", "AAPL", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "entry", "edit", "AAPL", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Provide at least one" in result.output

@@ -92,7 +92,7 @@ def _delete_entry(
     yes: bool = True,
 ):
     portfolio, symbol = reference.split("/", maxsplit=1)
-    args = ["asset", "delete-entry", symbol, entry_no, "-p", portfolio]
+    args = ["asset", "entry", "delete", symbol, entry_no, "-p", portfolio]
     if yes:
         args.append("--yes")
     return runner.invoke(app, args)

@@ -136,8 +136,8 @@ timestamps, and soft-delete state.
 - Internal IDs are not exposed by the CLI.
 - The table contains no market value or unrealized PnL.
 - Individual transaction correction preserves row identity and asset-local
-  entry numbers. `asset edit` updates one active row in place. `asset
-  delete-entry` soft-deletes one active row only. Both commands recalculate
+  entry numbers. `asset entry edit` updates one active row in place. `asset
+  entry delete` soft-deletes one active row only. Both commands recalculate
   affected active transaction accounting fields. Neither command hard-deletes
   rows or exposes internal IDs.
 - Correction replay uses active transactions in asset-local `entry_no` order.

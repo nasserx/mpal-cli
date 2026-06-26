@@ -136,11 +136,18 @@ ASSET_HELP_EXAMPLES = r"""Examples:
 
   mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
-  mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]
+  mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
 
-  mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes
+  mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes
 
   mpal asset delete <symbol> -p <portfolio> --yes
+"""
+
+ASSET_ENTRY_HELP_EXAMPLES = r"""Examples:
+
+  mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
+
+  mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes
 """
 
 app = typer.Typer(
@@ -173,10 +180,17 @@ asset_app = typer.Typer(
     epilog=ASSET_HELP_EXAMPLES,
     no_args_is_help=True,
 )
+asset_entry_app = typer.Typer(
+    name="entry",
+    help="Edit or delete historical asset transaction entries.",
+    epilog=ASSET_ENTRY_HELP_EXAMPLES,
+    no_args_is_help=True,
+)
 app.add_typer(portfolio_app)
 app.add_typer(capital_app)
 capital_app.add_typer(capital_entry_app)
 app.add_typer(asset_app)
+asset_app.add_typer(asset_entry_app)
 
 
 def version_callback(value: bool) -> None:
@@ -593,8 +607,8 @@ def asset_delete(
     print_success(f"Asset '{normalized_symbol}' deleted from portfolio '{portfolio}'.")
 
 
-@asset_app.command("delete-entry")
-def asset_delete_entry(
+@asset_entry_app.command("delete")
+def asset_entry_delete(
     symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
     entry_number: Annotated[
         int,
@@ -627,8 +641,8 @@ def asset_delete_entry(
     )
 
 
-@asset_app.command("edit")
-def asset_edit(
+@asset_entry_app.command("edit")
+def asset_entry_edit(
     symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
     entry_number: Annotated[
         int,

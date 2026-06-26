@@ -49,25 +49,20 @@ Implemented asset commands:
 - `mpal asset show <symbol> -p <portfolio>`
 - `mpal asset log <symbol> -p <portfolio>`
 - `mpal asset delete <symbol> -p <portfolio> --yes`
-- `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`
-- `mpal asset delete-entry <symbol> <entry-number> -p <portfolio> --yes`
+- `mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]`
+- `mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`
 - `mpal asset income <symbol> <amount> -p <portfolio>`
 - `mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>`
 - `mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity>`
-
-Planned asset cleanup:
-
-- `mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]`
-- `mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`
 
 The long `--portfolio` option is equivalent to `-p`. There is no default
 portfolio. `-p` remains required when an operation targets one specific
 portfolio. Global views, such as `mpal asset list`, may omit `-p`.
 
 This branch intentionally removes the earlier root commands and the old
-combined `<portfolio>/<symbol>` argument. The next cleanup should remove old
-`asset edit` and `asset delete-entry` without hidden or compatibility aliases.
-`asset summary`, `capital edit`, and `capital delete` are already removed.
+combined `<portfolio>/<symbol>` argument. `asset summary`, `asset edit`,
+`asset delete-entry`, `capital edit`, and `capital delete` are already removed
+without hidden or compatibility aliases.
 
 Command vocabulary rule:
 
@@ -175,10 +170,10 @@ Deletion is soft:
 - portfolio delete preserves the existing portfolio/capital soft-delete
   behavior
 - asset delete atomically marks the asset and active transactions deleted
-- planned asset entry edit atomically updates one active transaction after
-  replaying active transaction effects
-- planned asset entry delete atomically marks one active transaction deleted
-  after replaying and updating remaining active transaction effects
+- asset entry edit atomically updates one active transaction after replaying
+  active transaction effects
+- asset entry delete atomically marks one active transaction deleted after
+  replaying and updating remaining active transaction effects
 
 Do not hard-delete records. Multi-record writes must remain atomic. Read models
 and validation normally use active rows only.

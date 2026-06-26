@@ -122,8 +122,8 @@ def test_official_portfolio_capital_and_asset_workflow(
         ["asset", "show", "AAPL"],
         ["asset", "log", "AAPL"],
         ["asset", "delete", "AAPL", "--yes"],
-        ["asset", "delete-entry", "AAPL", "1", "--yes"],
-        ["asset", "edit", "AAPL", "1", "--note", "changed"],
+        ["asset", "entry", "delete", "AAPL", "1", "--yes"],
+        ["asset", "entry", "edit", "AAPL", "1", "--note", "changed"],
         ["asset", "income", "AAPL", "10"],
         ["asset", "buy", "AAPL", "--price", "1", "--quantity", "1"],
         ["asset", "sell", "AAPL", "--price", "1", "--quantity", "1"],
@@ -186,11 +186,24 @@ def test_legacy_root_commands_are_removed(command: str) -> None:
         ],
         ["asset", "income", "stocks/MSFT", "1"],
         ["asset", "delete", "stocks/MSFT", "--yes"],
-        ["asset", "delete-entry", "stocks/MSFT", "1", "--yes"],
-        ["asset", "edit", "stocks/MSFT", "1", "--note", "changed"],
+        ["asset", "entry", "delete", "stocks/MSFT", "1", "--yes"],
+        ["asset", "entry", "edit", "stocks/MSFT", "1", "--note", "changed"],
     ],
 )
 def test_legacy_asset_command_shapes_are_removed(arguments: list[str]) -> None:
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 2
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["asset", "edit", "AAPL", "1", "-p", "stocks", "--note", "changed"],
+        ["asset", "delete-entry", "AAPL", "1", "-p", "stocks", "--yes"],
+    ],
+)
+def test_legacy_asset_entry_commands_are_removed(arguments: list[str]) -> None:
     result = runner.invoke(app, arguments)
 
     assert result.exit_code == 2
