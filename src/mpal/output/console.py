@@ -18,6 +18,8 @@ from mpal.numbers import (
     infer_price_display_scale,
 )
 from mpal.output.formatting import (
+    format_asset_portfolio_header,
+    format_asset_portfolio_label,
     format_capital_entry_amount,
     format_capital_entry_type,
     format_income_money,
@@ -117,7 +119,7 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 def print_assets(assets: list[Asset]) -> None:
     """Print active asset current-state rows."""
     table = _make_table()
-    table.add_column("A/P")
+    table.add_column(format_asset_portfolio_header())
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
     table.add_column("Average Cost", justify="right")
@@ -126,7 +128,7 @@ def print_assets(assets: list[Asset]) -> None:
     table.add_column("Realized Return", justify="right")
     for asset in assets:
         table.add_row(
-            f"{asset.symbol}/{asset.portfolio_name}",
+            format_asset_portfolio_label(asset.symbol, asset.portfolio_name),
             format_quantity(asset.quantity),
             format_money(asset.cost_basis_minor),
             _format_average_cost(

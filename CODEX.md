@@ -192,6 +192,9 @@ and validation normally use active rows only.
   borders, themed headers and borders, subtle inset solid separators between
   data rows, and no internal vertical column dividers. This table styling is
   presentation-only.
+- Asset list tables use the `Asset/Portfolio` first column. Combined labels
+  display as `<SYMBOL> • <Portfolio>` with display-only portfolio
+  capitalization; command syntax still uses `-p <portfolio>`.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.
 

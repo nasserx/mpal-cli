@@ -73,6 +73,10 @@ previous root commands, `capital edit`, `capital delete`, `asset summary`,
 argument form have been removed. No compatibility aliases are kept in this CLI
 redesign.
 
+Asset list output uses an `Asset/Portfolio` column. Combined labels display
+as `<SYMBOL> • <Portfolio>`, such as `AAPL • Stocks`; portfolio capitalization
+there is display-only, and command syntax still uses `-p <portfolio>`.
+
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
 Capital entry correction is under `mpal capital entry edit/delete`; `mpal

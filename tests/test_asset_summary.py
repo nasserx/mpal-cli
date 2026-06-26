@@ -162,7 +162,7 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
 
     assert result.exit_code == 0
     for column in (
-        "A/P",
+        "Asset/Portfolio",
         "Quantity",
         "Cost Basis",
         "Average Cost",
@@ -171,12 +171,16 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
         "Realized Return",
     ):
         assert column in result.output
-    assert "Asset/Portfolio" not in result.output
+    assert "Asset • Portfolio" not in result.output
+    assert "A/P" not in result.output
+    assert "A • P" not in result.output
     assert result.output.index("AAPL") < result.output.index("MSFT")
     aapl_row = next(line for line in result.output.splitlines() if "AAPL" in line)
     msft_row = next(line for line in result.output.splitlines() if "MSFT" in line)
-    assert "AAPL/stocks" in aapl_row
-    assert "MSFT/stocks" in msft_row
+    assert "AAPL • Stocks" in aapl_row
+    assert "MSFT • Stocks" in msft_row
+    assert "AAPL/stocks" not in result.output
+    assert "MSFT/stocks" not in result.output
     assert " 7 " in aapl_row
     assert "700.00" in aapl_row
     assert "100.00" in aapl_row
@@ -190,6 +194,21 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
     assert "10.00" in msft_row
     assert "+20.00%" in msft_row
     assert " ID " not in result.output.upper()
+
+
+def test_portfolio_asset_summary_capitalizes_portfolio_label_for_display_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _initialize_asset(tmp_path, monkeypatch, portfolio="etfs", symbols=("ETHA",))
+
+    result = runner.invoke(app, ["asset", "list", "-p", "etfs"])
+
+    assert result.exit_code == 0
+    assert "Asset/Portfolio" in result.output
+    assert "Asset • Portfolio" not in result.output
+    assert "ETHA • Etfs" in result.output
+    assert "ETHA/etfs" not in result.output
 
 
 def test_portfolio_asset_summary_excludes_deleted_assets(
@@ -242,15 +261,22 @@ def test_global_asset_list_shows_assets_across_active_portfolios(
     result = runner.invoke(app, ["asset", "list"])
 
     assert result.exit_code == 0
-    assert "A/P" in result.output
-    assert "Asset/Portfolio" not in result.output
-    assert "AAPL/stocks" in result.output
-    assert "AAPL/etfs" in result.output
-    assert "ETHA/etfs" in result.output
+    assert "Asset/Portfolio" in result.output
+    assert "Asset • Portfolio" not in result.output
+    assert "A/P" not in result.output
+    assert "A • P" not in result.output
+    assert "AAPL • Stocks" in result.output
+    assert "AAPL • Etfs" in result.output
+    assert "ETHA • Etfs" in result.output
+    assert "AAPL/stocks" not in result.output
+    assert "AAPL/etfs" not in result.output
+    assert "ETHA/etfs" not in result.output
     stocks_row = next(
-        line for line in result.output.splitlines() if "AAPL/stocks" in line
+        line for line in result.output.splitlines() if "AAPL • Stocks" in line
     )
-    etfs_row = next(line for line in result.output.splitlines() if "AAPL/etfs" in line)
+    etfs_row = next(
+        line for line in result.output.splitlines() if "AAPL • Etfs" in line
+    )
     assert " 3 " in stocks_row
     assert " 2 " in etfs_row
     assert " ID " not in result.output.upper()
@@ -275,8 +301,11 @@ def test_global_asset_list_excludes_deleted_assets_and_deleted_portfolios(
     result = runner.invoke(app, ["asset", "list"])
 
     assert result.exit_code == 0
-    assert "MSFT/stocks" in result.output
+    assert "MSFT • Stocks" in result.output
+    assert "MSFT/stocks" not in result.output
+    assert "AAPL • Stocks" not in result.output
     assert "AAPL/stocks" not in result.output
+    assert "ETHA • Closed" not in result.output
     assert "ETHA/closed" not in result.output
 
 

@@ -160,7 +160,7 @@ uppercase through the shared symbol validator.
 - `list` without `-p` shows all active assets across all active portfolios,
   aggregated by asset within each portfolio.
 - `list -p` shows all active assets in one portfolio. It uses the same columns
-  as the global list and keeps the first column as `A/P` for
+  as the global list and keeps the first column as `Asset/Portfolio` for
   consistent scanning.
 - `show <symbol> -p` shows the current state/details for one active asset.
 - `log` shows one asset's active transactions.
@@ -181,12 +181,14 @@ uppercase through the shared symbol validator.
 
 The global and portfolio-scoped asset list columns are:
 
-`A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
-`A/P` means `Asset/Portfolio`. Values use `<SYMBOL>/<portfolio>`, for example
-`AAPL/stocks` or `ETHA/etfs`. The same symbol in different portfolios remains
-separate rows; assets are not combined globally across portfolios. Internal
-database IDs are never displayed.
+Combined labels display as `<SYMBOL> • <Portfolio>`, for example
+`AAPL • Stocks` or `ETHA • Etfs`. The portfolio name capitalization in this
+combined label is display-only; command syntax and lookup still use
+`-p <portfolio>`. The same symbol in different portfolios remains separate
+rows; assets are not combined globally across portfolios. Internal database
+IDs are never displayed.
 
 The one-asset `show` output includes the current fields from the existing
 single-asset state view:
@@ -254,18 +256,19 @@ portfolios is shown as two rows, not one combined row.
 
 Columns:
 
-`A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
 Example:
 
-| A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
+| Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
 |---|---:|---:|---:|---:|---:|---:|
-| AAPL/stocks | 3 | 500.00 | 166.67 | +0.00 | 0.00 | +0.00% |
+| AAPL • Stocks | 3 | 500.00 | 166.67 | +0.00 | 0.00 | +0.00% |
 
 `mpal asset list -p <portfolio>` is the portfolio-scoped current-asset
 collection view. It uses the same columns as the global list, including
-`A/P`, so users can compare copied output from global and scoped views without
-changing mental models. `A/P` means `Asset/Portfolio`.
+`Asset/Portfolio`, so users can compare copied output from global and scoped
+views without changing mental models. Combined labels display as
+`<SYMBOL> • <Portfolio>`; the portfolio capitalization is display-only.
 
 Formatting rules:
 

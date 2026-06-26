@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 from mpal.cli import app
 from mpal.output import console as console_output
 from mpal.output.formatting import (
+    format_asset_portfolio_header,
+    format_asset_portfolio_label,
     format_capital_entry_amount,
     format_capital_entry_type,
     format_income_money,
@@ -26,6 +28,7 @@ from mpal.output.theme import (
     LOSS,
     MUTED,
     PROFIT,
+    RELATION_SEPARATOR,
     ROW_SEPARATOR,
     SUCCESS,
     TABLE_BORDER,
@@ -200,6 +203,7 @@ def test_theme_uses_documented_dark_terminal_palette() -> None:
     assert TABLE_BORDER == BORDER
     assert TABLE_CELL == VALUE
     assert ROW_SEPARATOR == f"dim {MUTED}"
+    assert RELATION_SEPARATOR == INFO
 
 
 def test_shared_table_helper_uses_theme_styles() -> None:
@@ -211,6 +215,16 @@ def test_shared_table_helper_uses_theme_styles() -> None:
     assert table.style == TABLE_CELL
     assert table.row_separator_style == ROW_SEPARATOR
     assert table.show_lines is False
+
+
+def test_asset_portfolio_label_uses_bullet_separator_style() -> None:
+    header = format_asset_portfolio_header()
+    label = format_asset_portfolio_label("etha", "etfs")
+
+    assert header.plain == "Asset/Portfolio"
+    assert label.plain == "ETHA • Etfs"
+    assert label.spans[0].style == RELATION_SEPARATOR
+    assert "/" not in label.plain
 
 
 def test_shared_table_helper_renders_inset_solid_row_separators() -> None:

@@ -293,7 +293,7 @@ def test_asset_list_uses_summary_columns_and_zero_values(
 
     assert result.exit_code == 0
     for column in (
-        "A/P",
+        "Asset/Portfolio",
         "Quantity",
         "Cost Basis",
         "Average Cost",
@@ -302,7 +302,11 @@ def test_asset_list_uses_summary_columns_and_zero_values(
         "Realized Return",
     ):
         assert column in result.output
-    assert "Asset/Portfolio" not in result.output
+    assert "Asset • Portfolio" not in result.output
+    assert "A/P" not in result.output
+    assert "A • P" not in result.output
+    assert "AAPL • Stocks" in result.output
+    assert "AAPL/stocks" not in result.output
     assert "0.00" in result.output
     assert "0.00%" in result.output
     assert "--" in result.output

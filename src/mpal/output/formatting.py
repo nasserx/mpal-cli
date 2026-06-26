@@ -5,7 +5,20 @@ from decimal import ROUND_HALF_EVEN, Decimal
 from rich.text import Text
 
 from mpal.amounts import format_money, format_signed_money
-from mpal.output.theme import INCOME, LOSS, PROFIT, TABLE_CELL
+from mpal.output.theme import INCOME, LOSS, PROFIT, RELATION_SEPARATOR, TABLE_CELL
+
+
+def format_asset_portfolio_header() -> Text:
+    """Format the combined asset and portfolio column header."""
+    return Text("Asset/Portfolio")
+
+
+def format_asset_portfolio_label(symbol: str, portfolio_name: str) -> Text:
+    """Format an asset/portfolio relationship label for display."""
+    return _format_asset_portfolio_text(
+        symbol.upper(),
+        _display_portfolio_name(portfolio_name),
+    )
 
 
 def format_signed_percent(result_minor: int, denominator_minor: int) -> str:
@@ -72,6 +85,26 @@ def result_style(value: int | Decimal) -> str:
     if value < 0:
         return LOSS
     return TABLE_CELL
+
+
+def _format_asset_portfolio_text(
+    left: str,
+    right: str,
+    *,
+    text_style: str | None = TABLE_CELL,
+) -> Text:
+    text = Text(left, style=text_style)
+    text.append(" ")
+    text.append("•", style=RELATION_SEPARATOR)
+    text.append(" ")
+    text.append(right, style=text_style)
+    return text
+
+
+def _display_portfolio_name(portfolio_name: str) -> str:
+    if not portfolio_name:
+        return portfolio_name
+    return f"{portfolio_name[0].upper()}{portfolio_name[1:]}"
 
 
 def _percentage(result_minor: int, denominator_minor: int) -> Decimal:
