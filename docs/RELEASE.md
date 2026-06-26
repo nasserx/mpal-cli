@@ -21,6 +21,19 @@ python -m build
 python -m twine check dist/*
 ```
 
+Run the manual Windows QA workflow to inspect real CLI output and table
+formatting:
+
+```console
+.\scripts\manual_qa.ps1
+```
+
+To keep the isolated QA data directory for debugging:
+
+```console
+.\scripts\manual_qa.ps1 -KeepData
+```
+
 After verifying the build, remove generated artifacts:
 
 ```console
