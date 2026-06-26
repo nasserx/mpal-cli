@@ -4,6 +4,12 @@ This checklist covers local release-readiness verification only.
 
 ## Local Checks
 
+Install release tooling in your local environment:
+
+```console
+python -m pip install -e ".[release]"
+```
+
 Run these commands from the repository root:
 
 ```console
@@ -12,11 +18,6 @@ python -m ruff check .
 python -m ruff format --check .
 git diff --check
 python -m build
-```
-
-If `twine` is installed, also run:
-
-```console
 python -m twine check dist/*
 ```
 

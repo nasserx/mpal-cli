@@ -29,6 +29,10 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
 ]
+release = [
+    "build>=1",
+    "twine>=5",
+]
 
 [project.scripts]
 mpal = "mpal.cli:app"
