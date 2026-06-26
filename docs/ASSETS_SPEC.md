@@ -182,12 +182,12 @@ mpal asset list
 
 Columns:
 
-`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
 Rows include active assets only and are aggregated by asset within each
-portfolio. The same symbol in different portfolios remains separate rows:
-`AAPL/stocks` and `AAPL/retirement` are distinct. Internal database IDs are
-never displayed.
+portfolio. `A/P` means `Asset/Portfolio`. The same symbol in different
+portfolios remains separate rows: `AAPL/stocks` and `AAPL/retirement` are
+distinct. Internal database IDs are never displayed.
 
 Portfolio-scoped current asset list:
 
@@ -195,9 +195,9 @@ Portfolio-scoped current asset list:
 mpal asset list -p stocks
 ```
 
-The scoped list uses the same columns as the global list, including
-`Asset/Portfolio`, with values such as `ETHA/etfs`. Keeping the same first
-column in global and scoped output is the selected behavior for consistency.
+The scoped list uses the same columns as the global list, including `A/P`,
+with values such as `ETHA/etfs`. Keeping the same first column in global and
+scoped output is the selected behavior for consistency.
 
 Single-asset current state:
 
@@ -235,7 +235,7 @@ Display rules:
 - Positive PnL/return values use the profit style, negative values use the
   loss style, and income values use the income style.
 - Output uses the shared rounded row-oriented table helper and centralized
-  terminal theme.
+  terminal theme with subtle inset solid row separators.
 - Raw `Decimal` output and internal database IDs are never displayed.
 
 ## Asset log

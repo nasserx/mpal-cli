@@ -189,8 +189,9 @@ and validation normally use active rows only.
   quantity, price, and average-cost values explicitly first.
 - Reuse the centralized semantic palette in `src/mpal/output/theme.py`.
 - Tables should use the shared row-oriented Rich table helper, with rounded
-  borders, themed headers and borders, and no internal vertical column
-  dividers.
+  borders, themed headers and borders, subtle inset solid separators between
+  data rows, and no internal vertical column dividers. This table styling is
+  presentation-only.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.
 

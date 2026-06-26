@@ -162,7 +162,7 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
 
     assert result.exit_code == 0
     for column in (
-        "Asset/Portfolio",
+        "A/P",
         "Quantity",
         "Cost Basis",
         "Average Cost",
@@ -171,6 +171,7 @@ def test_portfolio_asset_summary_shows_all_aggregates_in_symbol_order(
         "Realized Return",
     ):
         assert column in result.output
+    assert "Asset/Portfolio" not in result.output
     assert result.output.index("AAPL") < result.output.index("MSFT")
     aapl_row = next(line for line in result.output.splitlines() if "AAPL" in line)
     msft_row = next(line for line in result.output.splitlines() if "MSFT" in line)
@@ -241,7 +242,8 @@ def test_global_asset_list_shows_assets_across_active_portfolios(
     result = runner.invoke(app, ["asset", "list"])
 
     assert result.exit_code == 0
-    assert "Asset/Portfolio" in result.output
+    assert "A/P" in result.output
+    assert "Asset/Portfolio" not in result.output
     assert "AAPL/stocks" in result.output
     assert "AAPL/etfs" in result.output
     assert "ETHA/etfs" in result.output

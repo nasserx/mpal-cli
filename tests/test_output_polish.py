@@ -3,6 +3,7 @@
 from datetime import date
 from pathlib import Path
 
+from rich.console import Console
 from typer.testing import CliRunner
 
 from mpal.cli import app
@@ -25,6 +26,7 @@ from mpal.output.theme import (
     LOSS,
     MUTED,
     PROFIT,
+    ROW_SEPARATOR,
     SUCCESS,
     TABLE_BORDER,
     TABLE_BOX,
@@ -183,20 +185,21 @@ def test_semantic_result_helpers_use_reusable_theme_styles() -> None:
 
 
 def test_theme_uses_documented_dark_terminal_palette() -> None:
-    assert HEADER == "#C77DFF"
-    assert SUCCESS == "#4ADE80"
-    assert PROFIT == "#4ADE80"
-    assert ERROR == "#F87171"
-    assert LOSS == "#F87171"
-    assert INFO == "#60A5FA"
+    assert HEADER == "#B39DDB"
+    assert SUCCESS == "#81C784"
+    assert PROFIT == "#81C784"
+    assert ERROR == "#E57373"
+    assert LOSS == "#E57373"
+    assert INFO == "#64B5F6"
     assert INCOME == "#60A5FA"
-    assert WARNING == "#FACC15"
+    assert WARNING == "#FFD54F"
     assert BORDER == "#4B5563"
     assert MUTED == "#9CA3AF"
     assert VALUE == "#D1D5DB"
     assert TABLE_HEADER == HEADER
     assert TABLE_BORDER == BORDER
     assert TABLE_CELL == VALUE
+    assert ROW_SEPARATOR == f"dim {MUTED}"
 
 
 def test_shared_table_helper_uses_theme_styles() -> None:
@@ -206,7 +209,39 @@ def test_shared_table_helper_uses_theme_styles() -> None:
     assert table.header_style == TABLE_HEADER
     assert table.border_style == TABLE_BORDER
     assert table.style == TABLE_CELL
+    assert table.row_separator_style == ROW_SEPARATOR
     assert table.show_lines is False
+
+
+def test_shared_table_helper_renders_inset_solid_row_separators() -> None:
+    output_console = Console(width=80, record=True)
+    table = console_output._make_table()
+    table.add_column("Name")
+    table.add_column("Value", justify="right")
+    table.add_row("alpha", "1")
+    table.add_row("beta", "2")
+
+    output_console.print(table)
+    rendered = output_console.export_text()
+    lines = rendered.splitlines()
+    separator = next(line for line in lines if line.startswith("│") and "──" in line)
+
+    assert "╭" in rendered
+    assert "╮" in rendered
+    assert "╰" in rendered
+    assert "╯" in rendered
+    assert separator.startswith("│  ─")
+    assert separator.endswith("  │")
+    assert "- -" not in separator
+    assert "├" not in separator
+    assert "┤" not in separator
+    assert "┼" not in separator
+    assert separator.count("│") == 2
+    assert lines.index(next(line for line in lines if "alpha" in line)) < lines.index(
+        separator
+    )
+    beta_row = next(line for line in lines if "beta" in line)
+    assert lines.index(separator) < lines.index(beta_row)
 
 
 def test_table_output_uses_rounded_row_oriented_layout(

@@ -1,8 +1,13 @@
 """Rich terminal output helpers."""
 
 from decimal import Decimal, localcontext
+from typing import TYPE_CHECKING
 
+from rich._loop import loop_first_last, loop_last
+from rich._pick import pick_bool
 from rich.console import Console
+from rich.segment import Segment
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
@@ -24,6 +29,7 @@ from mpal.output.theme import (
     ERROR,
     INFO,
     MUTED,
+    ROW_SEPARATOR,
     SUCCESS,
     TABLE_BORDER,
     TABLE_BOX,
@@ -31,6 +37,9 @@ from mpal.output.theme import (
     TABLE_HEADER,
     WARNING,
 )
+
+if TYPE_CHECKING:
+    from rich.console import ConsoleOptions, RenderResult
 from mpal.storage.asset_logs import AssetTransaction
 from mpal.storage.assets import Asset
 from mpal.storage.logs import CapitalEntry, CapitalState
@@ -108,7 +117,7 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 def print_assets(assets: list[Asset]) -> None:
     """Print active asset current-state rows."""
     table = _make_table()
-    table.add_column("Asset/Portfolio")
+    table.add_column("A/P")
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
     table.add_column("Average Cost", justify="right")
@@ -268,10 +277,237 @@ def print_capital_state(state: CapitalState) -> None:
 
 def _make_table() -> Table:
     """Create mpal's shared row-oriented Rich table."""
-    return Table(
+    return MpalTable(
         box=TABLE_BOX,
         header_style=TABLE_HEADER,
         border_style=TABLE_BORDER,
         style=TABLE_CELL,
+        row_separator_style=ROW_SEPARATOR,
         show_lines=False,
     )
+
+
+class MpalTable(Table):
+    """Rich table with mpal's rounded, row-oriented separators."""
+
+    def __init__(self, *args, row_separator_style: str, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.row_separator_style = row_separator_style
+
+    def _render(
+        self,
+        console: Console,
+        options: "ConsoleOptions",
+        widths: list[int],
+    ) -> "RenderResult":
+        table_style = console.get_style(self.style or "")
+
+        border_style = table_style + console.get_style(self.border_style or "")
+        row_separator_style = table_style + console.get_style(self.row_separator_style)
+        _column_cells = (
+            self._get_cells(console, column_index, column)
+            for column_index, column in enumerate(self.columns)
+        )
+
+        row_cells = list(zip(*_column_cells))
+        _box = (
+            self.box.substitute(
+                options,
+                safe=pick_bool(self.safe_box, console.safe_box),
+            )
+            if self.box
+            else None
+        )
+        _box = _box.get_plain_headed_box() if _box and not self.show_header else _box
+
+        new_line = Segment.line()
+
+        columns = self.columns
+        show_header = self.show_header
+        show_footer = self.show_footer
+        show_edge = self.show_edge
+
+        if _box:
+            box_segments = [
+                (
+                    Segment(_box.head_left, border_style),
+                    Segment(_box.head_right, border_style),
+                    Segment(_box.head_vertical, border_style),
+                ),
+                (
+                    Segment(_box.mid_left, border_style),
+                    Segment(_box.mid_right, border_style),
+                    Segment(_box.mid_vertical, border_style),
+                ),
+                (
+                    Segment(_box.foot_left, border_style),
+                    Segment(_box.foot_right, border_style),
+                    Segment(_box.foot_vertical, border_style),
+                ),
+            ]
+            if show_edge:
+                yield Segment(_box.get_top(widths), border_style)
+                yield new_line
+        else:
+            box_segments = []
+
+        get_row_style = self.get_row_style
+        get_style = console.get_style
+
+        for index, (first, last, row_cell) in enumerate(loop_first_last(row_cells)):
+            header_row = first and show_header
+            footer_row = last and show_footer
+            row = (
+                self.rows[index - show_header]
+                if (not header_row and not footer_row)
+                else None
+            )
+            max_height = 1
+            cells = []
+            if header_row or footer_row:
+                row_style = Style.null()
+            else:
+                row_style = get_style(
+                    get_row_style(console, index - 1 if show_header else index)
+                )
+            for width, cell, column in zip(widths, row_cell, columns):
+                render_options = options.update(
+                    width=width,
+                    justify=column.justify,
+                    no_wrap=column.no_wrap,
+                    overflow=column.overflow,
+                    height=None,
+                    highlight=column.highlight,
+                )
+                lines = console.render_lines(
+                    cell.renderable,
+                    render_options,
+                    style=get_style(cell.style) + row_style,
+                )
+                max_height = max(max_height, len(lines))
+                cells.append(lines)
+
+            row_height = max(len(cell) for cell in cells)
+
+            def align_cell(cell, vertical: str, width: int, style: Style):
+                if header_row:
+                    vertical = "bottom"
+                elif footer_row:
+                    vertical = "top"
+
+                if vertical == "top":
+                    return Segment.align_top(cell, width, row_height, style)
+                if vertical == "middle":
+                    return Segment.align_middle(cell, width, row_height, style)
+                return Segment.align_bottom(cell, width, row_height, style)
+
+            cells[:] = [
+                Segment.set_shape(
+                    align_cell(
+                        cell,
+                        _cell.vertical,
+                        width,
+                        get_style(_cell.style) + row_style,
+                    ),
+                    width,
+                    max_height,
+                )
+                for width, _cell, cell, column in zip(widths, row_cell, cells, columns)
+            ]
+
+            if _box:
+                if last and show_footer:
+                    yield Segment(
+                        _box.get_row(widths, "foot", edge=show_edge),
+                        border_style,
+                    )
+                    yield new_line
+                left, right, _divider = box_segments[0 if first else (2 if last else 1)]
+
+                divider = (
+                    _divider
+                    if _divider.text.strip()
+                    else Segment(
+                        _divider.text,
+                        row_style.background_style + _divider.style,
+                    )
+                )
+                for line_no in range(max_height):
+                    if show_edge:
+                        yield left
+                    for last_cell, rendered_cell in loop_last(cells):
+                        yield from rendered_cell[line_no]
+                        if not last_cell:
+                            yield divider
+                    if show_edge:
+                        yield right
+                    yield new_line
+            else:
+                for line_no in range(max_height):
+                    for rendered_cell in cells:
+                        yield from rendered_cell[line_no]
+                    yield new_line
+
+            if _box and first and show_header:
+                yield Segment(
+                    _box.get_row(widths, "head", edge=show_edge),
+                    border_style,
+                )
+                yield new_line
+
+            if self._should_render_row_separator(
+                row=row,
+                last=last,
+                header_row=header_row,
+                footer_row=footer_row,
+                index=index,
+                row_cells=row_cells,
+            ):
+                yield from self._render_row_separator(
+                    widths,
+                    border_style=border_style,
+                    row_separator_style=row_separator_style,
+                )
+                yield new_line
+
+        if _box and show_edge:
+            yield Segment(_box.get_bottom(widths), border_style)
+            yield new_line
+
+    def _should_render_row_separator(
+        self,
+        *,
+        row,
+        last: bool,
+        header_row: bool,
+        footer_row: bool,
+        index: int,
+        row_cells: list[tuple],
+    ) -> bool:
+        if self.show_lines or self.leading or (row and row.end_section):
+            return False
+        if header_row or footer_row or last:
+            return False
+        if self.show_footer and index >= len(row_cells) - 2:
+            return False
+        return True
+
+    def _render_row_separator(
+        self,
+        widths: list[int],
+        *,
+        border_style: Style,
+        row_separator_style: Style,
+    ) -> "RenderResult":
+        inner_width = sum(widths) + max(0, len(widths) - 1)
+        inset = 2 if inner_width >= 8 else 1
+        separator_width = max(0, inner_width - (inset * 2))
+        separator = "─" * separator_width
+
+        if self.show_edge:
+            yield Segment("│", border_style)
+        yield Segment(" " * inset, border_style)
+        yield Segment(separator, row_separator_style)
+        yield Segment(" " * (inner_width - inset - separator_width), border_style)
+        if self.show_edge:
+            yield Segment("│", border_style)

@@ -160,7 +160,7 @@ uppercase through the shared symbol validator.
 - `list` without `-p` shows all active assets across all active portfolios,
   aggregated by asset within each portfolio.
 - `list -p` shows all active assets in one portfolio. It uses the same columns
-  as the global list and keeps the first column as `Asset/Portfolio` for
+  as the global list and keeps the first column as `A/P` for
   consistent scanning.
 - `show <symbol> -p` shows the current state/details for one active asset.
 - `log` shows one asset's active transactions.
@@ -181,9 +181,9 @@ uppercase through the shared symbol validator.
 
 The global and portfolio-scoped asset list columns are:
 
-`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
-`Asset/Portfolio` values use `<SYMBOL>/<portfolio>`, for example
+`A/P` means `Asset/Portfolio`. Values use `<SYMBOL>/<portfolio>`, for example
 `AAPL/stocks` or `ETHA/etfs`. The same symbol in different portfolios remains
 separate rows; assets are not combined globally across portfolios. Internal
 database IDs are never displayed.
@@ -254,18 +254,18 @@ portfolios is shown as two rows, not one combined row.
 
 Columns:
 
-`Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+`A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
 Example:
 
-| Asset/Portfolio | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
+| A/P | Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return |
 |---|---:|---:|---:|---:|---:|---:|
 | AAPL/stocks | 3 | 500.00 | 166.67 | +0.00 | 0.00 | +0.00% |
 
 `mpal asset list -p <portfolio>` is the portfolio-scoped current-asset
 collection view. It uses the same columns as the global list, including
-`Asset/Portfolio`, so users can compare copied output from global and scoped
-views without changing mental models.
+`A/P`, so users can compare copied output from global and scoped views without
+changing mental models. `A/P` means `Asset/Portfolio`.
 
 Formatting rules:
 
@@ -276,7 +276,7 @@ Formatting rules:
 - Positive PnL/return values use the profit style, negative values use the
   loss style, and income values use the income style.
 - Tables use the existing rounded row-oriented table helper and centralized
-  terminal theme.
+  terminal theme, with subtle inset solid separators between data rows.
 - Raw `Decimal` output and internal database IDs are never displayed.
 
 ## Shared input rules
@@ -302,7 +302,7 @@ Terminal styling is presentation-only. Rich output uses centralized semantic
 theme styles for headers, normal values, profit/loss, income/info, warnings,
 errors, borders, and muted note text. Data tables use a shared rounded,
 row-oriented layout with a header separator and without internal vertical
-column dividers.
+column dividers. Subtle solid data-row separators are presentation-only.
 
 Trade totals retain the existing behavior:
 
