@@ -21,6 +21,19 @@ python -m build
 python -m twine check dist/*
 ```
 
+Run the wheel smoke test to install the built wheel into a clean temporary
+virtual environment and verify the installed `mpal` command:
+
+```console
+.\scripts\wheel_smoke_test.ps1
+```
+
+To keep the temporary virtual environment and data directory for debugging:
+
+```console
+.\scripts\wheel_smoke_test.ps1 -KeepData
+```
+
 Run the manual Windows QA workflow to inspect real CLI output and table
 formatting:
 
