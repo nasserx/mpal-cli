@@ -339,8 +339,10 @@ def test_init_migrates_and_backfills_portfolio_entry_numbers(
     assert "uq_portfolio_entry_no" in indexes
     log_result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     assert log_result.exit_code == 0
-    assert "│ 1   2026-06-18" in log_result.output
-    assert "│ 2   2026-06-19" in log_result.output
+    assert " 1 " in log_result.output
+    assert "2026-06-18" in log_result.output
+    assert " 2 " in log_result.output
+    assert "2026-06-19" in log_result.output
     assert "│ 5   " not in log_result.output
     assert "│ 9   " not in log_result.output
 
@@ -409,8 +411,10 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
         assert result.exit_code == 0
         assert "Traceback" not in result.output
 
-    assert "│ 1   2026-06-18" in first_log.output
-    assert "│ 2   2026-06-19" in first_log.output
+    assert " 1 " in first_log.output
+    assert "2026-06-18" in first_log.output
+    assert " 2 " in first_log.output
+    assert "2026-06-19" in first_log.output
     assert "│ 5   " not in first_log.output
     assert "│ 9   " not in first_log.output
     assert "750.00" in summary_result.output

@@ -47,6 +47,8 @@ from mpal.storage.assets import Asset
 from mpal.storage.logs import CapitalEntry, CapitalState
 from mpal.storage.summaries import PortfolioSummary
 
+STANDARD_TABLE_WIDTH = 110
+
 
 def print_message(message: str) -> None:
     """Print a normal text message through Rich."""
@@ -113,7 +115,7 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
                 summary.capital_minor,
             ),
         )
-    Console(width=120).print(table)
+    _print_table(table)
 
 
 def print_assets(assets: list[Asset]) -> None:
@@ -143,13 +145,11 @@ def print_assets(assets: list[Asset]) -> None:
                 asset.total_buy_cost_minor,
             ),
         )
-    Console(width=120).print(table)
+    _print_table(table)
 
 
 def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
     """Print one active asset's derived accounting summary."""
-    console = Console(width=120)
-
     table = _make_table()
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
@@ -172,7 +172,7 @@ def print_asset_summary(portfolio_name: str, asset: Asset) -> None:
             asset.total_buy_cost_minor,
         ),
     )
-    console.print(table)
+    _print_table(table)
 
 
 def print_asset_transaction_log(
@@ -181,8 +181,6 @@ def print_asset_transaction_log(
     transactions: list[AssetTransaction],
 ) -> None:
     """Print one asset's active transactions using the documented columns."""
-    console = Console(width=120)
-
     table = _make_table()
     table.add_column("#", justify="right")
     table.add_column("Date")
@@ -225,7 +223,7 @@ def print_asset_transaction_log(
             ),
             Text(transaction.note, style=MUTED) if transaction.note else "",
         )
-    console.print(table)
+    _print_table(table)
 
 
 def _format_average_cost(
@@ -258,7 +256,7 @@ def print_capital_entry_log(entries: list[CapitalEntry]) -> None:
             format_capital_entry_amount(entry.entry_type, entry.amount_minor),
             Text(entry.note, style=MUTED) if entry.note else "",
         )
-    Console().print(table)
+    _print_table(table)
 
 
 def print_capital_state(state: CapitalState) -> None:
@@ -274,7 +272,7 @@ def print_capital_state(state: CapitalState) -> None:
         format_capital_entry_amount("outflow", state.withdrawals_minor),
         format_money(state.net_capital_minor),
     )
-    Console(width=120).print(table)
+    _print_table(table)
 
 
 def _make_table() -> Table:
@@ -289,10 +287,24 @@ def _make_table() -> Table:
     )
 
 
+def _print_table(table: Table) -> None:
+    """Print a table with mpal's shared responsive width policy."""
+    Console(width=_table_console_width()).print(table)
+
+
+def _table_console_width() -> int:
+    """Return the console width used for data table rendering."""
+    console = Console()
+    if not console.is_terminal:
+        return STANDARD_TABLE_WIDTH
+    return min(console.size.width, STANDARD_TABLE_WIDTH)
+
+
 class MpalTable(Table):
     """Rich table with mpal's rounded, row-oriented separators."""
 
     def __init__(self, *args, row_separator_style: str, **kwargs) -> None:
+        kwargs.setdefault("min_width", STANDARD_TABLE_WIDTH)
         super().__init__(*args, **kwargs)
         self.row_separator_style = row_separator_style
 

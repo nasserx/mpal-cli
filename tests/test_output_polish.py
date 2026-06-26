@@ -1,6 +1,7 @@
 """Focused tests for semantic financial output formatting."""
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from rich.console import Console
@@ -39,6 +40,9 @@ from mpal.output.theme import (
     WARNING,
 )
 from mpal.storage.asset_logs import AssetTransaction
+from mpal.storage.assets import Asset
+from mpal.storage.logs import CapitalState
+from mpal.storage.summaries import PortfolioSummary
 
 runner = CliRunner()
 
@@ -215,6 +219,84 @@ def test_shared_table_helper_uses_theme_styles() -> None:
     assert table.style == TABLE_CELL
     assert table.row_separator_style == ROW_SEPARATOR
     assert table.show_lines is False
+    assert table.min_width == console_output.STANDARD_TABLE_WIDTH
+
+
+def test_shared_table_helper_expands_small_tables_to_standard_width() -> None:
+    output_console = Console(width=140, record=True)
+    table = console_output._make_table()
+    table.add_column("Name")
+    table.add_column("Value", justify="right")
+    table.add_row("alpha", "1")
+
+    output_console.print(table)
+    rendered = output_console.export_text()
+    top_border = rendered.splitlines()[0]
+
+    assert len(top_border) == console_output.STANDARD_TABLE_WIDTH
+
+
+def test_shared_table_helper_does_not_exceed_narrow_console_width() -> None:
+    output_console = Console(width=80, record=True)
+    table = console_output._make_table()
+    table.add_column("Name")
+    table.add_column("Value", justify="right")
+    table.add_row("alpha", "1")
+
+    output_console.print(table)
+    rendered = output_console.export_text()
+
+    assert max(len(line) for line in rendered.splitlines()) <= 80
+
+
+def test_current_state_tables_share_standard_width_policy(
+    monkeypatch,
+) -> None:
+    rendered_tables: list[str] = []
+
+    def record_table(table):
+        output_console = Console(width=140, record=True)
+        output_console.print(table)
+        rendered_tables.append(output_console.export_text())
+
+    monkeypatch.setattr(console_output, "_print_table", record_table)
+
+    console_output.print_portfolio_summary(
+        PortfolioSummary(
+            portfolio_name="stocks",
+            capital_minor=100_000,
+            cash_minor=90_000,
+            positions_minor=10_000,
+            book_value_minor=100_000,
+            realized_pnl_minor=0,
+            income_minor=0,
+        )
+    )
+    console_output.print_capital_state(
+        CapitalState(
+            portfolio_name="stocks",
+            deposits_minor=100_000,
+            withdrawals_minor=0,
+            net_capital_minor=100_000,
+        )
+    )
+    console_output.print_asset_summary(
+        "stocks",
+        Asset(
+            portfolio_name="stocks",
+            symbol="AAPL",
+            quantity=Decimal("1"),
+            cost_basis_minor=10_000,
+            total_buy_cost_minor=10_000,
+            realized_pnl_minor=0,
+            income_minor=0,
+            price_display_scale=2,
+        ),
+    )
+
+    top_border_widths = [len(rendered.splitlines()[0]) for rendered in rendered_tables]
+
+    assert top_border_widths == [console_output.STANDARD_TABLE_WIDTH] * 3
 
 
 def test_asset_portfolio_label_uses_bullet_separator_style() -> None:

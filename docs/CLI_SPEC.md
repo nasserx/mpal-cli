@@ -306,6 +306,9 @@ theme styles for headers, normal values, profit/loss, income/info, warnings,
 errors, borders, and muted note text. Data tables use a shared rounded,
 row-oriented layout with a header separator and without internal vertical
 column dividers. Subtle solid data-row separators are presentation-only.
+Tables also use a centralized standard width policy so narrow current-state
+tables and wider log/list tables share a consistent visual width where the
+terminal allows it, while still responding to smaller terminal widths.
 
 Trade totals retain the existing behavior:
 
