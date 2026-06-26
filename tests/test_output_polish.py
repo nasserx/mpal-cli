@@ -30,6 +30,7 @@ from mpal.output.theme import (
     MUTED,
     PROFIT,
     RELATION_SEPARATOR,
+    ROW_KEY,
     ROW_SEPARATOR,
     SUCCESS,
     TABLE_BORDER,
@@ -41,7 +42,7 @@ from mpal.output.theme import (
 )
 from mpal.storage.asset_logs import AssetTransaction
 from mpal.storage.assets import Asset
-from mpal.storage.logs import CapitalState
+from mpal.storage.logs import CapitalEntry, CapitalState
 from mpal.storage.summaries import PortfolioSummary
 
 runner = CliRunner()
@@ -199,6 +200,7 @@ def test_theme_uses_documented_dark_terminal_palette() -> None:
     assert LOSS == "#E57373"
     assert INFO == "#64B5F6"
     assert INCOME == "#60A5FA"
+    assert ROW_KEY == "#FDBA74"
     assert WARNING == "#FFD54F"
     assert BORDER == "#4B5563"
     assert MUTED == "#9CA3AF"
@@ -220,6 +222,84 @@ def test_shared_table_helper_uses_theme_styles() -> None:
     assert table.row_separator_style == ROW_SEPARATOR
     assert table.show_lines is False
     assert table.min_width == console_output.STANDARD_TABLE_WIDTH
+
+
+def test_shared_table_helper_styles_first_column_values_as_row_keys() -> None:
+    table = console_output._make_table()
+    table.add_column("Portfolio")
+    table.add_column("Value", justify="right")
+    table.add_row("stocks", "1")
+
+    assert table.columns[0].header == "Portfolio"
+    assert table.columns[0].style == ROW_KEY
+    assert table.columns[1].style == ""
+    assert table.header_style == TABLE_HEADER
+    assert table.columns[0]._cells[0].style == ROW_KEY
+
+
+def test_shared_table_helper_limits_row_key_style_to_identity_headers() -> None:
+    table = console_output._make_table()
+    table.add_column("Name")
+    table.add_column("Value", justify="right")
+    table.add_row("alpha", "1")
+
+    assert table.columns[0].style == ""
+    assert table.columns[0]._cells[0] == "alpha"
+
+
+def test_user_facing_tables_style_first_column_as_row_keys(monkeypatch) -> None:
+    tables = []
+
+    def record_table(table):
+        tables.append(table)
+
+    monkeypatch.setattr(console_output, "_print_table", record_table)
+
+    console_output.print_capital_entry_log(
+        [
+            CapitalEntry(
+                entry_no=1,
+                entry_date=date.today().isoformat(),
+                entry_type="inflow",
+                amount_minor=100_000,
+                note=None,
+            )
+        ]
+    )
+    console_output.print_assets(
+        [
+            Asset(
+                portfolio_name="stocks",
+                symbol="AAPL",
+                quantity=Decimal("1"),
+                cost_basis_minor=10_000,
+                realized_pnl_minor=0,
+                income_minor=0,
+                total_buy_cost_minor=10_000,
+                price_display_scale=2,
+            )
+        ]
+    )
+    console_output.print_portfolio_summary(
+        PortfolioSummary(
+            portfolio_name="stocks",
+            capital_minor=100_000,
+            cash_minor=90_000,
+            positions_minor=10_000,
+            book_value_minor=100_000,
+            realized_pnl_minor=0,
+            income_minor=0,
+        )
+    )
+
+    assert [table.columns[0].style for table in tables] == [
+        ROW_KEY,
+        ROW_KEY,
+        ROW_KEY,
+    ]
+    assert tables[0].columns[2].style == ""
+    assert tables[1].columns[4].style == ""
+    assert tables[2].columns[0]._cells[0].style == ROW_KEY
 
 
 def test_shared_table_helper_expands_small_tables_to_standard_width() -> None:
@@ -309,7 +389,40 @@ def test_asset_portfolio_label_uses_bullet_separator_style() -> None:
     assert "/" not in label.plain
 
 
-def test_shared_table_helper_renders_inset_solid_row_separators() -> None:
+def test_asset_portfolio_label_uses_row_key_style_in_key_column(monkeypatch) -> None:
+    tables = []
+
+    def record_table(table):
+        tables.append(table)
+
+    monkeypatch.setattr(console_output, "_print_table", record_table)
+
+    console_output.print_assets(
+        [
+            Asset(
+                portfolio_name="etfs",
+                symbol="etha",
+                quantity=Decimal("1"),
+                cost_basis_minor=10_000,
+                realized_pnl_minor=0,
+                income_minor=0,
+                total_buy_cost_minor=10_000,
+                price_display_scale=2,
+            )
+        ]
+    )
+
+    label = tables[0].columns[0]._cells[0]
+
+    assert tables[0].columns[0].header.plain == "Asset/Portfolio"
+    assert tables[0].columns[0].header.style != ROW_KEY
+    assert label.plain == "ETHA • Etfs"
+    assert label.style == ROW_KEY
+    assert any(span.style == RELATION_SEPARATOR for span in label.spans)
+    assert "/" not in label.plain
+
+
+def test_shared_table_helper_renders_connected_solid_row_separators() -> None:
     output_console = Console(width=80, record=True)
     table = console_output._make_table()
     table.add_column("Name")
@@ -320,24 +433,31 @@ def test_shared_table_helper_renders_inset_solid_row_separators() -> None:
     output_console.print(table)
     rendered = output_console.export_text()
     lines = rendered.splitlines()
-    separator = next(line for line in lines if line.startswith("│") and "──" in line)
+    separator_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("├") and "──" in line
+    ]
+    separator = lines[separator_indexes[1]]
 
     assert "╭" in rendered
     assert "╮" in rendered
     assert "╰" in rendered
     assert "╯" in rendered
-    assert separator.startswith("│  ─")
-    assert separator.endswith("  │")
+    assert separator.startswith("├─")
+    assert separator.endswith("─┤")
     assert "- -" not in separator
-    assert "├" not in separator
-    assert "┤" not in separator
     assert "┼" not in separator
-    assert separator.count("│") == 2
-    assert lines.index(next(line for line in lines if "alpha" in line)) < lines.index(
-        separator
+    assert "┬" not in separator
+    assert "┴" not in separator
+    assert separator.count("│") == 0
+    assert len(separator_indexes) == 2
+    assert (
+        lines.index(next(line for line in lines if "alpha" in line))
+        < (separator_indexes[1])
     )
     beta_row = next(line for line in lines if "beta" in line)
-    assert lines.index(separator) < lines.index(beta_row)
+    assert separator_indexes[1] < lines.index(beta_row)
 
 
 def test_table_output_uses_rounded_row_oriented_layout(

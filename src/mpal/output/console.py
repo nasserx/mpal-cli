@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.segment import Segment
 from rich.style import Style
 from rich.table import Table
-from rich.text import Text
+from rich.text import Span, Text
 
 from mpal.amounts import format_money
 from mpal.numbers import (
@@ -31,6 +31,7 @@ from mpal.output.theme import (
     ERROR,
     INFO,
     MUTED,
+    ROW_KEY,
     ROW_SEPARATOR,
     SUCCESS,
     TABLE_BORDER,
@@ -48,6 +49,9 @@ from mpal.storage.logs import CapitalEntry, CapitalState
 from mpal.storage.summaries import PortfolioSummary
 
 STANDARD_TABLE_WIDTH = 110
+ROW_KEY_COLUMN_HEADERS = frozenset(
+    {"#", "Portfolio", "Asset", "Symbol", "Asset/Portfolio"}
+)
 
 
 def print_message(message: str) -> None:
@@ -308,6 +312,22 @@ class MpalTable(Table):
         super().__init__(*args, **kwargs)
         self.row_separator_style = row_separator_style
 
+    def add_column(self, *args, **kwargs) -> None:
+        """Add a column, styling identity-column body values as row keys."""
+        header = args[0] if args else kwargs.get("header", "")
+        if not self.columns and _is_row_key_header(header) and "style" not in kwargs:
+            kwargs["style"] = ROW_KEY
+        super().add_column(*args, **kwargs)
+
+    def add_row(self, *renderables, style=None, end_section: bool = False) -> None:
+        """Add a row, applying row-key styling to identity first-column cells."""
+        if renderables and self.columns and _is_row_key_header(self.columns[0].header):
+            renderables = (
+                _style_row_key_renderable(renderables[0]),
+                *renderables[1:],
+            )
+        super().add_row(*renderables, style=style, end_section=end_section)
+
     def _render(
         self,
         console: Console,
@@ -514,14 +534,35 @@ class MpalTable(Table):
         row_separator_style: Style,
     ) -> "RenderResult":
         inner_width = sum(widths) + max(0, len(widths) - 1)
-        inset = 2 if inner_width >= 8 else 1
-        separator_width = max(0, inner_width - (inset * 2))
-        separator = "─" * separator_width
+        separator = "─" * inner_width
 
         if self.show_edge:
-            yield Segment("│", border_style)
-        yield Segment(" " * inset, border_style)
+            yield Segment("├", border_style)
         yield Segment(separator, row_separator_style)
-        yield Segment(" " * (inner_width - inset - separator_width), border_style)
         if self.show_edge:
-            yield Segment("│", border_style)
+            yield Segment("┤", border_style)
+
+
+def _is_row_key_header(header) -> bool:
+    if isinstance(header, Text):
+        header_text = header.plain
+    else:
+        header_text = str(header)
+    return header_text in ROW_KEY_COLUMN_HEADERS
+
+
+def _style_row_key_renderable(renderable):
+    if isinstance(renderable, Text):
+        text = renderable.copy()
+        if not text.style or str(text.style) == TABLE_CELL:
+            text.style = ROW_KEY
+        text.spans = [
+            (
+                Span(span.start, span.end, ROW_KEY)
+                if not span.style or str(span.style) == TABLE_CELL
+                else span
+            )
+            for span in text.spans
+        ]
+        return text
+    return Text(str(renderable), style=ROW_KEY)
