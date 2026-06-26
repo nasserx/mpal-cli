@@ -20,10 +20,10 @@ market APIs, calculate market value, or calculate unrealized PnL.
 This is a breaking CLI redesign. Earlier root commands are removed, hidden
 aliases are removed, and no compatibility aliases are retained.
 
-## Target command vocabulary
+## Command vocabulary
 
-The next command cleanup standardizes command names around the shape of the
-data being shown or modified:
+The command hierarchy standardizes command names around the shape of the data
+being shown or modified:
 
 - `list` shows a collection of current things.
 - `show` shows the current state/details of one thing.
@@ -32,13 +32,12 @@ data being shown or modified:
 - `delete` deletes a whole entity.
 
 `summary` may remain in output titles such as `Portfolio Summary` or `Asset
-Summary`, but it should not remain a command name after this cleanup.
+Summary`, but it is not a command name.
 
-This is designed as a breaking local CLI cleanup. The old command names should
-be removed in the implementation phase rather than retained as compatibility
-aliases.
+This is a breaking local CLI cleanup. Old command names are removed rather
+than retained as compatibility aliases.
 
-## Target official commands
+## Official commands
 
 ### Initialization
 
@@ -206,7 +205,7 @@ removed. No compatibility aliases are retained.
 
 ### Asset transaction correction
 
-The target individual asset transaction correction commands are:
+The individual asset transaction correction commands are:
 
 ```console
 mpal asset entry edit <symbol> <entry-number> --portfolio <portfolio> [options...]
@@ -220,7 +219,7 @@ mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes
 same symbol and portfolio. Internal database IDs must not be accepted or
 displayed.
 
-Target `entry edit` behavior:
+`entry edit` behavior:
 
 - `income` rows may edit amount, date, and note.
 - `buy` rows may edit price, quantity, fee, total, date, and note.
@@ -232,7 +231,7 @@ Target `entry edit` behavior:
   rejected.
 - Buy and sell total validation keeps the current exact-total rules.
 
-Target `entry delete` behavior:
+`entry delete` behavior:
 
 - Requires an active portfolio, active asset, active transaction, and `--yes`.
 - Soft-deletes only the transaction row.

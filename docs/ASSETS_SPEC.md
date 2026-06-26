@@ -21,7 +21,7 @@ asset model supports:
 mpal does not use live prices, market APIs, market value, automatic
 valuation, or unrealized PnL.
 
-## Target CLI contract
+## CLI contract
 
 Asset commands that target one specific portfolio require `--portfolio` /
 `-p`; there is no default portfolio. The global asset list omits `-p`.
@@ -48,7 +48,7 @@ The old `asset summary`, `asset edit`, and `asset delete-entry` commands are
 removed.
 
 `summary` may still appear in rendered output titles, such as `Asset Summary`,
-but it should not remain a command name.
+but it is not a command name.
 
 ## Symbols and ownership
 
@@ -336,7 +336,7 @@ Soft-deleted assets and transactions do not contribute to current values.
 
 ## Transaction correction
 
-Target individual asset transaction editing and deletion commands:
+Individual asset transaction editing and deletion commands:
 
 ```console
 mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
@@ -378,7 +378,7 @@ Buy and sell edits preserve the current exact-total rules:
 If only date or note changes, accounting effects remain unchanged after replay
 because accounting replay order is asset-local entry number, not date.
 
-### Target entry delete behavior
+### Entry delete behavior
 
 `mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`:
 

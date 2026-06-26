@@ -15,7 +15,7 @@ Before changing behavior, read `README.md`, `docs/PRODUCT_SPEC.md`,
 `docs/CLI_SPEC.md`, `docs/ASSETS_SPEC.md`, `docs/FINANCIAL_MODEL.md`,
 `docs/DATA_MODEL.md`, and `docs/ROADMAP.md`.
 
-## Current CLI contract and planned cleanup
+## Current CLI Contract
 
 Root help exposes only:
 
@@ -73,7 +73,7 @@ Command vocabulary rule:
 - `delete` deletes a whole entity.
 
 `summary` may remain in output titles, such as `Portfolio Summary` or `Asset
-Summary`, but should not remain a command name after the planned cleanup.
+Summary`, but is not a command name.
 
 Use `mpal` in help, docs, tests, and examples. User shell shortcuts are not
 part of the product interface.

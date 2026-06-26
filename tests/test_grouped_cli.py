@@ -199,6 +199,8 @@ def test_legacy_asset_command_shapes_are_removed(arguments: list[str]) -> None:
 @pytest.mark.parametrize(
     "arguments",
     [
+        ["asset", "summary"],
+        ["asset", "summary", "AAPL", "-p", "stocks"],
         ["asset", "edit", "AAPL", "1", "-p", "stocks", "--note", "changed"],
         ["asset", "delete-entry", "AAPL", "1", "-p", "stocks", "--yes"],
     ],
