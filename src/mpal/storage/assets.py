@@ -19,6 +19,7 @@ from mpal.storage.database import connect_database
 class Asset:
     """One active portfolio-owned asset."""
 
+    portfolio_name: str
     symbol: str
     quantity: Decimal
     cost_basis_minor: int
@@ -106,7 +107,29 @@ def get_assets(
         assets: list[Asset] = []
         for asset_id, symbol in asset_rows:
             transactions = _get_active_transactions(connection, asset_id)
-            assets.append(_aggregate_asset(symbol, transactions))
+            assets.append(_aggregate_asset(portfolio_name, symbol, transactions))
+
+    return assets
+
+
+def get_all_assets(database_path: Path | None = None) -> list[Asset]:
+    """Return active assets across all active portfolios."""
+    with connect_database(database_path) as connection:
+        asset_rows = connection.execute(
+            """
+            SELECT a.id, p.name, a.symbol
+            FROM assets AS a
+            JOIN portfolios AS p ON p.id = a.portfolio_id
+            WHERE a.deleted_at IS NULL
+                AND p.deleted_at IS NULL
+            ORDER BY p.name ASC, a.symbol ASC
+            """
+        ).fetchall()
+
+        assets: list[Asset] = []
+        for asset_id, portfolio_name, symbol in asset_rows:
+            transactions = _get_active_transactions(connection, asset_id)
+            assets.append(_aggregate_asset(portfolio_name, symbol, transactions))
 
     return assets
 
@@ -145,7 +168,7 @@ def get_asset_summary(
 
         transactions = _get_active_transactions(connection, asset[0])
 
-    return _aggregate_asset(asset[1], transactions)
+    return _aggregate_asset(portfolio_name, asset[1], transactions)
 
 
 def _get_active_transactions(
@@ -171,6 +194,7 @@ def _get_active_transactions(
 
 
 def _aggregate_asset(
+    portfolio_name: str,
     symbol: str,
     transactions: list[tuple[str, str | None, str | None, int, int, int, int]],
 ) -> Asset:
@@ -184,6 +208,7 @@ def _aggregate_asset(
         Decimal(0),
     )
     return Asset(
+        portfolio_name=portfolio_name,
         symbol=symbol,
         quantity=quantity,
         cost_basis_minor=sum(row[3] for row in transactions),

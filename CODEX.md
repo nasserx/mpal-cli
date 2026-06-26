@@ -49,8 +49,9 @@ Planned capital cleanup:
 Implemented asset commands:
 
 - `mpal asset add <symbol> [symbol...] -p <portfolio>`
-- `mpal asset summary -p <portfolio>`
-- `mpal asset summary <symbol> -p <portfolio>`
+- `mpal asset list`
+- `mpal asset list -p <portfolio>`
+- `mpal asset show <symbol> -p <portfolio>`
 - `mpal asset log <symbol> -p <portfolio>`
 - `mpal asset delete <symbol> -p <portfolio> --yes`
 - `mpal asset edit <symbol> <entry-number> -p <portfolio> [options...]`
@@ -61,20 +62,17 @@ Implemented asset commands:
 
 Planned asset cleanup:
 
-- `mpal asset list`
-- `mpal asset list -p <portfolio>`
-- `mpal asset show <symbol> -p <portfolio>`
 - `mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]`
 - `mpal asset entry delete <symbol> <entry-number> -p <portfolio> --yes`
 
 The long `--portfolio` option is equivalent to `-p`. There is no default
 portfolio. `-p` remains required when an operation targets one specific
-portfolio. Planned global views, such as `mpal asset list`, may omit `-p`.
+portfolio. Global views, such as `mpal asset list`, may omit `-p`.
 
 This branch intentionally removes the earlier root commands and the old
 combined `<portfolio>/<symbol>` argument. The next cleanup should remove old
-`capital edit`, `capital delete`, `asset summary`, `asset edit`, and
-`asset delete-entry` without hidden or compatibility aliases.
+`capital edit`, `capital delete`, `asset edit`, and `asset delete-entry`
+without hidden or compatibility aliases. `asset summary` is already removed.
 
 Command vocabulary rule:
 

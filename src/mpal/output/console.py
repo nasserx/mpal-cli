@@ -106,9 +106,9 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
 
 
 def print_assets(assets: list[Asset]) -> None:
-    """Print portfolio-wide active asset summaries."""
+    """Print active asset current-state rows."""
     table = _make_table()
-    table.add_column("Asset")
+    table.add_column("Asset/Portfolio")
     table.add_column("Quantity", justify="right")
     table.add_column("Cost Basis", justify="right")
     table.add_column("Average Cost", justify="right")
@@ -117,7 +117,7 @@ def print_assets(assets: list[Asset]) -> None:
     table.add_column("Realized Return", justify="right")
     for asset in assets:
         table.add_row(
-            asset.symbol,
+            f"{asset.symbol}/{asset.portfolio_name}",
             format_quantity(asset.quantity),
             format_money(asset.cost_basis_minor),
             _format_average_cost(

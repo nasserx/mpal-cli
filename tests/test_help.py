@@ -54,7 +54,8 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["capital", "edit"],
         ["capital", "delete"],
         ["asset", "add"],
-        ["asset", "summary"],
+        ["asset", "list"],
+        ["asset", "show"],
         ["asset", "log"],
         ["asset", "delete"],
         ["asset", "delete-entry"],
@@ -82,7 +83,8 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         assert f"│ {command} " in capital.output
     for command in (
         "add",
-        "summary",
+        "list",
+        "show",
         "log",
         "delete",
         "delete-entry",
@@ -92,10 +94,11 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         "sell",
     ):
         assert f"│ {command} " in asset.output
-    assert "│ list " not in asset.output
+    assert "│ summary " not in asset.output
     assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
     assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in asset.output
-    assert "mpal asset summary <symbol> -p <portfolio>" in asset.output
+    assert "mpal asset list -p <portfolio>" in asset.output
+    assert "mpal asset show <symbol> -p <portfolio>" in asset.output
     assert "<portfolio>/<symbol>" not in asset.output
 
 
@@ -113,7 +116,8 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         ["capital", "edit"],
         ["capital", "delete"],
         ["asset", "add"],
-        ["asset", "summary"],
+        ["asset", "list"],
+        ["asset", "show"],
         ["asset", "log"],
         ["asset", "delete"],
         ["asset", "delete-entry"],
@@ -140,7 +144,8 @@ def test_official_command_help_is_registered(arguments: list[str]) -> None:
         ["capital", "edit", "--help"],
         ["capital", "delete", "--help"],
         ["asset", "add", "--help"],
-        ["asset", "summary", "--help"],
+        ["asset", "list", "--help"],
+        ["asset", "show", "--help"],
         ["asset", "log", "--help"],
         ["asset", "delete", "--help"],
         ["asset", "delete-entry", "--help"],

@@ -291,7 +291,7 @@ def test_asset_list_sums_income_and_keeps_zero_realized_return(
     runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
     runner.invoke(app, ["asset", "income", "AAPL", "8.50", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
@@ -393,7 +393,7 @@ def test_deleting_one_asset_preserves_other_asset_income(
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
     summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
-    list_result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    list_result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     summary_row = next(
         line for line in summary_result.output.splitlines() if "stocks" in line

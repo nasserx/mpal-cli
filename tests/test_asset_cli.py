@@ -27,9 +27,10 @@ def test_asset_help_lists_foundation_commands() -> None:
 
     assert result.exit_code == 0
     assert "add" in result.output
-    assert "summary" in result.output
+    assert "list" in result.output
+    assert "show" in result.output
+    assert "summary" not in result.output
     assert "delete" in result.output
-    assert "list" not in result.output
 
 
 def test_asset_add_requires_initialized_database(
@@ -232,7 +233,7 @@ def test_asset_list_requires_initialized_database(
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -246,7 +247,7 @@ def test_asset_list_requires_active_portfolio(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -258,7 +259,7 @@ def test_asset_list_prints_empty_message(
 ) -> None:
     _initialize_with_portfolio(tmp_path, monkeypatch)
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "No active assets for portfolio 'stocks'." in result.output
@@ -274,7 +275,7 @@ def test_asset_list_shows_uppercase_symbols_in_order(
         ["asset", "add", "msft", "aapl", "BRK.B", "-p", "stocks"],
     )
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.index("AAPL") < result.output.index("BRK.B")
@@ -288,7 +289,7 @@ def test_asset_list_uses_summary_columns_and_zero_values(
     _initialize_with_portfolio(tmp_path, monkeypatch)
     runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     for column in (
@@ -492,7 +493,7 @@ def test_asset_delete_hides_asset_from_list(
     runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "No active assets for portfolio 'stocks'." in result.output

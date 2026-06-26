@@ -595,7 +595,7 @@ def test_asset_list_aggregates_sell_results_and_income(
     runner.invoke(app, ["asset", "income", "AAPL", "10", "-p", "stocks"])
     runner.invoke(app, _sell_args(price="150", quantity="1"))
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
     assert " 1 " in row
@@ -694,7 +694,7 @@ def test_deleting_one_asset_preserves_other_asset_sell_effects(
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
     summary = runner.invoke(app, ["portfolio", "show", "stocks"])
-    assets = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    assets = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert "975.00" in row

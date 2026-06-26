@@ -36,6 +36,7 @@ from mpal.storage import (
     delete_portfolio,
     edit_asset_transaction_entry,
     edit_capital_entry,
+    get_all_assets,
     get_all_portfolio_summaries,
     get_asset_summary,
     get_asset_transaction_log,
@@ -71,7 +72,11 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal asset add <symbol> \[symbol...] -p <portfolio>
 
-  mpal asset summary [<symbol>] -p <portfolio>
+  mpal asset list
+
+  mpal asset list -p <portfolio>
+
+  mpal asset show <symbol> -p <portfolio>
 """
 
 PORTFOLIO_HELP_EXAMPLES = """Examples:
@@ -104,9 +109,11 @@ ASSET_HELP_EXAMPLES = r"""Examples:
 
   mpal asset add <symbol> \[symbol...] -p <portfolio>
 
-  mpal asset summary -p <portfolio>
+  mpal asset list
 
-  mpal asset summary <symbol> -p <portfolio>
+  mpal asset list -p <portfolio>
+
+  mpal asset show <symbol> -p <portfolio>
 
   mpal asset log <symbol> -p <portfolio>
 
@@ -460,28 +467,42 @@ def asset_add(
     )
 
 
-@asset_app.command("summary")
-def asset_summary(
-    portfolio: Annotated[str, PORTFOLIO_OPTION],
-    symbol: Annotated[
-        str | None,
-        typer.Argument(help="Optional asset symbol."),
-    ] = None,
+@asset_app.command("list")
+def asset_list(
+    portfolio: Annotated[str | None, PORTFOLIO_OPTION] = None,
 ) -> None:
-    """Show all asset summaries in a portfolio or one asset summary."""
-    if symbol is None:
+    """Show active assets globally or in one portfolio."""
+    if portfolio is None:
         try:
-            assets = get_assets(portfolio)
+            assets = get_all_assets()
         except MpalError as error:
             print_error(str(error))
             raise typer.Exit(code=1) from error
 
         if not assets:
-            print_info(f"No active assets for portfolio '{portfolio}'.")
+            print_info("No active assets.")
             return
         print_assets(assets)
         return
 
+    try:
+        assets = get_assets(portfolio)
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not assets:
+        print_info(f"No active assets for portfolio '{portfolio}'.")
+        return
+    print_assets(assets)
+
+
+@asset_app.command("show")
+def asset_show(
+    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+) -> None:
+    """Show one active asset's current state."""
     try:
         normalized_symbol = normalize_symbol(symbol)
         summary = get_asset_summary(portfolio, normalized_symbol)

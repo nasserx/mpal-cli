@@ -78,12 +78,11 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   `-p`.
 - Planned capital cleanup adds `capital show -p <portfolio>` and moves
   historical entry correction under `capital entry edit/delete`.
-- Planned asset cleanup replaces `asset summary` with `asset list` and
+- Asset current-state cleanup replaced `asset summary` with `asset list` and
   `asset show`, including a global `asset list` that omits `-p`.
 - Planned asset transaction correction moves under `asset entry edit/delete`.
 - The previous root commands are removed.
 - The old combined portfolio/symbol argument form is removed.
-- The planned cleanup should remove old `capital edit`, `capital delete`,
-  `asset summary`, `asset edit`, and `asset delete-entry` without
-  compatibility aliases.
+- The planned entry cleanup should remove old `capital edit`, `capital delete`,
+  `asset edit`, and `asset delete-entry` without compatibility aliases.
 - Official commands are shown in help.

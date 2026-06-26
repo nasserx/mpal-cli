@@ -53,8 +53,9 @@ mpal capital edit 2 -p stocks --amount 500
 mpal capital delete 2 -p stocks
 
 mpal asset add AAPL AMZN MSFT -p stocks
-mpal asset summary -p stocks
-mpal asset summary AAPL -p stocks
+mpal asset list
+mpal asset list -p stocks
+mpal asset show AAPL -p stocks
 mpal asset log AAPL -p stocks
 mpal asset delete AAPL -p stocks --yes
 mpal asset edit AAPL 2 -p stocks --price 234.50 --quantity 3
@@ -65,9 +66,10 @@ mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
-The previous root commands, `asset list`, and the old combined
-portfolio/symbol argument form have been removed. No compatibility aliases are
-kept in this CLI redesign.
+Global collection views such as `mpal asset list` do not require `-p`. The
+previous root commands, `asset summary`, and the old combined portfolio/symbol
+argument form have been removed. No compatibility aliases are kept in this CLI
+redesign.
 
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
@@ -78,16 +80,17 @@ Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 v0.1 covers initialization, portfolio creation, optional initial capital,
 deposits, withdrawals, summaries, logs, capital-entry correction and deletion,
 portfolio reset, and soft deletion of portfolios. The asset foundation adds
-manual symbol creation, summaries, and soft deletion under existing
+manual symbol creation, current-state views, and soft deletion under existing
 portfolios. The read-only asset log and its transaction storage foundation are
 also present. Manual asset income updates asset and portfolio summaries.
 Manual buys update open quantity, Cost Basis, portfolio Cash, and Positions.
 Manual sells use moving-average book cost and update open quantity, Cost Basis,
 Cash, Positions, and Realized PnL. Individual asset transactions can be edited
 or soft-deleted by asset-local entry number, with active transactions replayed
-before commit. Asset summary reports current open quantity, Cost Basis, Average
-Cost, Realized PnL, Income, and Realized Return from active manual
-transactions.
+before commit. `asset list` is the current asset collection view, and
+`asset show` reports current open quantity, Cost Basis, Average Cost, Realized
+PnL, Income, and Realized Return for one asset from active manual transactions.
+`summary` is no longer a command name.
 
 ## Planned capabilities
 

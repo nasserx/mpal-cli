@@ -101,7 +101,7 @@ def test_asset_outputs_omit_standalone_title_and_keep_tables(
     _buy(price="100", quantity="1")
 
     log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
-    summary_result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    summary_result = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
 
     for result in (log_result, summary_result):
         assert result.exit_code == 0
@@ -123,8 +123,8 @@ def test_positive_profit_and_returns_show_explicit_plus_sign(
     _buy(price="100", quantity="1")
     _sell(price="150", quantity="1")
 
-    asset_list = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
-    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_list = runner.invoke(app, ["asset", "list", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+50.00" in asset_list.output
@@ -143,7 +143,7 @@ def test_negative_profit_and_returns_keep_minus_sign(
     _buy(price="100", quantity="1")
     _sell(price="80", quantity="1")
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "-20.00" in asset_summary.output
@@ -159,7 +159,7 @@ def test_zero_profit_and_returns_remain_unsigned(
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="1")
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+0.00" not in asset_summary.output
@@ -216,7 +216,7 @@ def test_table_output_uses_rounded_row_oriented_layout(
     _initialize_asset(tmp_path, monkeypatch)
     _buy(price="100", quantity="1")
 
-    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "╭" in result.output
@@ -330,7 +330,7 @@ def test_buy_sell_income_formulas_remain_correct_with_signed_display(
         == 0
     )
 
-    asset_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
 
     assert "+150.00" in asset_summary.output
@@ -378,7 +378,7 @@ def test_fractional_quantity_display_is_dynamic_without_padding(
     _buy(price="100", quantity="0.0433")
 
     log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
-    summary_result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    summary_result = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
 
     assert log_result.exit_code == 0
     assert summary_result.exit_code == 0
@@ -396,7 +396,7 @@ def test_asset_summary_average_cost_does_not_show_raw_decimal_tail(
     _buy(price="1.00", quantity="1")
     _buy(price="1.31", quantity="2")
 
-    result = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "1.21" in result.output

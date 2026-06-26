@@ -456,7 +456,7 @@ def test_asset_list_aggregates_buys_and_income(
     runner.invoke(app, _buy_args(price="50", quantity="1"))
     runner.invoke(app, ["asset", "income", "AAPL", "25", "-p", "stocks"])
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
@@ -473,7 +473,7 @@ def test_asset_list_realized_pnl_remains_zero_after_buy(
     _initialize_asset(tmp_path, monkeypatch)
     runner.invoke(app, _buy_args(price="100", quantity="1"))
 
-    result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "AAPL" in line)
@@ -573,7 +573,7 @@ def test_deleting_one_asset_preserves_other_asset_buy_effects(
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
     summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
-    list_result = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
+    list_result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     summary_row = next(
         line for line in summary_result.output.splitlines() if "stocks" in line

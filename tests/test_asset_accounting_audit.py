@@ -112,7 +112,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 100_000
     assert portfolio.realized_pnl_minor == 0
     assert portfolio.income_minor == 0
-    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
+    summary = _invoke("asset", "show", "AAPL", "-p", "stocks")
     assert " 10 " in summary.output
     assert "1,000.00" in summary.output
     assert "100.00" in summary.output
@@ -131,7 +131,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 115_000
     assert portfolio.realized_pnl_minor == 15_000
     assert portfolio.income_minor == 0
-    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
+    summary = _invoke("asset", "show", "AAPL", "-p", "stocks")
     assert " 7 " in summary.output
     assert "700.00" in summary.output
     assert "100.00" in summary.output
@@ -153,7 +153,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.book_value_minor == 117_000
     assert portfolio.realized_pnl_minor == 15_000
     assert portfolio.income_minor == 2_000
-    assert "17.00%" in _invoke("asset", "summary", "AAPL", "-p", "stocks").output
+    assert "17.00%" in _invoke("asset", "show", "AAPL", "-p", "stocks").output
     assert "17.00%" in _invoke("portfolio", "show", "stocks").output
 
     _sell("stocks/AAPL", price="100", quantity="7", total="700.00")
@@ -167,7 +167,7 @@ def test_scenarios_a_through_d_preserve_complete_accounting(
     assert portfolio.cash_minor == 117_000
     assert portfolio.positions_minor == 0
     assert portfolio.book_value_minor == 117_000
-    summary = _invoke("asset", "summary", "AAPL", "-p", "stocks")
+    summary = _invoke("asset", "show", "AAPL", "-p", "stocks")
     row = next(line for line in summary.output.splitlines() if "150.00" in line)
     assert " 0 " in row
     assert "--" in row
@@ -235,8 +235,8 @@ def test_multiple_assets_are_isolated_and_portfolio_totals_are_additive(
         portfolio.income_minor,
     ) == (200_000, 136_000, 85_000, 221_000, 18_000, 3_000)
     assert "10.50%" in _invoke("portfolio", "show", "stocks").output
-    assert "17.00%" in _invoke("asset", "summary", "AAPL", "-p", "stocks").output
-    assert "20.00%" in _invoke("asset", "summary", "MSFT", "-p", "stocks").output
+    assert "17.00%" in _invoke("asset", "show", "AAPL", "-p", "stocks").output
+    assert "20.00%" in _invoke("asset", "show", "MSFT", "-p", "stocks").output
 
 
 def test_same_symbol_is_isolated_by_portfolio(
@@ -318,14 +318,14 @@ def test_asset_delete_removes_only_its_effects_and_preserves_rows(
         portfolio.realized_pnl_minor,
         portfolio.income_minor,
     ) == (189_000, 15_000, 204_000, 3_000, 1_000)
-    list_output = _invoke("asset", "summary", "-p", "stocks").output
+    list_output = _invoke("asset", "list", "-p", "stocks").output
     all_output = _invoke("portfolio", "list").output
     assert "AAPL" not in list_output
     assert "MSFT" in list_output
     assert "1,890.00" in all_output
     assert "150.00" in all_output
 
-    deleted_summary = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    deleted_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     deleted_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
     assert deleted_summary.exit_code == 1
     assert deleted_log.exit_code == 1

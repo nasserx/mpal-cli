@@ -54,8 +54,8 @@ def test_official_portfolio_capital_and_asset_workflow(
         result = runner.invoke(app, arguments)
         assert result.exit_code == 0, result.output
 
-    asset_list = runner.invoke(app, ["asset", "summary", "-p", "stocks"])
-    asset_show = runner.invoke(app, ["asset", "summary", "AAPL", "-p", "stocks"])
+    asset_list = runner.invoke(app, ["asset", "list", "-p", "stocks"])
+    asset_show = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
     asset_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
     capital_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     portfolio_list = runner.invoke(app, ["portfolio", "list"])
@@ -110,7 +110,7 @@ def test_official_portfolio_capital_and_asset_workflow(
         ["capital", "edit", "1", "--note", "changed"],
         ["capital", "delete", "1"],
         ["asset", "add", "AAPL"],
-        ["asset", "summary"],
+        ["asset", "show", "AAPL"],
         ["asset", "log", "AAPL"],
         ["asset", "delete", "AAPL", "--yes"],
         ["asset", "delete-entry", "AAPL", "1", "--yes"],

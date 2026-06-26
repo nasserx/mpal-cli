@@ -14,6 +14,7 @@ from mpal.storage.assets import (
     Asset,
     create_assets,
     delete_asset,
+    get_all_assets,
     get_asset_summary,
     get_assets,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "edit_asset_transaction_entry",
     "edit_capital_entry",
     "get_all_portfolio_summaries",
+    "get_all_assets",
     "get_assets",
     "get_asset_summary",
     "get_asset_transaction_log",

@@ -44,8 +44,9 @@ The long `--portfolio` spelling is equivalent to `-p`.
 
 This cleanup is designed as a breaking command rename with no compatibility or
 hidden aliases. The previous combined portfolio/symbol argument form remains
-removed. The old `asset summary`, `asset edit`, and `asset delete-entry`
-commands should be removed in the implementation phase.
+removed. The old `asset summary` command is removed. The old `asset edit` and
+`asset delete-entry` commands should be removed in the entry subgroup
+implementation phase.
 
 `summary` may still appear in rendered output titles, such as `Asset Summary`,
 but it should not remain a command name.
