@@ -6,6 +6,8 @@
 - Cleaned up command consistency around portfolio, capital, and asset groups.
 - Added asset current-state commands through `asset list` and `summary -p -a`.
 - Added `capital -p` for capital-only current state.
+- Expanded global `summary` with total cash, positions, book value, and
+  optional `--explain` definitions.
 - Added capital entry correction and deletion under `capital entry edit/delete`.
 - Added asset entry correction and deletion under `asset entry edit/delete`.
 - Added the asset transaction replay foundation.

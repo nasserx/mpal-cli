@@ -4,6 +4,7 @@ mpal — Multi-Portfolio Asset Ledger — is a minimal CLI tool for manual asset
 tracking and capital management.
 
 The CLI command is `mpal`. The package/distribution name is `mpal-cli`.
+Current version: `0.5.2`. License: MIT.
 
 ## Installation
 
@@ -21,6 +22,16 @@ From a project checkout:
 ```console
 python -m pip install -e .
 mpal --help
+```
+
+## Storage
+
+mpal stores records in a local SQLite database named `mpal.db`. By default it
+uses the platform data directory, but you can set `MPAL_DATA_DIR` to choose a
+different directory:
+
+```console
+MPAL_DATA_DIR=/path/to/mpal-data mpal init
 ```
 
 ## What mpal is
@@ -41,19 +52,26 @@ APIs or other external services, or provide financial advice.
 
 mpal only works with the records you enter manually.
 
-Portfolio summaries use book/accounting values. Book Value is derived from manual records and is not market value.
+mpal tracks capital, cash, open positions by book cost, manually recorded
+asset income, realized P&L, and return. Portfolio summaries use
+book/accounting values. Book Value is derived from manual records and is not
+market value.
 
 ## Quick Start
 
 ```console
 mpal init
 mpal summary
+mpal summary --explain
 mpal portfolio create stocks
 mpal deposit 1000 -p stocks
+mpal withdraw 250 -p stocks
 mpal capital -p stocks
+mpal capital log -p stocks
 mpal asset add AAPL -p stocks
 mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset list
+mpal summary -p stocks
 mpal summary -p stocks -a AAPL
 mpal asset log AAPL -p stocks
 ```
