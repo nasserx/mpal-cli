@@ -49,8 +49,8 @@ Portfolio summaries use book/accounting values. Book Value is derived from manua
 mpal init
 mpal summary
 mpal portfolio create stocks
-mpal capital deposit 1000 -p stocks
-mpal capital show -p stocks
+mpal deposit 1000 -p stocks
+mpal capital -p stocks
 mpal asset add AAPL -p stocks
 mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset list
@@ -75,9 +75,9 @@ mpal portfolio list
 mpal portfolio reset stocks --yes
 mpal portfolio delete stocks --yes
 
-mpal capital show -p stocks
-mpal capital deposit 1000 -p stocks
-mpal capital withdraw 250 --portfolio stocks --date 2026-06-19 --note "withdrawal"
+mpal deposit 1000 -p stocks
+mpal withdraw 250 --portfolio stocks --date 2026-06-19 --note "withdrawal"
+mpal capital -p stocks
 mpal capital log -p stocks
 mpal capital entry edit 2 -p stocks --amount 500
 mpal capital entry delete 2 -p stocks
@@ -107,6 +107,11 @@ Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal summary` and `mpal asset list` do not
 require `-p`. No compatibility aliases are kept in this CLI redesign.
 
+Use `mpal deposit <amount> -p <portfolio>` for external capital deposits and
+`mpal withdraw <amount> -p <portfolio>` for external capital withdrawals. Use
+`mpal capital -p <portfolio>` to inspect current capital and
+`mpal capital log -p <portfolio>` to inspect capital history.
+
 Asset list output uses an `Asset/Portfolio` column. Combined labels display
 as `<SYMBOL> • <Portfolio>`, such as `AAPL • Stocks`; portfolio capitalization
 there is display-only, and command syntax still uses `-p <portfolio>`.
@@ -114,8 +119,8 @@ there is display-only, and command syntax still uses `-p <portfolio>`.
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.
 Capital entry correction is under `mpal capital entry edit/delete`; `mpal
-capital log` remains the historical entry view, and `mpal capital show` is the
-capital-only current-state view.
+capital log` remains the historical entry view, and `mpal capital -p
+<portfolio>` is the capital-only current-state view.
 
 Explicit transaction dates must use `YYYY-MM-DD` and cannot be in the future. If
 `--date` is omitted, mpal uses the current local date.
@@ -139,6 +144,9 @@ asset log` remains the historical transaction view.
 
 `portfolio show` and `asset show` were removed before public release because
 `summary` now owns all summary/reporting views.
+`capital deposit`, `capital withdraw`, and `capital show` were removed before
+public release because daily capital actions are top-level commands and
+`capital -p` owns the current capital view.
 
 ## Planned capabilities
 

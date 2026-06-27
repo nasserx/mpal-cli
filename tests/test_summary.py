@@ -171,7 +171,7 @@ def test_summary_portfolio_reuses_portfolio_summary_output(
 ) -> None:
     _init(tmp_path, monkeypatch)
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
 
@@ -366,8 +366,8 @@ def test_summary_ignores_deleted_capital_entries_and_asset_transactions(
 ) -> None:
     _init(tmp_path, monkeypatch)
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
     runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
     runner.invoke(app, ["asset", "income", "AAPL", "50", "-p", "stocks"])
@@ -389,8 +389,8 @@ def test_summary_total_capital_is_deposits_minus_withdrawals(
 ) -> None:
     _init(tmp_path, monkeypatch)
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary"])
 

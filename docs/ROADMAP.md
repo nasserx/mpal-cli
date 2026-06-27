@@ -9,8 +9,8 @@ implemented, including current asset output. The governing contract is
 documented in `docs/ASSETS_SPEC.md`.
 
 The breaking command hierarchy documented in `docs/CLI_SPEC.md` is
-implemented. Official help exposes only `init`, `summary`, `portfolio`,
-`capital`, and `asset` at the root.
+implemented. Official help exposes only `init`, `summary`, `deposit`,
+`withdraw`, `portfolio`, `capital`, and `asset` at the root.
 
 A breaking cleanup standardized command vocabulary: `list` for current
 collections, `show` for non-summary current state views, `log` for history,
@@ -83,8 +83,9 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   from global totals rather than averaging portfolio returns.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
-- Capital cleanup added `capital show -p <portfolio>` and moved historical
-  entry correction under `capital entry edit/delete`.
+- Capital cleanup moved daily actions to root `deposit` / `withdraw`, made
+  `capital -p <portfolio>` the current capital view, and kept historical entry
+  correction under `capital entry edit/delete`.
 - Asset current-state cleanup replaced `asset summary` with `asset list`, then
   moved one-asset reporting to `summary -p <portfolio> -a <asset>`. Global
   `asset list` omits `-p`.
@@ -93,6 +94,8 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 - The old combined portfolio/symbol argument form is removed.
 - Old `capital edit` and `capital delete` are removed without compatibility
   aliases.
+- Pre-release `capital show`, `capital deposit`, and `capital withdraw` were
+  removed without compatibility aliases.
 - Old `asset edit` and `asset delete-entry` are removed without compatibility
   aliases.
 - Pre-release `portfolio show` and `asset show` were removed without

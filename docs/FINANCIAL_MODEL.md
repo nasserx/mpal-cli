@@ -201,7 +201,7 @@ moving-average Cost Basis.
 ### Add a deposit
 
 ```console
-mpal capital deposit 1000 -p stocks
+mpal deposit 1000 -p stocks
 ```
 
 Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and Income remain `0.00`; Return remains `0.00%`.
@@ -209,7 +209,7 @@ Capital, Cash, and Book Value become `1,000.00`. Positions, Realized PnL, and In
 ### Add a withdrawal
 
 ```console
-mpal capital withdraw 250 -p stocks
+mpal withdraw 250 -p stocks
 ```
 
 After the preceding deposit, Capital, Cash, and Book Value become `750.00`. The other v0.1 summary values remain zero.
@@ -217,7 +217,7 @@ After the preceding deposit, Capital, Cash, and Book Value become `750.00`. The 
 ### Attempt a withdrawal with insufficient Cash
 
 ```console
-mpal capital withdraw 1000 -p stocks
+mpal withdraw 1000 -p stocks
 ```
 
 With only `750.00` Cash available, the command fails, creates no entry, and leaves the summary unchanged.

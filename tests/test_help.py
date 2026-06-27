@@ -13,7 +13,15 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
 
     assert result.exit_code == 0
     assert "Multi-Portfolio Asset Ledger" in result.output
-    for command in ("init", "summary", "portfolio", "capital", "asset"):
+    for command in (
+        "init",
+        "summary",
+        "deposit",
+        "withdraw",
+        "portfolio",
+        "capital",
+        "asset",
+    ):
         assert f"│ {command} " in result.output
     for command in (
         "create",
@@ -43,13 +51,12 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["asset"],
         ["init"],
         ["summary"],
+        ["deposit"],
+        ["withdraw"],
         ["portfolio", "create"],
         ["portfolio", "list"],
         ["portfolio", "reset"],
         ["portfolio", "delete"],
-        ["capital", "show"],
-        ["capital", "deposit"],
-        ["capital", "withdraw"],
         ["capital", "log"],
         ["capital", "entry"],
         ["capital", "entry", "edit"],
@@ -81,8 +88,10 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     for command in ("create", "list", "delete", "reset"):
         assert f"│ {command} " in portfolio.output
     assert "│ show " not in portfolio.output
-    for command in ("show", "deposit", "withdraw", "log", "entry"):
+    for command in ("log", "entry"):
         assert f"│ {command} " in capital.output
+    for command in ("show", "deposit", "withdraw"):
+        assert f"│ {command} " not in capital.output
     for command in ("edit", "delete"):
         assert f"│ {command} " not in capital.output
     entry = runner.invoke(app, ["capital", "entry", "--help"])
@@ -107,8 +116,10 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     for removed_command in ("show", "summary", "edit", "delete-entry"):
         assert f"│ {removed_command} " not in asset.output
     assert "│ summary " not in asset.output
-    assert "mpal capital show -p <portfolio>" in capital.output
-    assert "mpal capital deposit <amount> -p <portfolio>" in capital.output
+    assert "mpal capital -p <portfolio>" in capital.output
+    assert "mpal capital show -p <portfolio>" not in capital.output
+    assert "mpal capital deposit <amount> -p <portfolio>" not in capital.output
+    assert "mpal capital withdraw <amount> -p <portfolio>" not in capital.output
     assert "mpal capital entry edit <entry-number> -p <portfolio>" in capital.output
     assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in asset.output
     assert "mpal asset list -p <portfolio>" in asset.output
@@ -128,9 +139,8 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
         ["portfolio", "list"],
         ["portfolio", "reset"],
         ["portfolio", "delete"],
-        ["capital", "show"],
-        ["capital", "deposit"],
-        ["capital", "withdraw"],
+        ["deposit"],
+        ["withdraw"],
         ["capital", "log"],
         ["capital", "entry"],
         ["capital", "entry", "edit"],
@@ -158,9 +168,8 @@ def test_official_command_help_is_registered(arguments: list[str]) -> None:
 @pytest.mark.parametrize(
     "arguments",
     [
-        ["capital", "show", "--help"],
-        ["capital", "deposit", "--help"],
-        ["capital", "withdraw", "--help"],
+        ["deposit", "--help"],
+        ["withdraw", "--help"],
         ["capital", "log", "--help"],
         ["capital", "entry", "edit", "--help"],
         ["capital", "entry", "delete", "--help"],

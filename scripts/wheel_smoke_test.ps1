@@ -91,7 +91,7 @@ try {
     Invoke-VenvMpal -Arguments @("--help")
     Invoke-VenvMpal -Arguments @("init")
     Invoke-VenvMpal -Arguments @("portfolio", "create", "etfs", "--initial", "10000")
-    Invoke-VenvMpal -Arguments @("capital", "show", "-p", "etfs")
+    Invoke-VenvMpal -Arguments @("capital", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("asset", "add", "ETHA", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("asset", "buy", "ETHA", "-p", "etfs", "--price", "22.04", "--quantity", "10")
     Invoke-VenvMpal -Arguments @("asset", "list")

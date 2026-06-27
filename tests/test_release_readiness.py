@@ -51,7 +51,7 @@ def test_outflow_validation_includes_active_asset_cash_effects(
     database_path = _initialize_asset(tmp_path, monkeypatch)
     _buy()
 
-    result = runner.invoke(app, ["capital", "withdraw", "300", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "300", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
@@ -90,7 +90,7 @@ def test_outflow_validation_includes_asset_income_and_sell_proceeds(
         == 0
     )
 
-    result = runner.invoke(app, ["capital", "withdraw", "170", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "170", "-p", "stocks"])
 
     assert result.exit_code == 0
 
@@ -109,7 +109,7 @@ def test_outflow_validation_excludes_deleted_asset_cash_effects(
         == 0
     )
 
-    result = runner.invoke(app, ["capital", "withdraw", "1000", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "1000", "-p", "stocks"])
 
     assert result.exit_code == 0
 

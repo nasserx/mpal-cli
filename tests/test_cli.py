@@ -15,9 +15,11 @@ runner = CliRunner()
 VISIBLE_COMMANDS = {
     "asset",
     "capital",
+    "deposit",
     "init",
     "portfolio",
     "summary",
+    "withdraw",
 }
 LEGACY_COMMANDS = {
     "buy",
@@ -45,7 +47,7 @@ def test_help_exits_successfully() -> None:
     assert "Examples:" in result.output
     assert "mpal portfolio create <portfolio> [--initial <amount>]" in result.output
     assert "mpal capital delete <entry-number> -p <portfolio>" not in result.output
-    assert "mpal capital deposit <amount> -p <portfolio>" in result.output
+    assert "mpal deposit <amount> -p <portfolio>" in result.output
 
 
 def test_version_exits_successfully() -> None:
@@ -609,7 +611,7 @@ def test_capital_show_requires_initialized_database(
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -624,7 +626,7 @@ def test_capital_show_requires_active_portfolio(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -638,11 +640,11 @@ def test_capital_show_displays_capital_only_state(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250.50", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "75.25", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250.50", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "75.25", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "-p", "stocks"])
 
     assert result.exit_code == 0
     for column in ("Portfolio", "Deposits", "Withdrawals", "Net Capital"):
@@ -670,11 +672,11 @@ def test_capital_show_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+    result = runner.invoke(app, ["capital", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -826,7 +828,7 @@ def test_inflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "Deposit recorded for portfolio 'stocks'." in result.output
@@ -851,7 +853,7 @@ def test_inflow_accepts_past_date(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "deposit", "1000", "-p", "stocks", "--date", past_date.isoformat()],
+        ["deposit", "1000", "-p", "stocks", "--date", past_date.isoformat()],
     )
 
     assert result.exit_code == 0
@@ -871,7 +873,7 @@ def test_inflow_accepts_today(tmp_path: Path, monkeypatch) -> None:
 
     result = runner.invoke(
         app,
-        ["capital", "deposit", "1000", "-p", "stocks", "--date", today.isoformat()],
+        ["deposit", "1000", "-p", "stocks", "--date", today.isoformat()],
     )
 
     assert result.exit_code == 0
@@ -887,7 +889,6 @@ def test_inflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "1000",
             "-p",
@@ -913,7 +914,6 @@ def test_inflow_stores_decimal_amount_as_minor_units(
     result = runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "1000.50",
             "-p",
@@ -940,7 +940,7 @@ def test_inflow_rejects_zero_amount(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "deposit", "0", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "0", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Amount must be greater than zero." in result.output
@@ -952,7 +952,7 @@ def test_inflow_rejects_negative_amount(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "deposit", "-10", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "-10", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Amount must be greater than zero." in result.output
@@ -964,7 +964,7 @@ def test_inflow_rejects_invalid_amount(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "deposit", "not-a-number", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "not-a-number", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Invalid amount: 'not-a-number'." in result.output
@@ -979,7 +979,7 @@ def test_inflow_rejects_more_than_two_decimal_places(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["capital", "deposit", "10.001", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "10.001", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Amount cannot have more than 2 decimal places." in result.output
@@ -989,7 +989,7 @@ def test_inflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -1001,7 +1001,7 @@ def test_inflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> None
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -1021,7 +1021,7 @@ def test_inflow_fails_for_soft_deleted_portfolio(
             ("stocks",),
         )
 
-    result = runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    result = runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -1032,9 +1032,9 @@ def test_outflow_creates_capital_entry(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "Withdrawal recorded for portfolio 'stocks'." in result.output
@@ -1060,7 +1060,6 @@ def test_outflow_rejects_future_date(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(
         app,
         [
-            "capital",
             "withdraw",
             "250",
             "-p",
@@ -1082,12 +1081,11 @@ def test_outflow_stores_decimal_amount_as_minor_units(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app,
         [
-            "capital",
             "withdraw",
             "250.50",
             "-p",
@@ -1131,9 +1129,9 @@ def test_outflow_rejects_invalid_amounts(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "withdraw", amount, "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", amount, "-p", "stocks"])
 
     assert result.exit_code == 1
     assert message in result.output
@@ -1143,7 +1141,7 @@ def test_outflow_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -1155,7 +1153,7 @@ def test_outflow_fails_for_unknown_portfolio(tmp_path: Path, monkeypatch) -> Non
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -1169,9 +1167,9 @@ def test_outflow_fails_when_cash_is_insufficient(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "100", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "withdraw", "100.01", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "100.01", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
@@ -1191,9 +1189,9 @@ def test_outflow_succeeds_when_cash_is_exactly_enough(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250.50", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250.50", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "withdraw", "250.50", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "250.50", "-p", "stocks"])
 
     assert result.exit_code == 0
 
@@ -1206,10 +1204,10 @@ def test_outflow_cash_check_includes_prior_active_outflows(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "400", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "400", "-p", "stocks"])
 
-    result = runner.invoke(app, ["capital", "withdraw", "100.01", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "100.01", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
@@ -1223,7 +1221,7 @@ def test_outflow_cash_check_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
@@ -1233,7 +1231,7 @@ def test_outflow_cash_check_ignores_soft_deleted_entries(
             """
         )
 
-    result = runner.invoke(app, ["capital", "withdraw", "1", "-p", "stocks"])
+    result = runner.invoke(app, ["withdraw", "1", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Insufficient cash in portfolio 'stocks'." in result.output
@@ -1272,7 +1270,7 @@ def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000.50", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000.50", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
 
@@ -1285,8 +1283,8 @@ def test_summary_after_inflow_and_outflow(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250.25", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250.25", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
 
@@ -1302,8 +1300,8 @@ def test_summary_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
@@ -1328,8 +1326,8 @@ def test_summary_ignores_soft_deleted_outflow(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             """
@@ -1379,7 +1377,7 @@ def test_summary_formats_money_with_two_decimal_places(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1.2", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1.2", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
 
@@ -1415,8 +1413,8 @@ def test_summary_v01_book_fields_are_deterministic(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
 
@@ -1507,9 +1505,9 @@ def test_summary_all_derives_each_portfolio_independently(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500.50", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500.50", "-p", "crypto"])
 
     result = runner.invoke(app, ["portfolio", "list"])
 
@@ -1526,8 +1524,8 @@ def test_summary_all_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
@@ -1640,7 +1638,6 @@ def test_log_shows_deposit_entry_with_date_note_and_amount(
     runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "1000.5",
             "-p",
@@ -1670,11 +1667,10 @@ def test_log_shows_withdraw_entry(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500", "-p", "stocks"])
     runner.invoke(
         app,
         [
-            "capital",
             "withdraw",
             "250",
             "-p",
@@ -1703,11 +1699,11 @@ def test_log_ignores_soft_deleted_entries(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(
         app,
-        ["capital", "deposit", "100", "-p", "stocks", "--note", "keep this"],
+        ["deposit", "100", "-p", "stocks", "--note", "keep this"],
     )
     runner.invoke(
         app,
-        ["capital", "deposit", "200", "-p", "stocks", "--note", "hide this"],
+        ["deposit", "200", "-p", "stocks", "--note", "hide this"],
     )
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
@@ -1734,12 +1730,8 @@ def test_log_only_shows_selected_portfolio(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(
-        app, ["capital", "deposit", "100", "-p", "stocks", "--note", "stock entry"]
-    )
-    runner.invoke(
-        app, ["capital", "deposit", "200", "-p", "crypto", "--note", "crypto entry"]
-    )
+    runner.invoke(app, ["deposit", "100", "-p", "stocks", "--note", "stock entry"])
+    runner.invoke(app, ["deposit", "200", "-p", "crypto", "--note", "crypto entry"])
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
 
@@ -1757,8 +1749,8 @@ def test_entry_numbers_start_at_one_for_each_portfolio(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "200", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "100", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "200", "-p", "crypto"])
 
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
@@ -1781,8 +1773,8 @@ def test_new_entries_increment_portfolio_entry_numbers(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "100", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "100", "-p", "stocks"])
 
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
@@ -1800,11 +1792,11 @@ def test_deleted_and_reset_entries_do_not_reuse_entry_numbers(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "300", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "300", "-p", "stocks"])
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
-    runner.invoke(app, ["capital", "deposit", "400", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "400", "-p", "stocks"])
 
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         entries = connection.execute(
@@ -1853,7 +1845,6 @@ def test_log_ordering_is_date_then_entry_number(
     runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "300",
             "-p",
@@ -1867,7 +1858,6 @@ def test_log_ordering_is_date_then_entry_number(
     runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "100",
             "-p",
@@ -1881,7 +1871,6 @@ def test_log_ordering_is_date_then_entry_number(
     runner.invoke(
         app,
         [
-            "capital",
             "deposit",
             "200",
             "-p",
@@ -1905,7 +1894,7 @@ def test_edit_amount(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500.50"]
@@ -1926,7 +1915,7 @@ def test_edit_date(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app,
@@ -1947,9 +1936,7 @@ def test_edit_note(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(
-        app, ["capital", "deposit", "1000", "-p", "stocks", "--note", "original"]
-    )
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks", "--note", "original"])
 
     result = runner.invoke(
         app,
@@ -1979,7 +1966,7 @@ def test_edit_multiple_fields_atomically(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app,
@@ -2020,11 +2007,10 @@ def test_edit_multiple_fields_roll_back_together_on_cash_failure(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
     runner.invoke(
         app,
         [
-            "capital",
             "withdraw",
             "250",
             "-p",
@@ -2116,7 +2102,7 @@ def test_edit_fails_when_entry_belongs_to_another_portfolio(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "1000", "-p", "crypto"])
 
     result = runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
@@ -2135,8 +2121,8 @@ def test_edit_targets_portfolio_local_entry_number(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "200", "-p", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "200", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "100", "-p", "stocks"])
 
     result = runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "150"]
@@ -2161,7 +2147,7 @@ def test_edit_fails_for_soft_deleted_entry(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 1"
@@ -2180,7 +2166,7 @@ def test_edit_fails_without_edit_options(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "edit", "1", "-p", "stocks"])
 
@@ -2207,7 +2193,7 @@ def test_edit_rejects_invalid_amount(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", amount]
@@ -2222,7 +2208,7 @@ def test_edit_rejects_invalid_date(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app,
@@ -2238,7 +2224,7 @@ def test_edit_rejects_compact_date_format(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(
         app,
@@ -2282,8 +2268,8 @@ def test_edit_outflow_cannot_make_cash_negative(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(
         app,
@@ -2308,8 +2294,8 @@ def test_edit_inflow_downward_cannot_make_cash_negative(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "750", "-p", "stocks"])
 
     result = runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "500"]
@@ -2333,8 +2319,8 @@ def test_edit_cash_validation_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "900", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "900", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
@@ -2358,7 +2344,7 @@ def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
     runner.invoke(
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "1250.50"]
     )
@@ -2374,9 +2360,7 @@ def test_log_reflects_edited_fields(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(
-        app, ["capital", "deposit", "1000", "-p", "stocks", "--note", "original"]
-    )
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks", "--note", "original"])
     runner.invoke(
         app,
         [
@@ -2409,7 +2393,7 @@ def test_delete_entry_soft_deletes_active_entry(tmp_path: Path, monkeypatch) -> 
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
@@ -2429,9 +2413,7 @@ def test_deleted_entry_is_hidden_from_log(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(
-        app, ["capital", "deposit", "1000", "-p", "stocks", "--note", "removed entry"]
-    )
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks", "--note", "removed entry"])
     runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
@@ -2449,8 +2431,8 @@ def test_deleted_entry_is_ignored_by_summary(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
@@ -2506,7 +2488,7 @@ def test_delete_entry_number_in_another_portfolio_is_not_found(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "1000", "-p", "crypto"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
@@ -2523,8 +2505,8 @@ def test_delete_targets_portfolio_local_entry_number(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "200", "-p", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "100", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "200", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "100", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
@@ -2552,7 +2534,7 @@ def test_delete_entry_fails_for_already_soft_deleted_entry(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
@@ -2569,8 +2551,8 @@ def test_deleting_outflow_succeeds_and_increases_cash(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "750", "-p", "stocks"])
 
     delete_result = runner.invoke(
         app, ["capital", "entry", "delete", "2", "-p", "stocks"]
@@ -2591,8 +2573,8 @@ def test_deleting_inflow_fails_if_cash_would_be_negative(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "750", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
@@ -2608,8 +2590,8 @@ def test_failed_delete_entry_keeps_entry_active(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "750", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "750", "-p", "stocks"])
 
     result = runner.invoke(app, ["capital", "entry", "delete", "1", "-p", "stocks"])
 
@@ -2630,8 +2612,8 @@ def test_delete_entry_cash_validation_ignores_soft_deleted_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "900", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "900", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = CURRENT_TIMESTAMP WHERE id = 2"
@@ -2684,7 +2666,7 @@ def test_reset_without_yes_does_not_change_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     result = runner.invoke(app, ["portfolio", "reset", "stocks"])
 
@@ -2705,8 +2687,8 @@ def test_reset_soft_deletes_all_active_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
@@ -2729,8 +2711,8 @@ def test_reset_preserves_already_soft_deleted_timestamp(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
@@ -2758,8 +2740,8 @@ def test_reset_does_not_affect_other_portfolios(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["portfolio", "create", "crypto"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "500", "-p", "crypto"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "500", "-p", "crypto"])
 
     result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
@@ -2784,7 +2766,7 @@ def test_log_is_empty_after_reset(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
     result = runner.invoke(app, ["capital", "log", "-p", "stocks"])
@@ -2798,8 +2780,8 @@ def test_summary_is_zero_after_reset(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
     result = runner.invoke(app, ["summary", "-p", "stocks"])
@@ -2815,7 +2797,7 @@ def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
-    runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "1000", "-p", "stocks"])
 
     reset_result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
     summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
@@ -2897,7 +2879,7 @@ def test_delete_soft_deletes_portfolio_and_active_entries(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+    runner.invoke(app, ["withdraw", "250", "-p", "stocks"])
 
     result = runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
 
@@ -2926,7 +2908,7 @@ def test_delete_preserves_existing_soft_deleted_entry_timestamp(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
+    runner.invoke(app, ["deposit", "250", "-p", "stocks"])
     with sqlite3.connect(data_dir / "mpal.db") as connection:
         connection.execute(
             "UPDATE capital_entries SET deleted_at = ? WHERE id = 2",
@@ -2996,10 +2978,10 @@ def test_deleted_portfolio_disappears_from_summary_all(
     "arguments",
     [
         ["summary", "-p", "stocks"],
-        ["capital", "show", "-p", "stocks"],
+        ["capital", "-p", "stocks"],
         ["capital", "log", "-p", "stocks"],
-        ["capital", "deposit", "100", "-p", "stocks"],
-        ["capital", "withdraw", "100", "-p", "stocks"],
+        ["deposit", "100", "-p", "stocks"],
+        ["withdraw", "100", "-p", "stocks"],
         ["capital", "entry", "edit", "1", "-p", "stocks", "--note", "changed"],
         ["capital", "entry", "delete", "1", "-p", "stocks"],
         ["portfolio", "reset", "stocks", "--yes"],

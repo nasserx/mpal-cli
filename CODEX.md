@@ -21,6 +21,8 @@ Root help exposes only:
 
 - `mpal init`
 - `mpal summary`
+- `mpal deposit`
+- `mpal withdraw`
 - `mpal portfolio`
 - `mpal capital`
 - `mpal asset`
@@ -34,9 +36,9 @@ Implemented portfolio commands:
 
 Implemented capital commands:
 
-- `mpal capital show -p <portfolio>`
-- `mpal capital deposit <amount> -p <portfolio>`
-- `mpal capital withdraw <amount> -p <portfolio>`
+- `mpal deposit <amount> -p <portfolio>`
+- `mpal withdraw <amount> -p <portfolio>`
+- `mpal capital -p <portfolio>`
 - `mpal capital log -p <portfolio>`
 - `mpal capital entry edit <entry-number> -p <portfolio>`
 - `mpal capital entry delete <entry-number> -p <portfolio>`
@@ -71,6 +73,13 @@ and `mpal asset show <symbol> -p <portfolio>` commands were removed without
 hidden compatibility aliases because `summary` now owns all summary/reporting
 views.
 
+Use `mpal deposit <amount> -p <portfolio>` for external capital deposits and
+`mpal withdraw <amount> -p <portfolio>` for external capital withdrawals. Use
+`mpal capital -p <portfolio>` to inspect current capital and
+`mpal capital log -p <portfolio>` to inspect capital history. The pre-release
+`mpal capital show`, `mpal capital deposit`, and `mpal capital withdraw`
+commands were removed without hidden compatibility aliases.
+
 This branch intentionally removes the earlier root commands and the old
 combined `<portfolio>/<symbol>` argument. `asset summary`, `asset edit`,
 `asset delete-entry`, `capital edit`, and `capital delete` are already removed
@@ -79,7 +88,8 @@ without hidden or compatibility aliases.
 Command vocabulary rule:
 
 - `list` shows a collection of current things.
-- `show` is retained for non-summary current state views, such as capital.
+- `deposit` and `withdraw` are root daily capital actions.
+- `capital -p` shows the current capital view.
 - `log` shows historical entries or transactions.
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.

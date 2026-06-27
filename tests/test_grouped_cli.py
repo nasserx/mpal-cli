@@ -23,8 +23,8 @@ def test_official_portfolio_capital_and_asset_workflow(
 
     commands = (
         ["portfolio", "create", "stocks", "--initial", "2000"],
-        ["capital", "deposit", "100", "-p", "stocks"],
-        ["capital", "withdraw", "50", "--portfolio", "stocks"],
+        ["deposit", "100", "-p", "stocks"],
+        ["withdraw", "50", "--portfolio", "stocks"],
         ["asset", "add", "AAPL", "MSFT", "-p", "stocks"],
         [
             "asset",
@@ -57,7 +57,7 @@ def test_official_portfolio_capital_and_asset_workflow(
     asset_list = runner.invoke(app, ["asset", "list", "-p", "stocks"])
     asset_show = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
     asset_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
-    capital_show = runner.invoke(app, ["capital", "show", "-p", "stocks"])
+    capital_show = runner.invoke(app, ["capital", "-p", "stocks"])
     capital_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     portfolio_list = runner.invoke(app, ["portfolio", "list"])
     portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
@@ -112,9 +112,8 @@ def test_official_portfolio_capital_and_asset_workflow(
 @pytest.mark.parametrize(
     "arguments",
     [
-        ["capital", "deposit", "100"],
-        ["capital", "withdraw", "100"],
-        ["capital", "show"],
+        ["deposit", "100"],
+        ["withdraw", "100"],
         ["capital", "log"],
         ["capital", "entry", "edit", "1", "--note", "changed"],
         ["capital", "entry", "delete", "1"],
@@ -134,6 +133,14 @@ def test_portfolio_option_is_required(arguments: list[str]) -> None:
     assert result.exit_code == 2
     assert "Missing option" in result.output
     assert "--portfolio" in result.output
+
+
+def test_capital_default_requires_portfolio() -> None:
+    result = runner.invoke(app, ["capital"])
+
+    assert result.exit_code == 1
+    assert "--portfolio is required." in result.output
+    assert "Traceback" not in result.output
 
 
 @pytest.mark.parametrize(
@@ -225,6 +232,20 @@ def test_removed_portfolio_show_command_is_invalid() -> None:
     ],
 )
 def test_legacy_capital_command_shapes_are_removed(arguments: list[str]) -> None:
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 2
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["capital", "show", "-p", "stocks"],
+        ["capital", "deposit", "100", "-p", "stocks"],
+        ["capital", "withdraw", "100", "-p", "stocks"],
+    ],
+)
+def test_removed_nested_capital_commands_are_invalid(arguments: list[str]) -> None:
     result = runner.invoke(app, arguments)
 
     assert result.exit_code == 2

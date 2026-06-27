@@ -14,6 +14,8 @@ market APIs, calculate market value, or calculate unrealized PnL.
 
 - `init`
 - `summary`
+- `deposit`
+- `withdraw`
 - `portfolio`
 - `capital`
 - `asset`
@@ -27,7 +29,8 @@ The command hierarchy standardizes command names around the shape of the data
 being shown or modified:
 
 - `list` shows a collection of current things.
-- `show` is retained for non-summary current state views, such as capital.
+- `show` is not used for summary/reporting views; current capital is the
+  default `capital -p` view.
 - `log` shows historical entries or transactions.
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.
@@ -119,17 +122,30 @@ Portfolio summary columns remain:
 
 Internal database IDs are never displayed.
 
+### Daily capital actions
+
+```console
+mpal deposit <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
+mpal deposit <amount> -p <portfolio> [--date <date>] [--note <text>]
+
+mpal withdraw <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
+mpal withdraw <amount> -p <portfolio> [--date <date>] [--note <text>]
+```
+
+`--portfolio` / `-p` is required. There is no default portfolio.
+
+- `deposit` records external money added to the portfolio. Storage continues
+  to use the existing `inflow` entry type.
+- `withdraw` records external money removed from the portfolio. Storage
+  continues to use the existing `outflow` entry type.
+- Withdrawal validation uses current active Cash, including active asset
+  income, buy cash effects, sell proceeds, and soft-delete filtering.
+
 ### Capital
 
 ```console
-mpal capital show --portfolio <portfolio>
-mpal capital show -p <portfolio>
-
-mpal capital deposit <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
-mpal capital deposit <amount> -p <portfolio> [--date <date>] [--note <text>]
-
-mpal capital withdraw <amount> --portfolio <portfolio> [--date <date>] [--note <text>]
-mpal capital withdraw <amount> -p <portfolio> [--date <date>] [--note <text>]
+mpal capital --portfolio <portfolio>
+mpal capital -p <portfolio>
 
 mpal capital log --portfolio <portfolio>
 mpal capital log -p <portfolio>
@@ -143,15 +159,9 @@ mpal capital entry delete <entry-number> -p <portfolio>
 
 `--portfolio` / `-p` is required. There is no default portfolio.
 
-- `show` shows capital-only current state for one active portfolio: deposits,
-  withdrawals, and net capital. It should not duplicate full portfolio fields
-  such as Positions or Book Value.
-- `deposit` records external money added to the portfolio. Storage continues
-  to use the existing `inflow` entry type.
-- `withdraw` records external money removed from the portfolio. Storage
-  continues to use the existing `outflow` entry type.
-- Withdrawal validation uses current active Cash, including active asset
-  income, buy cash effects, sell proceeds, and soft-delete filtering.
+- `capital -p` shows capital-only current state for one active portfolio:
+  deposits, withdrawals, and net capital. It should not duplicate full
+  portfolio fields such as Positions or Book Value.
 - `log` shows active capital entries.
 - `entry edit` requires at least one of `--amount`, `--date`, or `--note`.
 - `entry delete` soft-deletes one portfolio-local entry number.
@@ -159,8 +169,12 @@ mpal capital entry delete <entry-number> -p <portfolio>
 Capital entry numbers are stable within one portfolio and are not internal row
 IDs.
 
-The previous `mpal capital edit` and `mpal capital delete` command names are
-removed. No compatibility aliases are retained.
+The previous `mpal capital show`, `mpal capital deposit`,
+`mpal capital withdraw`, `mpal capital edit`, and `mpal capital delete`
+command names are removed. `capital show`, `capital deposit`, and
+`capital withdraw` were removed before public release because current capital
+review is `capital -p` and daily capital actions are top-level `deposit` and
+`withdraw` commands. No compatibility aliases are retained.
 
 ### Assets
 
@@ -395,14 +409,22 @@ The previous summary-style commands `mpal portfolio show <portfolio>` and
 Use `mpal summary -p <portfolio>` and `mpal summary -p <portfolio> -a <asset>`
 instead.
 
+The previous nested capital forms `mpal capital show -p <portfolio>`,
+`mpal capital deposit <amount> -p <portfolio>`, and
+`mpal capital withdraw <amount> -p <portfolio>` are removed before public
+release. Use `mpal capital -p <portfolio>`, `mpal deposit <amount> -p
+<portfolio>`, and `mpal withdraw <amount> -p <portfolio>` instead.
+
 No hidden alias plan exists for this cleanup.
 
 ## Help contract
 
-- Root help lists only the five root commands.
+- Root help lists only the seven root commands.
 - Help examples use `mpal`.
 - Help examples use `--portfolio` / `-p`.
 - Help does not advertise removed commands or compatibility aliases.
 - Portfolio-scoped command help shows both `--portfolio` and `-p`.
 - Summary help documents global, portfolio, and portfolio-asset forms, and
   states that `--asset` requires `--portfolio`.
+- Capital help documents the default `mpal capital -p <portfolio>` view, `log`,
+  and `entry edit/delete`; it does not advertise removed nested daily actions.

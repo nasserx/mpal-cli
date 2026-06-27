@@ -86,9 +86,11 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal portfolio list
 
-  mpal capital deposit <amount> -p <portfolio>
+  mpal deposit <amount> -p <portfolio>
 
-  mpal capital show -p <portfolio>
+  mpal withdraw <amount> -p <portfolio>
+
+  mpal capital -p <portfolio>
 
   mpal asset add <symbol> \[symbol...] -p <portfolio>
 
@@ -110,11 +112,7 @@ PORTFOLIO_HELP_EXAMPLES = """Examples:
 
 CAPITAL_HELP_EXAMPLES = """Examples:
 
-  mpal capital show -p <portfolio>
-
-  mpal capital deposit <amount> -p <portfolio>
-
-  mpal capital withdraw <amount> -p <portfolio>
+  mpal capital -p <portfolio>
 
   mpal capital log -p <portfolio>
 
@@ -174,9 +172,9 @@ portfolio_app = typer.Typer(
 )
 capital_app = typer.Typer(
     name="capital",
-    help="Manage external portfolio capital entries.",
+    help="Review external portfolio capital entries.",
     epilog=CAPITAL_HELP_EXAMPLES,
-    no_args_is_help=True,
+    invoke_without_command=True,
 )
 capital_entry_app = typer.Typer(
     name="entry",
@@ -267,6 +265,46 @@ def summary_command(
         print_asset_summary(portfolio, asset_summary)
 
 
+@app.command("deposit", context_settings={"ignore_unknown_options": True})
+def deposit_command(
+    amount: Annotated[str, typer.Argument(help="Capital deposit amount.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional entry note."),
+    ] = None,
+) -> None:
+    """Record external money added to a portfolio."""
+    _record_capital_deposit(amount, portfolio, date, note)
+
+
+@app.command("withdraw", context_settings={"ignore_unknown_options": True})
+def withdraw_command(
+    amount: Annotated[str, typer.Argument(help="Capital withdrawal amount.")],
+    portfolio: Annotated[str, PORTFOLIO_OPTION],
+    date: Annotated[
+        str | None,
+        typer.Option(
+            "--date",
+            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Optional entry note."),
+    ] = None,
+) -> None:
+    """Record external money withdrawn from a portfolio."""
+    _record_capital_withdrawal(amount, portfolio, date, note)
+
+
 @portfolio_app.command("create")
 def portfolio_create(
     portfolio: Annotated[str, typer.Argument(help="Name of the portfolio to create.")],
@@ -355,23 +393,26 @@ def portfolio_reset(
     print_success(f"Portfolio '{portfolio}' reset.")
 
 
-@capital_app.command("deposit", context_settings={"ignore_unknown_options": True})
-def capital_deposit(
-    amount: Annotated[str, typer.Argument(help="Capital deposit amount.")],
-    portfolio: Annotated[str, PORTFOLIO_OPTION],
-    date: Annotated[
-        str | None,
-        typer.Option(
-            "--date",
-            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
-        ),
-    ] = None,
-    note: Annotated[
-        str | None,
-        typer.Option("--note", help="Optional entry note."),
-    ] = None,
+@capital_app.callback()
+def capital_default(
+    context: typer.Context,
+    portfolio: Annotated[str | None, PORTFOLIO_OPTION] = None,
 ) -> None:
-    """Record external money added to a portfolio."""
+    """Show capital-only current state for a portfolio."""
+    if context.invoked_subcommand is not None:
+        return
+    if portfolio is None:
+        print_error("--portfolio is required.")
+        raise typer.Exit(code=1)
+    _show_capital_state(portfolio)
+
+
+def _record_capital_deposit(
+    amount: str,
+    portfolio: str,
+    date: str | None,
+    note: str | None,
+) -> None:
     try:
         amount_minor = parse_amount_minor(amount)
         entry_date = (
@@ -385,23 +426,12 @@ def capital_deposit(
     print_success(f"Deposit recorded for portfolio '{portfolio}'.")
 
 
-@capital_app.command("withdraw", context_settings={"ignore_unknown_options": True})
-def capital_withdraw(
-    amount: Annotated[str, typer.Argument(help="Capital withdrawal amount.")],
-    portfolio: Annotated[str, PORTFOLIO_OPTION],
-    date: Annotated[
-        str | None,
-        typer.Option(
-            "--date",
-            help="Entry date in YYYY-MM-DD; defaults to today and cannot be future.",
-        ),
-    ] = None,
-    note: Annotated[
-        str | None,
-        typer.Option("--note", help="Optional entry note."),
-    ] = None,
+def _record_capital_withdrawal(
+    amount: str,
+    portfolio: str,
+    date: str | None,
+    note: str | None,
 ) -> None:
-    """Record external money withdrawn from a portfolio."""
     try:
         amount_minor = parse_amount_minor(amount)
         entry_date = (
@@ -415,11 +445,7 @@ def capital_withdraw(
     print_success(f"Withdrawal recorded for portfolio '{portfolio}'.")
 
 
-@capital_app.command("show")
-def capital_show(
-    portfolio: Annotated[str, PORTFOLIO_OPTION],
-) -> None:
-    """Show capital-only current state for a portfolio."""
+def _show_capital_state(portfolio: str) -> None:
     try:
         state = get_capital_state(portfolio)
     except MpalError as error:
