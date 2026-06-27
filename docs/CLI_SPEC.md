@@ -90,7 +90,7 @@ portfolio summary columns:
 `Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return`
 
 `mpal summary -p <portfolio> -a <asset>` shows one active asset within one
-active portfolio using the single-asset summary columns:
+active portfolio using these columns:
 
 `Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
@@ -169,12 +169,8 @@ mpal capital entry delete <entry-number> -p <portfolio>
 Capital entry numbers are stable within one portfolio and are not internal row
 IDs.
 
-The previous `mpal capital show`, `mpal capital deposit`,
-`mpal capital withdraw`, `mpal capital edit`, and `mpal capital delete`
-command names are removed. `capital show`, `capital deposit`, and
-`capital withdraw` were removed before public release because current capital
-review is `capital -p` and daily capital actions are top-level `deposit` and
-`withdraw` commands. No compatibility aliases are retained.
+Only the command forms listed above are supported for capital review and
+capital entry correction. No compatibility aliases are retained.
 
 ### Assets
 
@@ -219,7 +215,7 @@ uppercase through the shared symbol validator.
 - `list -p` shows all active assets in one portfolio. It uses the same columns
   as the global list and keeps the first column as `Asset/Portfolio` for
   consistent scanning.
-- One-asset summary output is provided by
+- One-asset reporting output is provided by
   `mpal summary -p <portfolio> -a <asset>`.
 - `log` shows one asset's active transactions.
 - `delete` requires `--yes` and soft-deletes the asset and its active
@@ -260,10 +256,9 @@ Asset log columns remain:
 The `#` value is a stable asset-local transaction number and is not an
 internal database ID.
 
-`mpal portfolio show`, `mpal asset show`, `mpal asset summary`,
-`mpal asset edit`, and `mpal asset delete-entry` are removed. `portfolio show`
-and `asset show` were removed before public release because `summary` now owns
-all summary/reporting views. No compatibility aliases are retained.
+`summary` owns one-portfolio and one-asset reporting views. Asset
+transaction correction is under `asset entry edit/delete`. No compatibility
+aliases are retained.
 
 ### Asset transaction correction
 
@@ -399,21 +394,10 @@ mpal buy
 mpal sell
 ```
 
-The previous combined portfolio/symbol positional argument is also removed
-from legacy asset summary, log, delete, income, buy, and sell commands. Current
-asset commands receive the symbol positionally and the portfolio through
-`--portfolio` / `-p`.
-
-The previous summary-style commands `mpal portfolio show <portfolio>` and
-`mpal asset show <asset> -p <portfolio>` are removed before public release.
-Use `mpal summary -p <portfolio>` and `mpal summary -p <portfolio> -a <asset>`
-instead.
-
-The previous nested capital forms `mpal capital show -p <portfolio>`,
-`mpal capital deposit <amount> -p <portfolio>`, and
-`mpal capital withdraw <amount> -p <portfolio>` are removed before public
-release. Use `mpal capital -p <portfolio>`, `mpal deposit <amount> -p
-<portfolio>`, and `mpal withdraw <amount> -p <portfolio>` instead.
+Current asset commands receive the symbol positionally and the portfolio
+through `--portfolio` / `-p`. Current capital commands use top-level
+`deposit` / `withdraw` for daily actions and `capital -p` for current capital
+review.
 
 No hidden alias plan exists for this cleanup.
 

@@ -11,6 +11,43 @@ from mpal.cli import app
 runner = CliRunner()
 
 
+def test_current_docs_and_scripts_do_not_use_removed_command_forms() -> None:
+    project_root = Path(__file__).parents[1]
+    checked_paths = [
+        project_root / "README.md",
+        project_root / "CODEX.md",
+        project_root / "CHANGELOG.md",
+        project_root / "docs",
+        project_root / "scripts",
+    ]
+    removed_references = (
+        "mpal portfolio show",
+        "mpal asset show",
+        "mpal capital show",
+        "mpal capital deposit",
+        "mpal capital withdraw",
+        "`portfolio show`",
+        "`asset show`",
+        "`capital show`",
+        "`capital deposit`",
+        "`capital withdraw`",
+        "`asset summary`",
+        "fundlog",
+        "fundlog-cli",
+    )
+
+    current_text = []
+    for path in checked_paths:
+        paths = path.rglob("*") if path.is_dir() else (path,)
+        for candidate in paths:
+            if candidate.is_file():
+                current_text.append(candidate.read_text(encoding="utf-8").lower())
+
+    combined = "\n".join(current_text)
+    for reference in removed_references:
+        assert reference not in combined
+
+
 def _initialize_asset(tmp_path: Path, monkeypatch) -> Path:
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))

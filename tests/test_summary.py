@@ -87,9 +87,7 @@ def test_summary_help_describes_global_active_portfolio_summary() -> None:
     result = runner.invoke(app, ["summary", "--help"])
 
     assert result.exit_code == 0
-    assert "Show summaries: no options for global, -p for portfolio, -p -a" in (
-        result.output
-    )
+    assert "Show global, portfolio, or asset summaries." in result.output
     assert "--portfolio" in result.output
     assert "-p" in result.output
     assert "--asset" in result.output

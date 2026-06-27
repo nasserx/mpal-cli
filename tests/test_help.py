@@ -42,6 +42,45 @@ def test_top_level_help_lists_only_official_root_commands() -> None:
     assert "mpal asset add <symbol> [symbol...] -p <portfolio>" in result.output
 
 
+def test_top_level_help_descriptions_are_polished() -> None:
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    for command, description in (
+        ("init", "Initialize mpal's local database."),
+        ("summary", "Show global, portfolio, or asset summaries."),
+        ("deposit", "Record external money added to a portfolio."),
+        ("withdraw", "Record external money withdrawn from a portfolio."),
+        ("portfolio", "Create, list, reset, and delete portfolios."),
+        ("capital", "Review capital balance, logs, and entries."),
+        ("asset", "Manage assets, trades, income, and logs."),
+    ):
+        assert f"│ {command}" in result.output
+        assert description in result.output
+
+
+def test_top_level_help_examples_show_current_main_workflow() -> None:
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    examples = (
+        "mpal init",
+        "mpal portfolio create <portfolio> [--initial <amount>]",
+        "mpal portfolio list",
+        "mpal deposit <amount> -p <portfolio>",
+        "mpal withdraw <amount> -p <portfolio>",
+        "mpal asset add <symbol> [symbol...] -p <portfolio>",
+        "mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>",
+        "mpal summary",
+        "mpal summary -p <portfolio>",
+        "mpal summary -p <portfolio> -a <asset>",
+        "mpal capital -p <portfolio>",
+        "mpal capital log -p <portfolio>",
+    )
+    positions = [result.output.index(example) for example in examples]
+    assert positions == sorted(positions)
+
+
 def test_all_help_output_excludes_the_previous_product_name() -> None:
     old_name = "fund" + "log"
     help_commands = [

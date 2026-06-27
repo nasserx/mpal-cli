@@ -41,12 +41,6 @@ mpal asset sell <symbol> -p <portfolio> --price <price> --quantity <quantity> [-
 
 The long `--portfolio` spelling is equivalent to `-p`.
 
-This cleanup is a breaking command rename with no compatibility or hidden
-aliases. The previous combined portfolio/symbol argument form remains removed.
-The old `asset summary`, `asset show`, `asset edit`, and `asset delete-entry`
-commands are removed. `asset show` was removed before public release because
-`summary` now owns all summary/reporting views.
-
 `mpal summary -p <portfolio> -a <asset>` is the single-asset reporting view.
 `summary -a` requires `-p`.
 

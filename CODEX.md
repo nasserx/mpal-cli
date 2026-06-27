@@ -68,22 +68,16 @@ omit `-p`.
 - `mpal summary -p <portfolio> -a <asset>` summarizes one active asset within
   one active portfolio.
 
-`summary -a` requires `-p`. The pre-release `mpal portfolio show <portfolio>`
-and `mpal asset show <symbol> -p <portfolio>` commands were removed without
-hidden compatibility aliases because `summary` now owns all summary/reporting
-views.
+`summary -a` requires `-p`. `summary` owns all global, portfolio, and asset
+summary/reporting views.
 
 Use `mpal deposit <amount> -p <portfolio>` for external capital deposits and
 `mpal withdraw <amount> -p <portfolio>` for external capital withdrawals. Use
 `mpal capital -p <portfolio>` to inspect current capital and
-`mpal capital log -p <portfolio>` to inspect capital history. The pre-release
-`mpal capital show`, `mpal capital deposit`, and `mpal capital withdraw`
-commands were removed without hidden compatibility aliases.
+`mpal capital log -p <portfolio>` to inspect capital history.
 
-This branch intentionally removes the earlier root commands and the old
-combined `<portfolio>/<symbol>` argument. `asset summary`, `asset edit`,
-`asset delete-entry`, `capital edit`, and `capital delete` are already removed
-without hidden or compatibility aliases.
+This branch intentionally supports only the current command surface documented
+above. Hidden or compatibility aliases are not part of the product contract.
 
 Command vocabulary rule:
 

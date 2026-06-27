@@ -86,18 +86,14 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 - Capital cleanup moved daily actions to root `deposit` / `withdraw`, made
   `capital -p <portfolio>` the current capital view, and kept historical entry
   correction under `capital entry edit/delete`.
-- Asset current-state cleanup replaced `asset summary` with `asset list`, then
-  moved one-asset reporting to `summary -p <portfolio> -a <asset>`. Global
-  `asset list` omits `-p`.
+- Asset current-state views use `asset list`, and one-asset reporting is under
+  `summary -p <portfolio> -a <asset>`. Global `asset list` omits `-p`.
 - Asset transaction correction moved under `asset entry edit/delete`.
 - The previous root commands are removed.
 - The old combined portfolio/symbol argument form is removed.
 - Old `capital edit` and `capital delete` are removed without compatibility
   aliases.
-- Pre-release `capital show`, `capital deposit`, and `capital withdraw` were
-  removed without compatibility aliases.
 - Old `asset edit` and `asset delete-entry` are removed without compatibility
   aliases.
-- Pre-release `portfolio show` and `asset show` were removed without
-  compatibility aliases because `summary` owns all summary/reporting views.
+- `summary` owns one-portfolio and one-asset reporting views.
 - Official commands are shown in help.

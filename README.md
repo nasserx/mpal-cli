@@ -142,11 +142,9 @@ active manual transactions.
 Asset transaction correction is under `mpal asset entry edit/delete`; `mpal
 asset log` remains the historical transaction view.
 
-`portfolio show` and `asset show` were removed before public release because
-`summary` now owns all summary/reporting views.
-`capital deposit`, `capital withdraw`, and `capital show` were removed before
-public release because daily capital actions are top-level commands and
-`capital -p` owns the current capital view.
+`summary` owns global, portfolio, and asset summary/reporting views. Daily
+capital actions are top-level commands, and `capital -p` owns the current
+capital view.
 
 ## Planned capabilities
 

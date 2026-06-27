@@ -53,9 +53,8 @@ market value, or unrealized PnL.
 
 `mpal summary -p <portfolio>` uses the portfolio summary columns above for one
 active portfolio. `mpal summary -p <portfolio> -a <asset>` uses the existing
-single-asset summary view for one active asset within one active portfolio.
-`summary -a` requires `-p`. The removed pre-release `portfolio show` and
-`asset show` commands do not define separate accounting behavior.
+single-asset reporting view for one active asset within one active portfolio.
+`summary -a` requires `-p`.
 
 ### Capital
 

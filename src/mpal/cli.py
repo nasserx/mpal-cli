@@ -76,12 +76,6 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal init
 
-  mpal summary
-
-  mpal summary -p <portfolio>
-
-  mpal summary -p <portfolio> -a <asset>
-
   mpal portfolio create <portfolio> [--initial <amount>]
 
   mpal portfolio list
@@ -90,13 +84,19 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal withdraw <amount> -p <portfolio>
 
-  mpal capital -p <portfolio>
-
   mpal asset add <symbol> \[symbol...] -p <portfolio>
 
-  mpal asset list
+  mpal asset buy <symbol> -p <portfolio> --price <price> --quantity <quantity>
 
-  mpal asset list -p <portfolio>
+  mpal summary
+
+  mpal summary -p <portfolio>
+
+  mpal summary -p <portfolio> -a <asset>
+
+  mpal capital -p <portfolio>
+
+  mpal capital log -p <portfolio>
 """
 
 PORTFOLIO_HELP_EXAMPLES = """Examples:
@@ -166,13 +166,13 @@ app = typer.Typer(
 )
 portfolio_app = typer.Typer(
     name="portfolio",
-    help="Manage portfolio lifecycle and summaries.",
+    help="Create, list, reset, and delete portfolios.",
     epilog=PORTFOLIO_HELP_EXAMPLES,
     no_args_is_help=True,
 )
 capital_app = typer.Typer(
     name="capital",
-    help="Review external portfolio capital entries.",
+    help="Review capital balance, logs, and entries.",
     epilog=CAPITAL_HELP_EXAMPLES,
     invoke_without_command=True,
 )
@@ -184,7 +184,7 @@ capital_entry_app = typer.Typer(
 )
 asset_app = typer.Typer(
     name="asset",
-    help="Manage symbols inside a portfolio.",
+    help="Manage assets, trades, income, and logs.",
     epilog=ASSET_HELP_EXAMPLES,
     no_args_is_help=True,
 )
@@ -240,7 +240,7 @@ def summary_command(
     portfolio: Annotated[str | None, SUMMARY_PORTFOLIO_OPTION] = None,
     asset: Annotated[str | None, SUMMARY_ASSET_OPTION] = None,
 ) -> None:
-    """Show summaries: no options for global, -p for portfolio, -p -a for asset."""
+    """Show global, portfolio, or asset summaries."""
     if asset is not None and portfolio is None:
         print_error("--asset requires --portfolio.")
         raise typer.Exit(code=1)
