@@ -389,7 +389,7 @@ def test_normal_commands_migrate_legacy_entry_numbers_without_traceback(
 
     first_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     second_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
     duplicate_result = runner.invoke(app, ["portfolio", "create", "stocks"])
     edit_result = runner.invoke(
         app,
@@ -797,7 +797,7 @@ def test_summary_reflects_create_initial(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "5000.50"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("5,000.50") == 3
@@ -1248,7 +1248,7 @@ def test_summary_for_portfolio_with_no_entries(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     for heading in (
@@ -1274,7 +1274,7 @@ def test_summary_after_inflow(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1000.50", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1,000.50") == 3
@@ -1288,7 +1288,7 @@ def test_summary_after_inflow_and_outflow(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "250.25", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("749.75") == 3
@@ -1313,7 +1313,7 @@ def test_summary_ignores_soft_deleted_entries(
             """
         )
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1,000.00") == 3
@@ -1339,7 +1339,7 @@ def test_summary_ignores_soft_deleted_outflow(
             """
         )
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1,000.00") == 3
@@ -1350,7 +1350,7 @@ def test_summary_fails_before_init(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "mpal-data"
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
@@ -1365,7 +1365,7 @@ def test_summary_fails_for_unknown_portfolio(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 1
     assert "Active portfolio 'stocks' does not exist." in result.output
@@ -1381,7 +1381,7 @@ def test_summary_formats_money_with_two_decimal_places(
     runner.invoke(app, ["portfolio", "create", "stocks"])
     runner.invoke(app, ["capital", "deposit", "1.2", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1.20") == 3
@@ -1398,7 +1398,7 @@ def test_summary_hides_internal_and_ambiguous_columns(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "│ id " not in result.output
@@ -1418,7 +1418,7 @@ def test_summary_v01_book_fields_are_deterministic(
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
     runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("750.00") == 3
@@ -1589,7 +1589,7 @@ def test_portfolio_show_rejects_removed_all_flag(
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks", "--all"])
+    result = runner.invoke(app, ["summary", "-p", "stocks", "--all"])
 
     assert result.exit_code == 2
     assert "No such option: --all" in result.output
@@ -2363,7 +2363,7 @@ def test_summary_reflects_edited_amount(tmp_path: Path, monkeypatch) -> None:
         app, ["capital", "entry", "edit", "1", "-p", "stocks", "--amount", "1250.50"]
     )
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1,250.50") == 3
@@ -2453,7 +2453,7 @@ def test_deleted_entry_is_ignored_by_summary(
     runner.invoke(app, ["capital", "deposit", "250", "-p", "stocks"])
     runner.invoke(app, ["capital", "entry", "delete", "2", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("1,000.00") == 3
@@ -2575,7 +2575,7 @@ def test_deleting_outflow_succeeds_and_increases_cash(
     delete_result = runner.invoke(
         app, ["capital", "entry", "delete", "2", "-p", "stocks"]
     )
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert delete_result.exit_code == 0
     assert summary_result.exit_code == 0
@@ -2802,7 +2802,7 @@ def test_summary_is_zero_after_reset(tmp_path: Path, monkeypatch) -> None:
     runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
     runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert result.output.count("0.00") >= 6
@@ -2818,7 +2818,7 @@ def test_portfolio_still_exists_after_reset(tmp_path: Path, monkeypatch) -> None
     runner.invoke(app, ["capital", "deposit", "1000", "-p", "stocks"])
 
     reset_result = runner.invoke(app, ["portfolio", "reset", "stocks", "--yes"])
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert reset_result.exit_code == 0
     assert summary_result.exit_code == 0
@@ -2995,7 +2995,7 @@ def test_deleted_portfolio_disappears_from_summary_all(
 @pytest.mark.parametrize(
     "arguments",
     [
-        ["portfolio", "show", "stocks"],
+        ["summary", "-p", "stocks"],
         ["capital", "show", "-p", "stocks"],
         ["capital", "log", "-p", "stocks"],
         ["capital", "deposit", "100", "-p", "stocks"],

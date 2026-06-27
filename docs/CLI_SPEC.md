@@ -27,13 +27,13 @@ The command hierarchy standardizes command names around the shape of the data
 being shown or modified:
 
 - `list` shows a collection of current things.
-- `show` shows the current state/details of one thing.
+- `show` is retained for non-summary current state views, such as capital.
 - `log` shows historical entries or transactions.
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.
 
-`summary` is reserved for the top-level global dashboard command. It is not
-used inside `portfolio`, `capital`, or `asset` command groups.
+`summary` is the unified summary/reporting command. It is not used inside
+`portfolio`, `capital`, or `asset` command groups.
 
 This is a breaking local CLI cleanup. Old command names are removed rather
 than retained as compatibility aliases.
@@ -49,15 +49,19 @@ mpal init
 Creates or upgrades the local SQLite database using the existing idempotent
 schema checks.
 
-### Global summary
+### Summary
 
 ```console
 mpal summary
+mpal summary --portfolio <portfolio>
+mpal summary -p <portfolio>
+mpal summary --portfolio <portfolio> --asset <asset>
+mpal summary -p <portfolio> -a <asset>
 ```
 
-Shows one global summary table across all active portfolios. Deleted
-portfolios and soft-deleted entries or transactions do not contribute. The
-command uses existing active-only portfolio summary behavior and does not
+With no options, shows one global summary table across all active portfolios.
+Deleted portfolios and soft-deleted entries or transactions do not contribute.
+The command uses existing active-only portfolio summary behavior and does not
 display portfolio names or internal database IDs.
 
 Global summary columns are uppercase:
@@ -77,12 +81,25 @@ Global return is computed from global totals, not by averaging portfolio
 returns. The command does not use live prices, market value, or unrealized
 PnL.
 
+`mpal summary -p <portfolio>` shows one active portfolio using the standard
+portfolio summary columns:
+
+`Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return`
+
+`mpal summary -p <portfolio> -a <asset>` shows one active asset within one
+active portfolio using the single-asset summary columns:
+
+`Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
+
+Option order is flexible where the CLI parser supports it, so `mpal summary
+-a <asset> -p <portfolio>` is valid. `--asset` / `-a` requires `--portfolio` /
+`-p`; `mpal summary -a <asset>` fails clearly.
+
 ### Portfolio
 
 ```console
 mpal portfolio create <portfolio> [--initial <amount>]
 mpal portfolio list
-mpal portfolio show <portfolio>
 mpal portfolio delete <portfolio> --yes
 mpal portfolio reset <portfolio> --yes
 ```
@@ -91,7 +108,7 @@ mpal portfolio reset <portfolio> --yes
   first capital deposit using the current local date.
 - `list` shows every active portfolio using the standard portfolio financial
   summary columns.
-- `show` shows one active portfolio using the same summary columns.
+- One-portfolio summary output is provided by `mpal summary -p <portfolio>`.
 - `delete` requires `--yes` and preserves the existing soft-delete behavior.
 - `reset` requires `--yes`, soft-deletes active capital entries, and keeps the
   portfolio.
@@ -156,9 +173,6 @@ mpal asset list
 mpal asset list --portfolio <portfolio>
 mpal asset list -p <portfolio>
 
-mpal asset show <symbol> --portfolio <portfolio>
-mpal asset show <symbol> -p <portfolio>
-
 mpal asset log <symbol> --portfolio <portfolio>
 mpal asset log <symbol> -p <portfolio>
 
@@ -191,7 +205,8 @@ uppercase through the shared symbol validator.
 - `list -p` shows all active assets in one portfolio. It uses the same columns
   as the global list and keeps the first column as `Asset/Portfolio` for
   consistent scanning.
-- `show <symbol> -p` shows the current state/details for one active asset.
+- One-asset summary output is provided by
+  `mpal summary -p <portfolio> -a <asset>`.
 - `log` shows one asset's active transactions.
 - `delete` requires `--yes` and soft-deletes the asset and its active
   transactions.
@@ -219,8 +234,8 @@ combined label is display-only; command syntax and lookup still use
 rows; assets are not combined globally across portfolios. Internal database
 IDs are never displayed.
 
-The one-asset `show` output includes the current fields from the existing
-single-asset state view:
+The one-asset `summary -p <portfolio> -a <asset>` output includes the current
+fields from the existing single-asset state view:
 
 `Quantity | Cost Basis | Average Cost | Realized PnL | Income | Realized Return`
 
@@ -231,8 +246,10 @@ Asset log columns remain:
 The `#` value is a stable asset-local transaction number and is not an
 internal database ID.
 
-`mpal asset summary`, `mpal asset edit`, and `mpal asset delete-entry` are
-removed. No compatibility aliases are retained.
+`mpal portfolio show`, `mpal asset show`, `mpal asset summary`,
+`mpal asset edit`, and `mpal asset delete-entry` are removed. `portfolio show`
+and `asset show` were removed before public release because `summary` now owns
+all summary/reporting views. No compatibility aliases are retained.
 
 ### Asset transaction correction
 
@@ -369,9 +386,14 @@ mpal sell
 ```
 
 The previous combined portfolio/symbol positional argument is also removed
-from legacy asset summary, log, delete, income, buy, and sell commands. Current asset
-commands receive the symbol positionally and the portfolio through
+from legacy asset summary, log, delete, income, buy, and sell commands. Current
+asset commands receive the symbol positionally and the portfolio through
 `--portfolio` / `-p`.
+
+The previous summary-style commands `mpal portfolio show <portfolio>` and
+`mpal asset show <asset> -p <portfolio>` are removed before public release.
+Use `mpal summary -p <portfolio>` and `mpal summary -p <portfolio> -a <asset>`
+instead.
 
 No hidden alias plan exists for this cleanup.
 
@@ -382,3 +404,5 @@ No hidden alias plan exists for this cleanup.
 - Help examples use `--portfolio` / `-p`.
 - Help does not advertise removed commands or compatibility aliases.
 - Portfolio-scoped command help shows both `--portfolio` and `-p`.
+- Summary help documents global, portfolio, and portfolio-asset forms, and
+  states that `--asset` requires `--portfolio`.

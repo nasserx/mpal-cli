@@ -38,8 +38,8 @@ The summary output has exactly these columns:
 
 The internal portfolio database ID is not part of summary output.
 
-The top-level global summary command uses one aggregate row across active
-portfolios:
+`mpal summary` is the unified summary/reporting command. With no options, it
+uses one aggregate row across active portfolios:
 
 | TOTAL CAPITAL | TOTAL INCOME | REALIZED P&L | RETURN |
 |---:|---:|---:|---:|
@@ -50,6 +50,12 @@ PnL. Global `RETURN` is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or
 `0.00%` when total capital is zero. Global return is computed from global
 totals, not by averaging portfolio returns. It does not use live prices,
 market value, or unrealized PnL.
+
+`mpal summary -p <portfolio>` uses the portfolio summary columns above for one
+active portfolio. `mpal summary -p <portfolio> -a <asset>` uses the existing
+single-asset summary view for one active asset within one active portfolio.
+`summary -a` requires `-p`. The removed pre-release `portfolio show` and
+`asset show` commands do not define separate accounting behavior.
 
 ### Capital
 

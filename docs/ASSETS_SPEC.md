@@ -30,7 +30,6 @@ Asset commands that target one specific portfolio require `--portfolio` /
 mpal asset add <symbol> [symbol...] -p <portfolio>
 mpal asset list
 mpal asset list -p <portfolio>
-mpal asset show <symbol> -p <portfolio>
 mpal asset log <symbol> -p <portfolio>
 mpal asset delete <symbol> -p <portfolio> --yes
 mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]
@@ -44,11 +43,12 @@ The long `--portfolio` spelling is equivalent to `-p`.
 
 This cleanup is a breaking command rename with no compatibility or hidden
 aliases. The previous combined portfolio/symbol argument form remains removed.
-The old `asset summary`, `asset edit`, and `asset delete-entry` commands are
-removed.
+The old `asset summary`, `asset show`, `asset edit`, and `asset delete-entry`
+commands are removed. `asset show` was removed before public release because
+`summary` now owns all summary/reporting views.
 
-`summary` may still appear in rendered output titles, such as `Asset Summary`,
-but it is not a command name.
+`mpal summary -p <portfolio> -a <asset>` is the single-asset reporting view.
+`summary -a` requires `-p`.
 
 ## Symbols and ownership
 
@@ -172,7 +172,7 @@ For a partial sell:
 Fractional-minor-unit allocation uses deterministic round-half-even. A full
 sell relieves all remaining Cost Basis so no residual remains.
 
-## Asset list and show
+## Asset List And Summary
 
 Global current asset list:
 
@@ -203,7 +203,7 @@ column in global and scoped output is the selected behavior for consistency.
 Single-asset current state:
 
 ```console
-mpal asset show AAPL -p stocks
+mpal summary -p stocks -a AAPL
 ```
 
 Columns:

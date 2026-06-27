@@ -246,8 +246,8 @@ def test_editing_income_amount_updates_asset_and_portfolio_summaries(
     _income(amount="10")
 
     result = _edit("1", amount="32")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
-    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+    portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert _rows(database_path)[0][6:11] == (3200, 3200, 0, 0, 3200)
@@ -411,7 +411,7 @@ def test_editing_sell_price_quantity_fee_updates_pnl_and_summaries(
     _sell(price="150", quantity="1")
 
     result = _edit("2", price="200", quantity="2", fee="5")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
 
     assert result.exit_code == 0
     assert _rows(database_path)[1][3:11] == (
@@ -463,7 +463,7 @@ def test_editing_sell_to_full_sell_leaves_zero_cost_basis(
     _sell(quantity="1")
 
     result = _edit("2", quantity="2", total="300.00")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
 
     assert result.exit_code == 0
     row = next(line for line in asset_summary.output.splitlines() if "+100.00" in line)

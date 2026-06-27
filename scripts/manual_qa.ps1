@@ -49,7 +49,7 @@ try {
     Invoke-Mpal -Arguments @("portfolio", "create", "etfs", "--initial", "10000")
     Invoke-Mpal -Arguments @("portfolio", "create", "stocks")
     Invoke-Mpal -Arguments @("portfolio", "list")
-    Invoke-Mpal -Arguments @("portfolio", "show", "etfs")
+    Invoke-Mpal -Arguments @("summary", "-p", "etfs")
     Invoke-Mpal -Arguments @("capital", "show", "-p", "etfs")
     Invoke-Mpal -Arguments @("capital", "deposit", "2500", "-p", "etfs", "--note", "Manual QA deposit")
     Invoke-Mpal -Arguments @("capital", "withdraw", "500", "-p", "etfs", "--note", "Manual QA withdrawal")
@@ -64,12 +64,12 @@ try {
     Invoke-Mpal -Arguments @("asset", "sell", "ETHA", "-p", "etfs", "--price", "23.00", "--quantity", "3", "--fee", "1.00")
     Invoke-Mpal -Arguments @("asset", "list")
     Invoke-Mpal -Arguments @("asset", "list", "-p", "etfs")
-    Invoke-Mpal -Arguments @("asset", "show", "ETHA", "-p", "etfs")
+    Invoke-Mpal -Arguments @("summary", "-p", "etfs", "-a", "ETHA")
     Invoke-Mpal -Arguments @("asset", "log", "ETHA", "-p", "etfs")
     Invoke-Mpal -Arguments @("asset", "entry", "edit", "ETHA", "1", "-p", "etfs", "--note", "Corrected buy note")
     Invoke-Mpal -Arguments @("asset", "entry", "delete", "ETHA", "3", "-p", "etfs", "--yes")
-    Invoke-Mpal -Arguments @("asset", "show", "ETHA", "-p", "etfs")
-    Invoke-Mpal -Arguments @("portfolio", "show", "etfs")
+    Invoke-Mpal -Arguments @("summary", "-p", "etfs", "-a", "ETHA")
+    Invoke-Mpal -Arguments @("summary", "-p", "etfs")
 
     Write-Host ""
     Write-Host "Manual QA completed successfully."

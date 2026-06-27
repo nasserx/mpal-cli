@@ -87,7 +87,14 @@ def test_summary_help_describes_global_active_portfolio_summary() -> None:
     result = runner.invoke(app, ["summary", "--help"])
 
     assert result.exit_code == 0
-    assert "Show a global summary across active portfolios." in result.output
+    assert "Show summaries: no options for global, -p for portfolio, -p -a" in (
+        result.output
+    )
+    assert "--portfolio" in result.output
+    assert "-p" in result.output
+    assert "--asset" in result.output
+    assert "-a" in result.output
+    assert "requires --portfolio" in result.output
 
 
 def test_summary_requires_initialized_database(tmp_path: Path, monkeypatch) -> None:
@@ -98,6 +105,16 @@ def test_summary_requires_initialized_database(tmp_path: Path, monkeypatch) -> N
     assert result.exit_code == 1
     assert "Run 'mpal init' first." in result.output
     assert not (data_dir / "mpal.db").exists()
+
+
+def test_summary_asset_requires_portfolio(tmp_path: Path, monkeypatch) -> None:
+    _init(tmp_path, monkeypatch)
+
+    result = runner.invoke(app, ["summary", "-a", "AAPL"])
+
+    assert result.exit_code == 1
+    assert "--asset requires --portfolio." in result.output
+    assert "Traceback" not in result.output
 
 
 def test_summary_empty_initialized_database_shows_zero_table(
@@ -146,6 +163,141 @@ def test_summary_one_portfolio_totals_are_correct(
     assert "100.00" in result.output
     assert "+400.00" in result.output
     assert "+5.00%" in result.output
+
+
+def test_summary_portfolio_reuses_portfolio_summary_output(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["capital", "withdraw", "250", "-p", "stocks"])
+
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    for column in (
+        "Portfolio",
+        "Capital",
+        "Cash",
+        "Positions",
+        "Book Value",
+        "Realized PnL",
+        "Income",
+        "Return",
+    ):
+        assert column in result.output
+    assert "stocks" in result.output
+    assert "750.00" in result.output
+    assert " ID " not in result.output.upper()
+
+
+def test_summary_asset_reuses_asset_summary_output(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(
+        app,
+        [
+            "asset",
+            "buy",
+            "AAPL",
+            "-p",
+            "stocks",
+            "--price",
+            "100",
+            "--quantity",
+            "3",
+        ],
+    )
+
+    result = runner.invoke(app, ["summary", "-p", "stocks", "-a", "aapl"])
+
+    assert result.exit_code == 0
+    for column in (
+        "Quantity",
+        "Cost Basis",
+        "Average Cost",
+        "Realized PnL",
+        "Income",
+        "Realized Return",
+    ):
+        assert column in result.output
+    assert " 3 " in result.output
+    assert "300.00" in result.output
+    assert "100.00" in result.output
+    assert " ID " not in result.output.upper()
+
+
+def test_summary_asset_option_order_is_flexible(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+
+    result = runner.invoke(app, ["summary", "-a", "AAPL", "-p", "stocks"])
+
+    assert result.exit_code == 0
+    assert "Quantity" in result.output
+
+
+def test_summary_portfolio_fails_for_deleted_portfolio(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks"])
+    runner.invoke(app, ["portfolio", "delete", "stocks", "--yes"])
+
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
+
+    assert result.exit_code == 1
+    assert "Active portfolio 'stocks' does not exist." in result.output
+
+
+def test_summary_asset_fails_for_missing_and_deleted_asset(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks"])
+
+    missing = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
+    deleted = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+
+    assert missing.exit_code == 1
+    assert deleted.exit_code == 1
+    for result in (missing, deleted):
+        assert "Active asset 'AAPL' does not exist in portfolio 'stocks'." in (
+            result.output
+        )
+
+
+def test_removed_show_commands_are_invalid_and_absent_from_help() -> None:
+    top_help = runner.invoke(app, ["--help"])
+    portfolio_help = runner.invoke(app, ["portfolio", "--help"])
+    asset_help = runner.invoke(app, ["asset", "--help"])
+    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    asset_show = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
+
+    assert top_help.exit_code == 0
+    assert portfolio_help.exit_code == 0
+    assert asset_help.exit_code == 0
+    assert "mpal portfolio show <portfolio>" not in top_help.output
+    assert "mpal asset show <symbol> -p <portfolio>" not in top_help.output
+    assert "│ show " not in portfolio_help.output
+    assert "│ show " not in asset_help.output
+    assert portfolio_show.exit_code == 2
+    assert asset_show.exit_code == 2
+    assert "No such command 'show'" in portfolio_show.output
+    assert "No such command 'show'" in asset_show.output
 
 
 def test_summary_multiple_portfolios_are_aggregated_from_global_totals(

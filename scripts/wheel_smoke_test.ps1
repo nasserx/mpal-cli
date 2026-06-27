@@ -95,8 +95,8 @@ try {
     Invoke-VenvMpal -Arguments @("asset", "add", "ETHA", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("asset", "buy", "ETHA", "-p", "etfs", "--price", "22.04", "--quantity", "10")
     Invoke-VenvMpal -Arguments @("asset", "list")
-    Invoke-VenvMpal -Arguments @("asset", "show", "ETHA", "-p", "etfs")
-    Invoke-VenvMpal -Arguments @("portfolio", "show", "etfs")
+    Invoke-VenvMpal -Arguments @("summary", "-p", "etfs", "-a", "ETHA")
+    Invoke-VenvMpal -Arguments @("summary", "-p", "etfs")
 
     Write-Host ""
     Write-Host "Wheel smoke test completed successfully."

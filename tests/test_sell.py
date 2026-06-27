@@ -615,7 +615,7 @@ def test_portfolio_summary_applies_sell_accounting(
 
     result = runner.invoke(app, _sell_args(price="150", quantity="1"))
     assert result.exit_code == 0
-    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary = runner.invoke(app, ["summary", "-p", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert "870.00" in row
@@ -662,7 +662,7 @@ def test_asset_delete_removes_sell_effects_from_summary(
     runner.invoke(app, _sell_args(price="150", quantity="1"))
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
-    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary = runner.invoke(app, ["summary", "-p", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)
     assert row.count("1,000.00") == 3
@@ -693,7 +693,7 @@ def test_deleting_one_asset_preserves_other_asset_sell_effects(
     )
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
-    summary = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary = runner.invoke(app, ["summary", "-p", "stocks"])
     assets = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     row = next(line for line in summary.output.splitlines() if "stocks" in line)

@@ -54,7 +54,7 @@ mpal capital show -p stocks
 mpal asset add AAPL -p stocks
 mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset list
-mpal asset show AAPL -p stocks
+mpal summary -p stocks -a AAPL
 mpal asset log AAPL -p stocks
 ```
 
@@ -66,11 +66,12 @@ mpal groups commands by the records they manage:
 mpal init
 
 mpal summary
+mpal summary -p stocks
+mpal summary -p stocks -a AAPL
 
 mpal portfolio create stocks
 mpal portfolio create stocks --initial 5000
 mpal portfolio list
-mpal portfolio show stocks
 mpal portfolio reset stocks --yes
 mpal portfolio delete stocks --yes
 
@@ -84,7 +85,6 @@ mpal capital entry delete 2 -p stocks
 mpal asset add AAPL AMZN MSFT -p stocks
 mpal asset list
 mpal asset list -p stocks
-mpal asset show AAPL -p stocks
 mpal asset log AAPL -p stocks
 mpal asset delete AAPL -p stocks --yes
 mpal asset entry edit AAPL 2 -p stocks --price 234.50 --quantity 3
@@ -94,11 +94,14 @@ mpal asset buy AAPL -p stocks --price 234.43 --quantity 3 --fee 2.30
 mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
-`mpal summary` is a top-level global dashboard summary across active
-portfolios. It aggregates active portfolio capital, active asset income, and
-active realized PnL without live prices, market value, or unrealized PnL.
-Global return is computed from global totals, not by averaging portfolio
-returns.
+`mpal summary` is the unified summary/reporting command. With no options it
+shows a global dashboard summary across all active portfolios. `mpal summary
+-p <portfolio>` summarizes one active portfolio. `mpal summary -p <portfolio>
+-a <asset>` summarizes one active asset within one active portfolio; `-a`
+requires `-p`. Summary views aggregate active portfolio capital, active asset
+income, and active realized PnL without live prices, market value, or
+unrealized PnL. Global return is computed from global totals, not by averaging
+portfolio returns.
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal summary` and `mpal asset list` do not
@@ -128,10 +131,14 @@ Manual sells use moving-average book cost and update open quantity, Cost Basis,
 Cash, Positions, and Realized PnL. Individual asset transactions can be edited
 or soft-deleted by asset-local entry number, with active transactions replayed
 before commit. `asset list` is the current asset collection view, and
-`asset show` reports current open quantity, Cost Basis, Average Cost, Realized
-PnL, Income, and Realized Return for one asset from active manual transactions.
+`summary -p <portfolio> -a <asset>` reports current open quantity, Cost Basis,
+Average Cost, Realized PnL, Income, and Realized Return for one asset from
+active manual transactions.
 Asset transaction correction is under `mpal asset entry edit/delete`; `mpal
 asset log` remains the historical transaction view.
+
+`portfolio show` and `asset show` were removed before public release because
+`summary` now owns all summary/reporting views.
 
 ## Planned capabilities
 

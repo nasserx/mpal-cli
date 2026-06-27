@@ -55,12 +55,12 @@ def test_official_portfolio_capital_and_asset_workflow(
         assert result.exit_code == 0, result.output
 
     asset_list = runner.invoke(app, ["asset", "list", "-p", "stocks"])
-    asset_show = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
+    asset_show = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
     asset_log = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
     capital_show = runner.invoke(app, ["capital", "show", "-p", "stocks"])
     capital_log = runner.invoke(app, ["capital", "log", "-p", "stocks"])
     portfolio_list = runner.invoke(app, ["portfolio", "list"])
-    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
 
     for result in (
         asset_list,
@@ -119,7 +119,6 @@ def test_official_portfolio_capital_and_asset_workflow(
         ["capital", "entry", "edit", "1", "--note", "changed"],
         ["capital", "entry", "delete", "1"],
         ["asset", "add", "AAPL"],
-        ["asset", "show", "AAPL"],
         ["asset", "log", "AAPL"],
         ["asset", "delete", "AAPL", "--yes"],
         ["asset", "entry", "delete", "AAPL", "1", "--yes"],
@@ -200,6 +199,7 @@ def test_legacy_asset_command_shapes_are_removed(arguments: list[str]) -> None:
     [
         ["asset", "summary"],
         ["asset", "summary", "AAPL", "-p", "stocks"],
+        ["asset", "show", "AAPL", "-p", "stocks"],
         ["asset", "edit", "AAPL", "1", "-p", "stocks", "--note", "changed"],
         ["asset", "delete-entry", "AAPL", "1", "-p", "stocks", "--yes"],
     ],
@@ -208,6 +208,13 @@ def test_legacy_asset_entry_commands_are_removed(arguments: list[str]) -> None:
     result = runner.invoke(app, arguments)
 
     assert result.exit_code == 2
+
+
+def test_removed_portfolio_show_command_is_invalid() -> None:
+    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+
+    assert result.exit_code == 2
+    assert "No such command 'show'" in result.output
 
 
 @pytest.mark.parametrize(

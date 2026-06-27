@@ -200,8 +200,8 @@ def test_delete_entry_soft_deletes_income_transaction_and_updates_summaries(
     _income(amount="32")
 
     result = _delete_entry("1")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
-    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+    portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "Asset transaction 1 deleted" in result.output
@@ -224,8 +224,8 @@ def test_delete_entry_soft_deletes_buy_with_no_dependent_sells(
     _buy(quantity="2")
 
     result = _delete_entry("1")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
-    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+    portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = _asset_rows(database_path)[0]
@@ -269,8 +269,8 @@ def test_delete_entry_soft_deletes_sell_and_restores_open_position(
     _sell(quantity="1")
 
     result = _delete_entry("2")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
-    portfolio_show = runner.invoke(app, ["portfolio", "show", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
+    portfolio_show = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert _asset_rows(database_path)[1][:6] == (2, "sell", 15_000, -10_000, 5_000, 0)
@@ -295,7 +295,7 @@ def test_delete_entry_full_sell_restores_open_position(
     _sell(quantity="2", total="300.00")
 
     result = _delete_entry("2")
-    asset_summary = runner.invoke(app, ["asset", "show", "AAPL", "-p", "stocks"])
+    asset_summary = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL"])
 
     assert result.exit_code == 0
     row = next(line for line in asset_summary.output.splitlines() if "2" in line)
@@ -354,7 +354,7 @@ def test_deleting_one_asset_transaction_does_not_affect_another_asset(
 
     result = _delete_entry("1", reference="stocks/AAPL")
     assets = runner.invoke(app, ["asset", "list", "-p", "stocks"])
-    portfolio = runner.invoke(app, ["portfolio", "show", "stocks"])
+    portfolio = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     assert "MSFT" in assets.output

@@ -61,6 +61,16 @@ PORTFOLIO_OPTION = typer.Option(
     "-p",
     help="Portfolio name.",
 )
+SUMMARY_PORTFOLIO_OPTION = typer.Option(
+    "--portfolio",
+    "-p",
+    help="Portfolio summary.",
+)
+SUMMARY_ASSET_OPTION = typer.Option(
+    "--asset",
+    "-a",
+    help="Asset summary inside the selected portfolio; requires --portfolio.",
+)
 
 HELP_EXAMPLES = r"""Examples:
 
@@ -68,11 +78,13 @@ HELP_EXAMPLES = r"""Examples:
 
   mpal summary
 
+  mpal summary -p <portfolio>
+
+  mpal summary -p <portfolio> -a <asset>
+
   mpal portfolio create <portfolio> [--initial <amount>]
 
   mpal portfolio list
-
-  mpal portfolio show <portfolio>
 
   mpal capital deposit <amount> -p <portfolio>
 
@@ -83,8 +95,6 @@ HELP_EXAMPLES = r"""Examples:
   mpal asset list
 
   mpal asset list -p <portfolio>
-
-  mpal asset show <symbol> -p <portfolio>
 """
 
 PORTFOLIO_HELP_EXAMPLES = """Examples:
@@ -92,8 +102,6 @@ PORTFOLIO_HELP_EXAMPLES = """Examples:
   mpal portfolio create <portfolio> [--initial <amount>]
 
   mpal portfolio list
-
-  mpal portfolio show <portfolio>
 
   mpal portfolio reset <portfolio> --yes
 
@@ -129,8 +137,6 @@ ASSET_HELP_EXAMPLES = r"""Examples:
   mpal asset list
 
   mpal asset list -p <portfolio>
-
-  mpal asset show <symbol> -p <portfolio>
 
   mpal asset log <symbol> -p <portfolio>
 
@@ -232,15 +238,33 @@ def init_command() -> None:
 
 
 @app.command("summary")
-def summary_command() -> None:
-    """Show a global summary across active portfolios."""
+def summary_command(
+    portfolio: Annotated[str | None, SUMMARY_PORTFOLIO_OPTION] = None,
+    asset: Annotated[str | None, SUMMARY_ASSET_OPTION] = None,
+) -> None:
+    """Show summaries: no options for global, -p for portfolio, -p -a for asset."""
+    if asset is not None and portfolio is None:
+        print_error("--asset requires --portfolio.")
+        raise typer.Exit(code=1)
+
     try:
-        summary = get_global_summary()
+        if portfolio is None:
+            global_summary = get_global_summary()
+        elif asset is None:
+            portfolio_summary = get_portfolio_summary(portfolio)
+        else:
+            normalized_symbol = normalize_symbol(asset)
+            asset_summary = get_asset_summary(portfolio, normalized_symbol)
     except MpalError as error:
         print_error(str(error))
         raise typer.Exit(code=1) from error
 
-    print_global_summary(summary)
+    if portfolio is None:
+        print_global_summary(global_summary)
+    elif asset is None:
+        print_portfolio_summary(portfolio_summary)
+    else:
+        print_asset_summary(portfolio, asset_summary)
 
 
 @portfolio_app.command("create")
@@ -285,20 +309,6 @@ def portfolio_list() -> None:
         print_info("No active portfolios.")
         return
     print_portfolio_summaries(summaries)
-
-
-@portfolio_app.command("show")
-def portfolio_show(
-    portfolio: Annotated[str, typer.Argument(help="Portfolio name.")],
-) -> None:
-    """Show one active portfolio's financial summary."""
-    try:
-        summary = get_portfolio_summary(portfolio)
-    except MpalError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_portfolio_summary(summary)
 
 
 @portfolio_app.command("delete")
@@ -559,22 +569,6 @@ def asset_list(
         print_info(f"No active assets for portfolio '{portfolio}'.")
         return
     print_assets(assets)
-
-
-@asset_app.command("show")
-def asset_show(
-    symbol: Annotated[str, typer.Argument(help="Asset symbol.")],
-    portfolio: Annotated[str, PORTFOLIO_OPTION],
-) -> None:
-    """Show one active asset's current state."""
-    try:
-        normalized_symbol = normalize_symbol(symbol)
-        summary = get_asset_summary(portfolio, normalized_symbol)
-    except MpalError as error:
-        print_error(str(error))
-        raise typer.Exit(code=1) from error
-
-    print_asset_summary(portfolio, summary)
 
 
 @asset_app.command("log")

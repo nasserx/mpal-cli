@@ -28,7 +28,7 @@ def test_asset_help_lists_foundation_commands() -> None:
     assert result.exit_code == 0
     assert "add" in result.output
     assert "list" in result.output
-    assert "show" in result.output
+    assert "show" not in result.output
     assert "summary" not in result.output
     assert "delete" in result.output
 
@@ -323,10 +323,10 @@ def test_adding_assets_does_not_change_portfolio_summary(
     monkeypatch.setenv("MPAL_DATA_DIR", str(data_dir))
     runner.invoke(app, ["init"])
     runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
-    before = runner.invoke(app, ["portfolio", "show", "stocks"])
+    before = runner.invoke(app, ["summary", "-p", "stocks"])
 
     add_result = runner.invoke(app, ["asset", "add", "AAPL", "MSFT", "-p", "stocks"])
-    after = runner.invoke(app, ["portfolio", "show", "stocks"])
+    after = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert add_result.exit_code == 0
     assert before.exit_code == 0

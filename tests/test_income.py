@@ -306,7 +306,7 @@ def test_portfolio_summary_includes_income_in_cash_book_value_and_return(
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
     runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -323,7 +323,7 @@ def test_portfolio_return_is_zero_when_capital_is_zero(
     _initialize_asset(tmp_path, monkeypatch)
     runner.invoke(app, ["asset", "income", "AAPL", "32", "-p", "stocks"])
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -365,7 +365,7 @@ def test_asset_delete_soft_deletes_income_transactions_and_removes_summary_effec
         app,
         ["asset", "delete", "AAPL", "-p", "stocks", "--yes"],
     )
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
     log_result = runner.invoke(app, ["asset", "log", "AAPL", "-p", "stocks"])
 
     assert delete_result.exit_code == 0
@@ -392,7 +392,7 @@ def test_deleting_one_asset_preserves_other_asset_income(
     runner.invoke(app, ["asset", "income", "MSFT", "18", "-p", "stocks"])
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
     list_result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     summary_row = next(

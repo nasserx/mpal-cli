@@ -13,9 +13,9 @@ implemented. Official help exposes only `init`, `summary`, `portfolio`,
 `capital`, and `asset` at the root.
 
 A breaking cleanup standardized command vocabulary: `list` for current
-collections, `show` for current details of one thing, `log` for history, and
-`entry edit/delete` for historical entry correction. `summary` is the
-top-level global dashboard command and is not used inside command groups.
+collections, `show` for non-summary current state views, `log` for history,
+and `entry edit/delete` for historical entry correction. `summary` is the
+unified summary/reporting command and is not used inside command groups.
 
 ## v0.1 — Capital ledger foundation
 
@@ -26,7 +26,7 @@ top-level global dashboard command and is not used inside command groups.
 - Create a portfolio with initial capital.
 - Record deposits.
 - Record withdrawals with Cash validation.
-- Show a portfolio summary.
+- Show a portfolio summary through `summary -p`.
 - Show all portfolio summaries.
 - Show a global summary across active portfolios.
 - Show a portfolio capital-entry log.
@@ -75,15 +75,19 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 
 - Official `portfolio`, `capital`, and organized `asset` command groups are
   implemented.
-- Top-level `summary` is implemented for global active-portfolio totals. It
-  does not use live prices, market value, or unrealized PnL, and global return
-  is computed from global totals rather than averaging portfolio returns.
+- Top-level `summary` is implemented as the unified summary/reporting command:
+  no options summarizes all active portfolios, `-p <portfolio>` summarizes one
+  active portfolio, and `-p <portfolio> -a <asset>` summarizes one active asset
+  within one active portfolio. `summary -a` requires `-p`. Summary does not use
+  live prices, market value, or unrealized PnL, and global return is computed
+  from global totals rather than averaging portfolio returns.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
 - Capital cleanup added `capital show -p <portfolio>` and moved historical
   entry correction under `capital entry edit/delete`.
-- Asset current-state cleanup replaced `asset summary` with `asset list` and
-  `asset show`, including a global `asset list` that omits `-p`.
+- Asset current-state cleanup replaced `asset summary` with `asset list`, then
+  moved one-asset reporting to `summary -p <portfolio> -a <asset>`. Global
+  `asset list` omits `-p`.
 - Asset transaction correction moved under `asset entry edit/delete`.
 - The previous root commands are removed.
 - The old combined portfolio/symbol argument form is removed.
@@ -91,4 +95,6 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   aliases.
 - Old `asset edit` and `asset delete-entry` are removed without compatibility
   aliases.
+- Pre-release `portfolio show` and `asset show` were removed without
+  compatibility aliases because `summary` owns all summary/reporting views.
 - Official commands are shown in help.

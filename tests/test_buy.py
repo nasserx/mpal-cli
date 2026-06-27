@@ -487,7 +487,7 @@ def test_portfolio_summary_applies_buy_cash_and_position_effects(
     _initialize_asset(tmp_path, monkeypatch, initial="1000")
     runner.invoke(app, _buy_args(price="100", quantity="3"))
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     assert result.exit_code == 0
     row = next(line for line in result.output.splitlines() if "stocks" in line)
@@ -505,7 +505,7 @@ def test_buy_does_not_change_income_or_return(
     runner.invoke(app, ["asset", "income", "AAPL", "20", "-p", "stocks"])
     runner.invoke(app, _buy_args(price="100", quantity="3"))
 
-    result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     row = next(line for line in result.output.splitlines() if "stocks" in line)
     assert "720.00" in row
@@ -547,7 +547,7 @@ def test_asset_delete_removes_buy_effects_from_summary(
     runner.invoke(app, _buy_args(price="100", quantity="3"))
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
 
     row = next(line for line in summary_result.output.splitlines() if "stocks" in line)
     assert row.count("1,000.00") == 3
@@ -572,7 +572,7 @@ def test_deleting_one_asset_preserves_other_asset_buy_effects(
     )
 
     runner.invoke(app, ["asset", "delete", "AAPL", "-p", "stocks", "--yes"])
-    summary_result = runner.invoke(app, ["portfolio", "show", "stocks"])
+    summary_result = runner.invoke(app, ["summary", "-p", "stocks"])
     list_result = runner.invoke(app, ["asset", "list", "-p", "stocks"])
 
     summary_row = next(

@@ -29,7 +29,6 @@ Implemented portfolio commands:
 
 - `mpal portfolio create <portfolio> [--initial <amount>]`
 - `mpal portfolio list`
-- `mpal portfolio show <portfolio>`
 - `mpal portfolio reset <portfolio> --yes`
 - `mpal portfolio delete <portfolio> --yes`
 
@@ -47,7 +46,6 @@ Implemented asset commands:
 - `mpal asset add <symbol> [symbol...] -p <portfolio>`
 - `mpal asset list`
 - `mpal asset list -p <portfolio>`
-- `mpal asset show <symbol> -p <portfolio>`
 - `mpal asset log <symbol> -p <portfolio>`
 - `mpal asset delete <symbol> -p <portfolio> --yes`
 - `mpal asset entry edit <symbol> <entry-number> -p <portfolio> [options...]`
@@ -58,7 +56,20 @@ Implemented asset commands:
 
 The long `--portfolio` option is equivalent to `-p`. There is no default
 portfolio. `-p` remains required when an operation targets one specific
-portfolio. Global views, such as `mpal asset list`, may omit `-p`.
+portfolio. Global views, such as `mpal summary` and `mpal asset list`, may
+omit `-p`.
+
+`mpal summary` is the unified summary/reporting command:
+
+- `mpal summary` summarizes all active portfolios.
+- `mpal summary -p <portfolio>` summarizes one active portfolio.
+- `mpal summary -p <portfolio> -a <asset>` summarizes one active asset within
+  one active portfolio.
+
+`summary -a` requires `-p`. The pre-release `mpal portfolio show <portfolio>`
+and `mpal asset show <symbol> -p <portfolio>` commands were removed without
+hidden compatibility aliases because `summary` now owns all summary/reporting
+views.
 
 This branch intentionally removes the earlier root commands and the old
 combined `<portfolio>/<symbol>` argument. `asset summary`, `asset edit`,
@@ -68,12 +79,12 @@ without hidden or compatibility aliases.
 Command vocabulary rule:
 
 - `list` shows a collection of current things.
-- `show` shows current state/details of one thing.
+- `show` is retained for non-summary current state views, such as capital.
 - `log` shows historical entries or transactions.
 - `entry edit` and `entry delete` edit or delete one historical log entry.
 - `delete` deletes a whole entity.
 
-`summary` is the top-level global dashboard command and is not used inside
+`summary` is the unified summary/reporting command and is not used inside
 command groups.
 
 Use `mpal` in help, docs, tests, and examples. User shell shortcuts are not
