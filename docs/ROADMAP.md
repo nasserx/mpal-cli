@@ -28,7 +28,7 @@ unified summary/reporting command and is not used inside command groups.
 - Record withdrawals with Cash validation.
 - Show a portfolio summary through `summary -p`.
 - Show all portfolio summaries.
-- Show a global summary across active portfolios.
+- Show a global summary dashboard across active portfolios.
 - Show a portfolio capital-entry log.
 - Edit portfolio capital entries.
 - Soft-delete portfolio capital entries.
@@ -78,9 +78,11 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
 - Top-level `summary` is implemented as the unified summary/reporting command:
   no options summarizes all active portfolios, `-p <portfolio>` summarizes one
   active portfolio, and `-p <portfolio> -a <asset>` summarizes one active asset
-  within one active portfolio. `summary -a` requires `-p`. Summary does not use
-  live prices, market value, or unrealized PnL, and global return is computed
-  from global totals rather than averaging portfolio returns.
+  within one active portfolio. `summary -a` requires `-p`. Global summary shows
+  total capital, total cash, positions, book value, total income, realized P&L,
+  and return, with optional definitions through `summary --explain`. Summary
+  does not use live prices, market value, or unrealized PnL, and global return
+  is computed from global totals rather than averaging portfolio returns.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
 - Capital cleanup moved daily actions to root `deposit` / `withdraw`, made

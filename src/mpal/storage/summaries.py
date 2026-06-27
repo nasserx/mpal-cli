@@ -25,6 +25,9 @@ class GlobalSummary:
     """Derived summary values across all active portfolios."""
 
     capital_minor: int
+    cash_minor: int
+    positions_minor: int
+    book_value_minor: int
     realized_pnl_minor: int
     income_minor: int
 
@@ -142,6 +145,9 @@ def get_global_summary(database_path: Path | None = None) -> GlobalSummary:
     summaries = get_all_portfolio_summaries(database_path)
     return GlobalSummary(
         capital_minor=sum(summary.capital_minor for summary in summaries),
+        cash_minor=sum(summary.cash_minor for summary in summaries),
+        positions_minor=sum(summary.positions_minor for summary in summaries),
+        book_value_minor=sum(summary.book_value_minor for summary in summaries),
         realized_pnl_minor=sum(summary.realized_pnl_minor for summary in summaries),
         income_minor=sum(summary.income_minor for summary in summaries),
     )

@@ -260,11 +260,17 @@ def test_shared_table_helper_applies_central_column_alignment_policy() -> None:
 def test_default_table_layout_keeps_financial_columns_right_aligned() -> None:
     table = console_output._make_table()
     table.add_column("TOTAL CAPITAL")
+    table.add_column("TOTAL CASH")
+    table.add_column("POSITIONS")
+    table.add_column("BOOK VALUE")
     table.add_column("TOTAL INCOME")
     table.add_column("REALIZED P&L")
     table.add_column("RETURN")
 
     assert [column.justify for column in table.columns] == [
+        "right",
+        "right",
+        "right",
         "right",
         "right",
         "right",
@@ -277,6 +283,9 @@ def test_spread_table_layout_is_opt_in() -> None:
     spread_table = console_output._make_table(layout="spread")
     for table in (default_table, spread_table):
         table.add_column("TOTAL CAPITAL")
+        table.add_column("TOTAL CASH")
+        table.add_column("POSITIONS")
+        table.add_column("BOOK VALUE")
         table.add_column("TOTAL INCOME")
         table.add_column("REALIZED P&L")
         table.add_column("RETURN")
@@ -288,9 +297,15 @@ def test_spread_table_layout_is_opt_in() -> None:
         "right",
         "right",
         "right",
+        "right",
+        "right",
+        "right",
     ]
     assert [column.justify for column in spread_table.columns] == [
         "left",
+        "center",
+        "center",
+        "center",
         "center",
         "center",
         "right",
@@ -308,6 +323,9 @@ def test_summary_table_uses_spread_layout(monkeypatch) -> None:
     console_output.print_global_summary(
         GlobalSummary(
             capital_minor=4_000_000,
+            cash_minor=4_033_000,
+            positions_minor=110_000,
+            book_value_minor=4_143_000,
             income_minor=18_000,
             realized_pnl_minor=125_000,
         )
@@ -318,6 +336,9 @@ def test_summary_table_uses_spread_layout(monkeypatch) -> None:
     assert table.layout == "spread"
     assert [column.header for column in table.columns] == [
         "TOTAL CAPITAL",
+        "TOTAL CASH",
+        "POSITIONS",
+        "BOOK VALUE",
         "TOTAL INCOME",
         "REALIZED P&L",
         "RETURN",
@@ -326,12 +347,18 @@ def test_summary_table_uses_spread_layout(monkeypatch) -> None:
         "left",
         "center",
         "center",
+        "center",
+        "center",
+        "center",
         "right",
     ]
     assert table.columns[0]._cells[0] == "40,000.00"
-    assert table.columns[1]._cells[0].plain == "180.00"
-    assert table.columns[2]._cells[0].plain == "+1,250.00"
-    assert table.columns[3]._cells[0].plain == "+3.58%"
+    assert table.columns[1]._cells[0] == "40,330.00"
+    assert table.columns[2]._cells[0] == "1,100.00"
+    assert table.columns[3]._cells[0] == "41,430.00"
+    assert table.columns[4]._cells[0].plain == "180.00"
+    assert table.columns[5]._cells[0].plain == "+1,250.00"
+    assert table.columns[6]._cells[0].plain == "+3.58%"
 
 
 def test_spread_summary_output_places_edges_near_table_edges(monkeypatch) -> None:
@@ -347,6 +374,9 @@ def test_spread_summary_output_places_edges_near_table_edges(monkeypatch) -> Non
     console_output.print_global_summary(
         GlobalSummary(
             capital_minor=4_000_000,
+            cash_minor=4_033_000,
+            positions_minor=110_000,
+            book_value_minor=4_143_000,
             income_minor=18_000,
             realized_pnl_minor=125_000,
         )

@@ -64,6 +64,7 @@ omit `-p`.
 `mpal summary` is the unified summary/reporting command:
 
 - `mpal summary` summarizes all active portfolios.
+- `mpal summary --explain` prints concise definitions for the global summary.
 - `mpal summary -p <portfolio>` summarizes one active portfolio.
 - `mpal summary -p <portfolio> -a <asset>` summarizes one active asset within
   one active portfolio.
@@ -148,6 +149,9 @@ Current portfolio formulas:
 Global summary formulas:
 
 - Total Capital = sum of active portfolio Capital
+- Total Cash = sum of active portfolio Cash
+- Positions = sum of active open position book cost, not market value
+- Book Value = Total Cash + Positions
 - Total Income = sum of active asset Income across active portfolios
 - Realized P&L = sum of active realized sell PnL across active portfolios
 - Return = `(Total Income + Realized P&L) / Total Capital`, or `0.00%` for

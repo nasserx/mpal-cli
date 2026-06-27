@@ -56,6 +56,7 @@ schema checks.
 
 ```console
 mpal summary
+mpal summary --explain
 mpal summary --portfolio <portfolio>
 mpal summary -p <portfolio>
 mpal summary --portfolio <portfolio> --asset <asset>
@@ -69,12 +70,16 @@ display portfolio names or internal database IDs.
 
 Global summary columns are uppercase:
 
-`TOTAL CAPITAL | TOTAL INCOME | REALIZED P&L | RETURN`
+`TOTAL CAPITAL | TOTAL CASH | POSITIONS | BOOK VALUE | TOTAL INCOME | REALIZED P&L | RETURN`
 
 Definitions:
 
 - `TOTAL CAPITAL` is active deposits minus active withdrawals across active
   portfolios.
+- `TOTAL CASH` is current cash across active portfolios.
+- `POSITIONS` is open position book cost across active portfolios; it is not
+  market value.
+- `BOOK VALUE` is total cash plus open position book cost.
 - `TOTAL INCOME` is active asset income across active portfolios.
 - `REALIZED P&L` is active realized sell PnL across active portfolios.
 - `RETURN` is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or `0.00%`
@@ -83,6 +88,10 @@ Definitions:
 Global return is computed from global totals, not by averaging portfolio
 returns. The command does not use live prices, market value, or unrealized
 PnL.
+
+`mpal summary --explain` shows the same global table and then prints concise
+definitions below it. `--explain` is only supported for the global summary;
+filtered summary forms reject it with a clear error.
 
 `mpal summary -p <portfolio>` shows one active portfolio using the standard
 portfolio summary columns:

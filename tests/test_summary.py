@@ -92,6 +92,8 @@ def test_summary_help_describes_global_active_portfolio_summary() -> None:
     assert "-p" in result.output
     assert "--asset" in result.output
     assert "-a" in result.output
+    assert "--explain" in result.output
+    assert "concise definitions" in result.output
     assert "requires --portfolio" in result.output
 
 
@@ -125,6 +127,9 @@ def test_summary_empty_initialized_database_shows_zero_table(
 
     assert result.exit_code == 0
     assert "TOTAL CAPITAL" in result.output
+    assert "TOTAL CASH" in result.output
+    assert "POSITIONS" in result.output
+    assert "BOOK VALUE" in result.output
     assert "TOTAL INCOME" in result.output
     assert "REALIZED P&L" in result.output
     assert "RETURN" in result.output
@@ -158,6 +163,9 @@ def test_summary_one_portfolio_totals_are_correct(
 
     assert result.exit_code == 0
     assert "10,000.00" in result.output
+    assert "9,900.00" in result.output
+    assert "600.00" in result.output
+    assert "10,500.00" in result.output
     assert "100.00" in result.output
     assert "+400.00" in result.output
     assert "+5.00%" in result.output
@@ -338,6 +346,9 @@ def test_summary_multiple_portfolios_are_aggregated_from_global_totals(
 
     assert result.exit_code == 0
     assert "40,000.00" in result.output
+    assert "40,330.00" in result.output
+    assert "1,100.00" in result.output
+    assert "41,430.00" in result.output
     assert "180.00" in result.output
     assert "+1,250.00" in result.output
     assert "+3.58%" in result.output
@@ -379,6 +390,39 @@ def test_summary_ignores_deleted_capital_entries_and_asset_transactions(
     assert "1,000.00" in result.output
     assert "500.00" not in result.output
     assert "50.00" not in result.output
+
+
+def test_summary_cash_positions_and_book_value_ignore_deleted_transactions(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+    runner.invoke(
+        app,
+        [
+            "asset",
+            "buy",
+            "AAPL",
+            "-p",
+            "stocks",
+            "--price",
+            "100",
+            "--quantity",
+            "2",
+        ],
+    )
+    runner.invoke(
+        app, ["asset", "entry", "delete", "AAPL", "1", "-p", "stocks", "--yes"]
+    )
+
+    result = runner.invoke(app, ["summary"])
+
+    assert result.exit_code == 0
+    assert result.output.count("1,000.00") == 3
+    assert "800.00" not in result.output
+    assert "200.00" not in result.output
 
 
 def test_summary_total_capital_is_deposits_minus_withdrawals(
@@ -489,10 +533,72 @@ def test_summary_headers_are_exact_uppercase(tmp_path: Path, monkeypatch) -> Non
     result = runner.invoke(app, ["summary"])
 
     assert result.exit_code == 0
-    for header in ("TOTAL CAPITAL", "TOTAL INCOME", "REALIZED P&L", "RETURN"):
+    expected_headers = (
+        "TOTAL CAPITAL",
+        "TOTAL CASH",
+        "POSITIONS",
+        "BOOK VALUE",
+        "TOTAL INCOME",
+        "REALIZED P&L",
+        "RETURN",
+    )
+    for header in expected_headers:
         assert header in result.output
+    header_indexes = [result.output.index(header) for header in expected_headers]
+    assert header_indexes == sorted(header_indexes)
     for old_header in ("Total Capital", "Total Income", "Realized PnL"):
         assert old_header not in result.output
+
+
+def test_summary_explain_shows_table_and_definitions(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+
+    result = runner.invoke(app, ["summary", "--explain"])
+
+    assert result.exit_code == 0
+    assert "TOTAL CAPITAL" in result.output
+    assert "Definitions" in result.output
+    assert "TOTAL CAPITAL: Net external capital across active portfolios." in (
+        result.output
+    )
+    assert "POSITIONS: Open position book cost; not market value." in result.output
+    assert "mpal does not use live prices, market value, or unrealized PnL." in (
+        result.output
+    )
+
+
+def test_summary_default_does_not_show_explanation(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+
+    result = runner.invoke(app, ["summary"])
+
+    assert result.exit_code == 0
+    assert "Definitions" not in result.output
+    assert "Open position book cost; not market value." not in result.output
+
+
+def test_summary_explain_is_global_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _init(tmp_path, monkeypatch)
+    runner.invoke(app, ["portfolio", "create", "stocks", "--initial", "1000"])
+    runner.invoke(app, ["asset", "add", "AAPL", "-p", "stocks"])
+
+    portfolio = runner.invoke(app, ["summary", "-p", "stocks", "--explain"])
+    asset = runner.invoke(app, ["summary", "-p", "stocks", "-a", "AAPL", "--explain"])
+
+    for result in (portfolio, asset):
+        assert result.exit_code == 1
+        assert "--explain is only supported for the global summary." in result.output
+        assert "Traceback" not in result.output
 
 
 def test_summary_uses_existing_formatting_without_decimal_tails_or_ids(

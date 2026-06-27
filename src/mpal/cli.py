@@ -20,6 +20,7 @@ from mpal.output.console import (
     print_capital_state,
     print_error,
     print_global_summary,
+    print_global_summary_explanation,
     print_info,
     print_portfolio_summaries,
     print_portfolio_summary,
@@ -70,6 +71,10 @@ SUMMARY_ASSET_OPTION = typer.Option(
     "--asset",
     "-a",
     help="Asset summary inside the selected portfolio; requires --portfolio.",
+)
+SUMMARY_EXPLAIN_OPTION = typer.Option(
+    "--explain",
+    help="Print concise definitions for the global summary.",
 )
 
 HELP_EXAMPLES = r"""Examples:
@@ -239,10 +244,14 @@ def init_command() -> None:
 def summary_command(
     portfolio: Annotated[str | None, SUMMARY_PORTFOLIO_OPTION] = None,
     asset: Annotated[str | None, SUMMARY_ASSET_OPTION] = None,
+    explain: Annotated[bool, SUMMARY_EXPLAIN_OPTION] = False,
 ) -> None:
     """Show global, portfolio, or asset summaries."""
     if asset is not None and portfolio is None:
         print_error("--asset requires --portfolio.")
+        raise typer.Exit(code=1)
+    if explain and portfolio is not None:
+        print_error("--explain is only supported for the global summary.")
         raise typer.Exit(code=1)
 
     try:
@@ -259,6 +268,8 @@ def summary_command(
 
     if portfolio is None:
         print_global_summary(global_summary)
+        if explain:
+            print_global_summary_explanation()
     elif asset is None:
         print_portfolio_summary(portfolio_summary)
     else:

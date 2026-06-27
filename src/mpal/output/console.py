@@ -75,6 +75,9 @@ RIGHT_ALIGNED_COLUMN_HEADERS = frozenset(
         "Realized Return",
         "Return",
         "Total",
+        "BOOK VALUE",
+        "POSITIONS",
+        "TOTAL CASH",
         "TOTAL CAPITAL",
         "TOTAL INCOME",
         "REALIZED P&L",
@@ -156,11 +159,17 @@ def print_global_summary(summary: GlobalSummary) -> None:
     """Print global totals across active portfolios."""
     table = _make_table(layout="spread")
     table.add_column("TOTAL CAPITAL")
+    table.add_column("TOTAL CASH")
+    table.add_column("POSITIONS")
+    table.add_column("BOOK VALUE")
     table.add_column("TOTAL INCOME")
     table.add_column("REALIZED P&L")
     table.add_column("RETURN")
     table.add_row(
         format_money(summary.capital_minor),
+        format_money(summary.cash_minor),
+        format_money(summary.positions_minor),
+        format_money(summary.book_value_minor),
         format_income_money(summary.income_minor),
         format_profit_loss_money(summary.realized_pnl_minor),
         format_profit_loss_percent(
@@ -169,6 +178,24 @@ def print_global_summary(summary: GlobalSummary) -> None:
         ),
     )
     _print_table(table)
+
+
+def print_global_summary_explanation() -> None:
+    """Print concise global summary definitions below the dashboard."""
+    definitions = Text(style=MUTED)
+    definitions.append("Definitions\n", style=MUTED)
+    for line in (
+        "TOTAL CAPITAL: Net external capital across active portfolios.",
+        "TOTAL CASH: Current cash across active portfolios.",
+        "POSITIONS: Open position book cost; not market value.",
+        "BOOK VALUE: Total cash plus open position book cost.",
+        "TOTAL INCOME: Asset income recorded across active portfolios.",
+        "REALIZED P&L: Profit or loss realized from closed sales.",
+        "RETURN: (Total income + realized P&L) divided by total capital.",
+        "mpal does not use live prices, market value, or unrealized PnL.",
+    ):
+        definitions.append(f"{line}\n", style=MUTED)
+    Console(width=_table_console_width()).print(definitions)
 
 
 def print_assets(assets: list[Asset]) -> None:

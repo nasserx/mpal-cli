@@ -66,6 +66,7 @@ mpal groups commands by the records they manage:
 mpal init
 
 mpal summary
+mpal summary --explain
 mpal summary -p stocks
 mpal summary -p stocks -a AAPL
 
@@ -95,13 +96,15 @@ mpal asset sell AAPL -p stocks --price 235.50 --quantity 1 --fee 1.25
 ```
 
 `mpal summary` is the unified summary/reporting command. With no options it
-shows a global dashboard summary across all active portfolios. `mpal summary
--p <portfolio>` summarizes one active portfolio. `mpal summary -p <portfolio>
--a <asset>` summarizes one active asset within one active portfolio; `-a`
-requires `-p`. Summary views aggregate active portfolio capital, active asset
-income, and active realized PnL without live prices, market value, or
-unrealized PnL. Global return is computed from global totals, not by averaging
-portfolio returns.
+shows a global dashboard summary across all active portfolios: total capital,
+total cash, positions, book value, total income, realized P&L, and return.
+`mpal summary --explain` prints concise definitions below that global table.
+`mpal summary -p <portfolio>` summarizes one active portfolio. `mpal summary
+-p <portfolio> -a <asset>` summarizes one active asset within one active
+portfolio; `-a` requires `-p`. Positions are open position book cost, not
+market value. Book Value is total cash plus open position book cost. Summary
+views do not use live prices, market value, or unrealized PnL. Global return
+is computed from global totals, not by averaging portfolio returns.
 
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal summary` and `mpal asset list` do not

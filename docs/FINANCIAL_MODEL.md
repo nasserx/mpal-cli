@@ -41,15 +41,19 @@ The internal portfolio database ID is not part of summary output.
 `mpal summary` is the unified summary/reporting command. With no options, it
 uses one aggregate row across active portfolios:
 
-| TOTAL CAPITAL | TOTAL INCOME | REALIZED P&L | RETURN |
-|---:|---:|---:|---:|
+| TOTAL CAPITAL | TOTAL CASH | POSITIONS | BOOK VALUE | TOTAL INCOME | REALIZED P&L | RETURN |
+|---:|---:|---:|---:|---:|---:|---:|
 
-`TOTAL CAPITAL` is the sum of active portfolio Capital. `TOTAL INCOME` is the
-sum of active asset Income. `REALIZED P&L` is the sum of active realized sell
-PnL. Global `RETURN` is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or
-`0.00%` when total capital is zero. Global return is computed from global
-totals, not by averaging portfolio returns. It does not use live prices,
-market value, or unrealized PnL.
+`TOTAL CAPITAL` is the sum of active portfolio Capital. `TOTAL CASH` is the
+sum of active portfolio Cash. `POSITIONS` is the sum of open position book
+cost across active portfolios, not market value. `BOOK VALUE` is total cash
+plus open position book cost. `TOTAL INCOME` is the sum of active asset
+Income. `REALIZED P&L` is the sum of active realized sell PnL. Global `RETURN`
+is `(TOTAL INCOME + REALIZED P&L) / TOTAL CAPITAL`, or `0.00%` when total
+capital is zero. Global return is computed from global totals, not by
+averaging portfolio returns. It does not use live prices, market value, or
+unrealized PnL. `mpal summary --explain` prints concise definitions for these
+global fields.
 
 `mpal summary -p <portfolio>` uses the portfolio summary columns above for one
 active portfolio. `mpal summary -p <portfolio> -a <asset>` uses the existing
