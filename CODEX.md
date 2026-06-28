@@ -260,7 +260,7 @@ explicitly changes those contracts.
 ## Development workflow
 
 ```console
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,release]"
 python -m pytest
 python -m ruff check .
 python -m ruff format --check .

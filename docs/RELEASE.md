@@ -7,7 +7,7 @@ This checklist covers local release-readiness verification only.
 Install release tooling in your local environment:
 
 ```console
-python -m pip install -e ".[release]"
+python -m pip install -e ".[dev,release]"
 ```
 
 Run these commands from the repository root:

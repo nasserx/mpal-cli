@@ -10,17 +10,17 @@ Current version: `0.6.0`. License: MIT.
 
 mpal requires Python 3.11 or later.
 
-For a future PyPI release:
+Install mpal from PyPI:
 
 ```console
-python -m pip install mpal-cli
+pip install mpal-cli
 mpal --help
 ```
 
-From a project checkout:
+For local development from a project checkout:
 
 ```console
-python -m pip install -e .
+python -m pip install -e ".[dev,release]"
 mpal --help
 ```
 
