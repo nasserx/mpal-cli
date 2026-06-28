@@ -4,7 +4,7 @@ mpal — Multi-Portfolio Asset Ledger — is a minimal CLI tool for manual asset
 tracking and capital management.
 
 The CLI command is `mpal`. The package/distribution name is `mpal-cli`.
-Current version: `0.5.2`. License: MIT.
+Current version: `0.6.0`. License: MIT.
 
 ## Installation
 
@@ -91,6 +91,7 @@ mpal summary -p stocks -a AAPL
 mpal portfolio create stocks
 mpal portfolio create stocks --initial 5000
 mpal portfolio list
+mpal portfolio allocation
 mpal portfolio reset stocks --yes
 mpal portfolio delete stocks --yes
 
@@ -124,6 +125,11 @@ market value. Book Value is total cash plus open position book cost. Summary
 views do not use live prices, market value, or unrealized PnL. Global return
 is computed from global totals, not by averaging portfolio returns.
 
+`mpal portfolio allocation` shows active portfolio allocation by book value.
+`BOOK VALUE = TOTAL CASH + POSITIONS`, where positions are open position book
+cost. Allocation is not based on capital, cash alone, market value, live
+prices, or unrealized PnL.
+
 Portfolio-scoped capital and asset operations require `--portfolio` or `-p`.
 Global collection views such as `mpal summary` and `mpal asset list` do not
 require `-p`. No compatibility aliases are kept in this CLI redesign.
@@ -135,7 +141,8 @@ Use `mpal deposit <amount> -p <portfolio>` for external capital deposits and
 
 Asset list output uses an `Asset/Portfolio` column. Combined labels display
 as `<SYMBOL> • <Portfolio>`, such as `AAPL • Stocks`; portfolio capitalization
-there is display-only, and command syntax still uses `-p <portfolio>`.
+there is display-only, and command syntax still uses `-p <portfolio>`. The
+symbol uses the key style while the portfolio segment is muted for scanning.
 
 Entry numbers shown by `mpal capital log` are stable, portfolio-local
 numbers. Internal database IDs are not part of the CLI contract.

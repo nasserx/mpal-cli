@@ -49,6 +49,7 @@ try {
     Invoke-Mpal -Arguments @("portfolio", "create", "etfs", "--initial", "10000")
     Invoke-Mpal -Arguments @("portfolio", "create", "stocks")
     Invoke-Mpal -Arguments @("portfolio", "list")
+    Invoke-Mpal -Arguments @("portfolio", "allocation")
     Invoke-Mpal -Arguments @("summary")
     Invoke-Mpal -Arguments @("summary", "--explain")
     Invoke-Mpal -Arguments @("summary", "-p", "etfs")
@@ -72,6 +73,7 @@ try {
     Invoke-Mpal -Arguments @("asset", "entry", "delete", "ETHA", "3", "-p", "etfs", "--yes")
     Invoke-Mpal -Arguments @("summary", "-p", "etfs", "-a", "ETHA")
     Invoke-Mpal -Arguments @("summary", "-p", "etfs")
+    Invoke-Mpal -Arguments @("portfolio", "allocation")
     Invoke-Mpal -Arguments @("summary")
 
     Write-Host ""

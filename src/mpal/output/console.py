@@ -18,6 +18,7 @@ from mpal.numbers import (
     infer_price_display_scale,
 )
 from mpal.output.formatting import (
+    format_allocation_percent,
     format_asset_portfolio_header,
     format_asset_portfolio_label,
     format_capital_entry_amount,
@@ -50,10 +51,20 @@ from mpal.storage.summaries import GlobalSummary, PortfolioSummary
 
 STANDARD_TABLE_WIDTH = 110
 ROW_KEY_COLUMN_HEADERS = frozenset(
-    {"#", "Portfolio", "Asset", "Symbol", "Asset/Portfolio"}
+    {"#", "Portfolio", "PORTFOLIO", "Asset", "Symbol", "Asset/Portfolio"}
 )
 LEFT_ALIGNED_COLUMN_HEADERS = frozenset(
-    {"#", "Portfolio", "Asset", "Symbol", "Asset/Portfolio", "Type", "Date", "Note"}
+    {
+        "#",
+        "Portfolio",
+        "PORTFOLIO",
+        "Asset",
+        "Symbol",
+        "Asset/Portfolio",
+        "Type",
+        "Date",
+        "Note",
+    }
 )
 RIGHT_ALIGNED_COLUMN_HEADERS = frozenset(
     {
@@ -82,6 +93,7 @@ RIGHT_ALIGNED_COLUMN_HEADERS = frozenset(
         "TOTAL INCOME",
         "REALIZED P&L",
         "RETURN",
+        "ALLOCATION",
         "Withdrawals",
     }
 )
@@ -150,6 +162,32 @@ def print_portfolio_summaries(summaries: list[PortfolioSummary]) -> None:
             format_profit_loss_percent(
                 summary.realized_pnl_minor + summary.income_minor,
                 summary.capital_minor,
+            ),
+        )
+    _print_table(table)
+
+
+def print_portfolio_allocation(summaries: list[PortfolioSummary]) -> None:
+    """Print active portfolio allocation by book value."""
+    table = _make_table()
+    table.add_column("PORTFOLIO")
+    table.add_column("TOTAL CASH", justify="right")
+    table.add_column("POSITIONS", justify="right")
+    table.add_column("BOOK VALUE", justify="right")
+    table.add_column("ALLOCATION", justify="right")
+    total_book_value_minor = sum(summary.book_value_minor for summary in summaries)
+    for summary in sorted(
+        summaries,
+        key=lambda item: (-item.book_value_minor, item.portfolio_name.lower()),
+    ):
+        table.add_row(
+            summary.portfolio_name,
+            format_money(summary.cash_minor),
+            format_money(summary.positions_minor),
+            format_money(summary.book_value_minor),
+            format_allocation_percent(
+                summary.book_value_minor,
+                total_book_value_minor,
             ),
         )
     _print_table(table)

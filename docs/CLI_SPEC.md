@@ -112,6 +112,7 @@ Option order is flexible where the CLI parser supports it, so `mpal summary
 ```console
 mpal portfolio create <portfolio> [--initial <amount>]
 mpal portfolio list
+mpal portfolio allocation
 mpal portfolio delete <portfolio> --yes
 mpal portfolio reset <portfolio> --yes
 ```
@@ -120,6 +121,7 @@ mpal portfolio reset <portfolio> --yes
   first capital deposit using the current local date.
 - `list` shows every active portfolio using the standard portfolio financial
   summary columns.
+- `allocation` shows active portfolio allocation by book value.
 - One-portfolio summary output is provided by `mpal summary -p <portfolio>`.
 - `delete` requires `--yes` and preserves the existing soft-delete behavior.
 - `reset` requires `--yes`, soft-deletes active capital entries, and keeps the
@@ -130,6 +132,19 @@ Portfolio summary columns remain:
 `Portfolio | Capital | Cash | Positions | Book Value | Realized PnL | Income | Return`
 
 Internal database IDs are never displayed.
+
+Portfolio allocation columns are exactly:
+
+`PORTFOLIO | TOTAL CASH | POSITIONS | BOOK VALUE | ALLOCATION`
+
+`BOOK VALUE = TOTAL CASH + POSITIONS`, where `POSITIONS` is open position book
+cost. `ALLOCATION = portfolio BOOK VALUE / total BOOK VALUE across active
+portfolios`, or `0.00%` when total book value is zero. Allocation is not based
+on capital, cash alone, market value, live prices, or unrealized PnL. Rows sort
+by `BOOK VALUE` descending, then portfolio name ascending. Deleted portfolios,
+deleted entries, deleted assets, and deleted asset transactions are ignored by
+the existing active-only summary behavior. No internal database IDs are
+displayed.
 
 ### Daily capital actions
 
@@ -251,7 +266,9 @@ Combined labels display as `<SYMBOL> • <Portfolio>`, for example
 combined label is display-only; command syntax and lookup still use
 `-p <portfolio>`. The same symbol in different portfolios remains separate
 rows; assets are not combined globally across portfolios. Internal database
-IDs are never displayed.
+IDs are never displayed. The asset symbol keeps the row-key style, the bullet
+uses the relationship separator style, and the portfolio name uses muted
+styling.
 
 The one-asset `summary -p <portfolio> -a <asset>` output includes the current
 fields from the existing single-asset state view:
@@ -342,6 +359,9 @@ Formatting rules:
 - `Realized PnL` and `Realized Return` use existing signed display.
 - Positive PnL/return values use the profit style, negative values use the
   loss style, and income values use the income style.
+- In the `Asset/Portfolio` label, the asset symbol uses the row-key style, the
+  separator uses the relationship style, and the portfolio name uses muted
+  styling.
 - Tables use the existing rounded row-oriented table helper and centralized
   terminal theme, with subtle inset solid separators between data rows.
 - Raw `Decimal` output and internal database IDs are never displayed.

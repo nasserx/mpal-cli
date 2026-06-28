@@ -15,7 +15,7 @@ def test_project_metadata_uses_only_mpal_entry_point() -> None:
     old_name = "fund" + "log"
 
     assert project["name"] == "mpal-cli"
-    assert project["version"] == __version__ == "0.5.2"
+    assert project["version"] == __version__ == "0.6.0"
     assert project["description"] == (
         "Multi-Portfolio Asset Ledger (mpal) - A minimal CLI tool for manual "
         "asset tracking and capital management."

@@ -29,6 +29,7 @@ unified summary/reporting command and is not used inside command groups.
 - Show a portfolio summary through `summary -p`.
 - Show all portfolio summaries.
 - Show a global summary dashboard across active portfolios.
+- Show portfolio allocation by book value.
 - Show a portfolio capital-entry log.
 - Edit portfolio capital entries.
 - Soft-delete portfolio capital entries.
@@ -83,6 +84,9 @@ mpal will remain fully manual. Live prices, market APIs, market value, and unrea
   and return, with optional definitions through `summary --explain`. Summary
   does not use live prices, market value, or unrealized PnL, and global return
   is computed from global totals rather than averaging portfolio returns.
+- `portfolio allocation` is implemented as a portfolio-group report based on
+  Book Value, where `BOOK VALUE = TOTAL CASH + POSITIONS`. Allocation is not
+  based on capital, cash alone, market value, live prices, or unrealized PnL.
 - Portfolio-scoped capital and asset operations use required `--portfolio` /
   `-p`.
 - Capital cleanup moved daily actions to root `deposit` / `withdraw`, made

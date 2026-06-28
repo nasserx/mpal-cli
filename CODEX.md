@@ -31,6 +31,7 @@ Implemented portfolio commands:
 
 - `mpal portfolio create <portfolio> [--initial <amount>]`
 - `mpal portfolio list`
+- `mpal portfolio allocation`
 - `mpal portfolio reset <portfolio> --yes`
 - `mpal portfolio delete <portfolio> --yes`
 
@@ -146,6 +147,12 @@ Current portfolio formulas:
 - Income = active income effects
 - Return = `(Realized PnL + Income) / Capital`, or `0.00%` for zero Capital
 
+Portfolio allocation formula:
+
+- Book Value = Cash + Positions
+- Allocation = portfolio Book Value / total Book Value across active portfolios
+- Allocation displays `0.00%` when total Book Value is zero
+
 Global summary formulas:
 
 - Total Capital = sum of active portfolio Capital
@@ -159,6 +166,8 @@ Global summary formulas:
 
 Global return is computed from global totals, not by averaging portfolio
 returns. It does not use live prices, market value, or unrealized PnL.
+`mpal portfolio allocation` is based on Book Value, not capital, cash alone,
+market value, live prices, or unrealized PnL.
 
 Sell cost relief uses moving-average book cost and deterministic half-even
 minor-unit allocation. A full close relieves all remaining Cost Basis.
@@ -225,7 +234,9 @@ and validation normally use active rows only.
   presentation-only.
 - Asset list tables use the `Asset/Portfolio` first column. Combined labels
   display as `<SYMBOL> • <Portfolio>` with display-only portfolio
-  capitalization; command syntax still uses `-p <portfolio>`.
+  capitalization; command syntax still uses `-p <portfolio>`. The symbol uses
+  the row-key style, the separator uses the relationship style, and the
+  portfolio name uses muted styling.
 - Positive PnL/returns show `+`, negative values show `-`, and zero is
   unsigned.
 

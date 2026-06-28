@@ -5,7 +5,15 @@ from decimal import ROUND_HALF_EVEN, Decimal
 from rich.text import Text
 
 from mpal.amounts import format_money, format_signed_money
-from mpal.output.theme import INCOME, LOSS, PROFIT, RELATION_SEPARATOR, TABLE_CELL
+from mpal.output.theme import (
+    INCOME,
+    LOSS,
+    MUTED,
+    PROFIT,
+    RELATION_SEPARATOR,
+    ROW_KEY,
+    TABLE_CELL,
+)
 
 
 def format_asset_portfolio_header() -> Text:
@@ -44,6 +52,15 @@ def format_profit_loss_percent(
         (f"+{percentage:.2f}%" if percentage > 0 else f"{percentage:.2f}%"),
         style=result_style(percentage),
     )
+
+
+def format_allocation_percent(
+    book_value_minor: int,
+    total_book_value_minor: int,
+) -> str:
+    """Format an unsigned allocation percentage from book value."""
+    percentage = _percentage(book_value_minor, total_book_value_minor)
+    return f"{percentage:.2f}%"
 
 
 def format_income_money(amount_minor: int) -> Text:
@@ -93,11 +110,13 @@ def _format_asset_portfolio_text(
     *,
     text_style: str | None = TABLE_CELL,
 ) -> Text:
-    text = Text(left, style=text_style)
+    left_style = ROW_KEY if text_style == TABLE_CELL else text_style
+    right_style = MUTED if text_style == TABLE_CELL else text_style
+    text = Text(left, style=left_style)
     text.append(" ")
     text.append("•", style=RELATION_SEPARATOR)
     text.append(" ")
-    text.append(right, style=text_style)
+    text.append(right, style=right_style)
     return text
 
 

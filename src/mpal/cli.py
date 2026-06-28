@@ -22,6 +22,7 @@ from mpal.output.console import (
     print_global_summary,
     print_global_summary_explanation,
     print_info,
+    print_portfolio_allocation,
     print_portfolio_summaries,
     print_portfolio_summary,
     print_success,
@@ -110,6 +111,8 @@ PORTFOLIO_HELP_EXAMPLES = """Examples:
 
   mpal portfolio list
 
+  mpal portfolio allocation
+
   mpal portfolio reset <portfolio> --yes
 
   mpal portfolio delete <portfolio> --yes
@@ -171,7 +174,7 @@ app = typer.Typer(
 )
 portfolio_app = typer.Typer(
     name="portfolio",
-    help="Create, list, reset, and delete portfolios.",
+    help="Create, list, allocate, reset, and delete portfolios.",
     epilog=PORTFOLIO_HELP_EXAMPLES,
     no_args_is_help=True,
 )
@@ -358,6 +361,26 @@ def portfolio_list() -> None:
         print_info("No active portfolios.")
         return
     print_portfolio_summaries(summaries)
+
+
+@portfolio_app.command("allocation")
+def portfolio_allocation() -> None:
+    """
+    Show active portfolio allocation by book value.
+
+    Book value is total cash plus open position book cost. Allocation is not
+    market value; mpal does not use live prices.
+    """
+    try:
+        summaries = get_all_portfolio_summaries()
+    except MpalError as error:
+        print_error(str(error))
+        raise typer.Exit(code=1) from error
+
+    if not summaries:
+        print_info("No active portfolios.")
+        return
+    print_portfolio_allocation(summaries)
 
 
 @portfolio_app.command("delete")

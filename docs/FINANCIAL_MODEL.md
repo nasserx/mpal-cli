@@ -97,6 +97,18 @@ Book Value remains `Cash + Positions`. A buy transfers book value from Cash to
 Positions. A sell transfers relieved book cost from Positions to Cash and
 changes Book Value only by its realized profit or loss.
 
+### Portfolio allocation
+
+`mpal portfolio allocation` shows active portfolio allocation by book value:
+
+`Allocation = portfolio Book Value / total Book Value across active portfolios`
+
+If total Book Value is zero, allocation displays `0.00%`. Allocation is not
+based on Capital, Cash alone, market value, live prices, or unrealized PnL.
+Rows use existing active-only portfolio summary data, so deleted portfolios,
+soft-deleted capital entries, deleted assets, and deleted asset transactions do
+not contribute.
+
 ### Realized PnL
 
 Profit or loss realized from closed or partially closed manual positions:

@@ -91,6 +91,7 @@ try {
     Invoke-VenvMpal -Arguments @("--help")
     Invoke-VenvMpal -Arguments @("init")
     Invoke-VenvMpal -Arguments @("portfolio", "create", "etfs", "--initial", "10000")
+    Invoke-VenvMpal -Arguments @("portfolio", "allocation")
     Invoke-VenvMpal -Arguments @("capital", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("asset", "add", "ETHA", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("asset", "buy", "ETHA", "-p", "etfs", "--price", "22.04", "--quantity", "10")
@@ -99,6 +100,7 @@ try {
     Invoke-VenvMpal -Arguments @("summary", "-p", "etfs")
     Invoke-VenvMpal -Arguments @("summary")
     Invoke-VenvMpal -Arguments @("summary", "--explain")
+    Invoke-VenvMpal -Arguments @("portfolio", "allocation")
 
     Write-Host ""
     Write-Host "Wheel smoke test completed successfully."

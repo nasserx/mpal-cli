@@ -51,7 +51,7 @@ def test_top_level_help_descriptions_are_polished() -> None:
         ("summary", "Show global, portfolio, or asset summaries."),
         ("deposit", "Record external money added to a portfolio."),
         ("withdraw", "Record external money withdrawn from a portfolio."),
-        ("portfolio", "Create, list, reset, and delete portfolios."),
+        ("portfolio", "Create, list, allocate, reset, and delete portfolios."),
         ("capital", "Review capital balance, logs, and entries."),
         ("asset", "Manage assets, trades, income, and logs."),
     ):
@@ -93,6 +93,7 @@ def test_all_help_output_excludes_the_previous_product_name() -> None:
         ["deposit"],
         ["withdraw"],
         ["portfolio", "create"],
+        ["portfolio", "allocation"],
         ["portfolio", "list"],
         ["portfolio", "reset"],
         ["portfolio", "delete"],
@@ -124,7 +125,7 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     asset = runner.invoke(app, ["asset", "--help"])
 
     assert portfolio.exit_code == capital.exit_code == asset.exit_code == 0
-    for command in ("create", "list", "delete", "reset"):
+    for command in ("create", "allocation", "list", "delete", "reset"):
         assert f"│ {command} " in portfolio.output
     assert "│ show " not in portfolio.output
     for command in ("log", "entry"):
@@ -174,6 +175,7 @@ def test_group_help_lists_only_current_commands_and_examples() -> None:
     "arguments",
     [
         ["portfolio", "create"],
+        ["portfolio", "allocation"],
         ["summary"],
         ["portfolio", "list"],
         ["portfolio", "reset"],

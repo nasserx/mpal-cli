@@ -540,7 +540,9 @@ def test_asset_portfolio_label_uses_bullet_separator_style() -> None:
 
     assert header.plain == "Asset/Portfolio"
     assert label.plain == "ETHA • Etfs"
+    assert label.style == ROW_KEY
     assert label.spans[0].style == RELATION_SEPARATOR
+    assert label.spans[1].style == MUTED
     assert "/" not in label.plain
 
 
@@ -574,6 +576,7 @@ def test_asset_portfolio_label_uses_row_key_style_in_key_column(monkeypatch) -> 
     assert label.plain == "ETHA • Etfs"
     assert label.style == ROW_KEY
     assert any(span.style == RELATION_SEPARATOR for span in label.spans)
+    assert any(span.style == MUTED for span in label.spans)
     assert "/" not in label.plain
 
 

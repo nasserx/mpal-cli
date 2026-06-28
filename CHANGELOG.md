@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Added `mpal portfolio allocation` to show active portfolio allocation by
+  book value.
+- Allocation uses `BOOK VALUE = TOTAL CASH + POSITIONS`; it is not based on
+  capital, cash alone, market value, live prices, or unrealized PnL.
+- Polished `mpal asset list` `Asset/Portfolio` labels so the asset symbol keeps
+  the key style and the portfolio name uses a muted style.
+
 ## 0.5.2
 
 - Renamed the project identity to `mpal` / `mpal-cli`.
